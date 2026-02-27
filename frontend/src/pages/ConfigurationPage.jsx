@@ -533,16 +533,119 @@ export const ConfigurationPage = () => {
           </div>
         </div>
         
-        <Button 
-          onClick={handleSave}
-          className="bg-slate-900 hover:bg-slate-800"
-          disabled={saving}
-          data-testid="save-config-btn"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          {saving ? 'Salvataggio...' : 'Salva Configurazione'}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="outline"
+            onClick={() => navigate(isAdmin ? `/clients/${effectiveClientId}/history` : '/history')}
+            data-testid="history-btn"
+          >
+            <History className="w-4 h-4 mr-2" />
+            Storico
+          </Button>
+          
+          <Button 
+            onClick={handleSave}
+            variant="outline"
+            disabled={saving}
+            data-testid="save-config-btn"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {saving ? 'Salvataggio...' : 'Salva'}
+          </Button>
+          
+          <Button 
+            onClick={() => setShowSaveDialog(true)}
+            className="bg-orange-500 hover:bg-orange-600"
+            data-testid="save-and-generate-btn"
+          >
+            <Zap className="w-4 h-4 mr-2" />
+            Salva e Genera
+          </Button>
+        </div>
       </div>
+
+      {/* Save and Generate Dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-orange-500" />
+              Salva Sessione e Genera
+            </DialogTitle>
+            <DialogDescription>
+              Salva la configurazione attuale nello storico e prepara le combinazioni per la generazione articoli.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome Sessione (opzionale)</Label>
+              <Input
+                value={sessionName}
+                onChange={(e) => setSessionName(e.target.value)}
+                placeholder="Es: Campagna Estate 2024"
+                data-testid="session-name-input"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Note (opzionale)</Label>
+              <Textarea
+                value={sessionNotes}
+                onChange={(e) => setSessionNotes(e.target.value)}
+                placeholder="Aggiungi note per questa sessione..."
+                rows={3}
+                data-testid="session-notes-input"
+              />
+            </div>
+            
+            <div className="p-4 bg-slate-50 rounded-lg space-y-2">
+              <p className="text-sm font-medium text-slate-700">Riepilogo dati da salvare:</p>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div>
+                  <span className="text-slate-500">Servizi:</span>
+                  <span className="ml-1 font-semibold">{keywords.servizi?.length || 0}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Città:</span>
+                  <span className="ml-1 font-semibold">{keywords.citta_e_zone?.length || 0}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Tipi:</span>
+                  <span className="ml-1 font-semibold">{keywords.tipi_o_qualificatori?.length || 0}</span>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">
+                Combinazioni totali: <strong>{(keywords.servizi?.length || 0) * (keywords.citta_e_zone?.length || 0) * (keywords.tipi_o_qualificatori?.length || 0)}</strong>
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
+              Annulla
+            </Button>
+            <Button 
+              onClick={handleSaveAndGenerate}
+              className="bg-orange-500 hover:bg-orange-600"
+              disabled={saveAndGenerating}
+              data-testid="confirm-save-generate-btn"
+            >
+              {saveAndGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvataggio...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 mr-2" />
+                  Conferma e Procedi
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Tabs */}
       <Tabs defaultValue="api" className="w-full">
