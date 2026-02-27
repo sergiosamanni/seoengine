@@ -8,6 +8,7 @@ import { ClientsPage } from './pages/ClientsPage';
 import { ConfigurationPage } from './pages/ConfigurationPage';
 import { GeneratorPage } from './pages/GeneratorPage';
 import { ArticlesPage } from './pages/ArticlesPage';
+import { SessionHistoryPage } from './pages/SessionHistoryPage';
 import { DashboardLayout } from './components/DashboardLayout';
 
 // Protected Route Component
