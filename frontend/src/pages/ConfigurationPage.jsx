@@ -494,41 +494,6 @@ export const ConfigurationPage = () => {
             </Card>
           </div>
         </TabsContent>
-                    onChange={(e) => setWordpress({ ...wordpress, utente: e.target.value })}
-                    placeholder="username"
-                    data-testid="wp-user-input"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Password Applicazione</Label>
-                  <Input
-                    type="password"
-                    value={wordpress.password_applicazione}
-                    onChange={(e) => setWordpress({ ...wordpress, password_applicazione: e.target.value })}
-                    placeholder="xxxx xxxx xxxx xxxx"
-                    data-testid="wp-pass-input"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Stato Pubblicazione</Label>
-                  <Select
-                    value={wordpress.stato_pubblicazione}
-                    onValueChange={(v) => setWordpress({ ...wordpress, stato_pubblicazione: v })}
-                  >
-                    <SelectTrigger data-testid="wp-status-select">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Bozza</SelectItem>
-                      <SelectItem value="publish">Pubblica</SelectItem>
-                      <SelectItem value="pending">In Revisione</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
 
         {/* Knowledge Base Tab */}
         <TabsContent value="knowledge" className="mt-6">
