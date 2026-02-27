@@ -571,25 +571,6 @@ async def generate_articles(request: ArticleGenerate, current_user: dict = Depen
     )
     
     return {"articles": generated_articles, "generated": len([a for a in generated_articles if a.stato == "generated"])}
-                "id": article_id,
-                "client_id": request.client_id,
-                "titolo": titolo_formatted,
-                "contenuto": f"Errore nella generazione: {str(e)}",
-                "stato": "failed",
-                "wordpress_post_id": None,
-                "created_at": now,
-                "published_at": None
-            }
-            await db.articles.insert_one(article_doc)
-            generated_articles.append(ArticleResponse(**article_doc))
-    
-    # Update ultimo_run
-    await db.clients.update_one(
-        {"id": request.client_id},
-        {"$set": {"ultimo_run": datetime.now(timezone.utc).isoformat()}}
-    )
-    
-    return {"articles": generated_articles, "generated": len([a for a in generated_articles if a.stato == "generated"])}
 
 @api_router.post("/articles/publish")
 async def publish_articles(request: ArticlePublish, current_user: dict = Depends(get_current_user)):
