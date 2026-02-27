@@ -179,7 +179,17 @@ export const ConfigurationPage = () => {
         // Load existing configuration
         const config = clientData.configuration || {};
         if (config.wordpress) setWordpress(config.wordpress);
-        if (config.openai) setOpenai(config.openai);
+        // Support both new llm config and legacy openai config
+        if (config.llm) {
+          setLlm(config.llm);
+        } else if (config.openai) {
+          setLlm({
+            provider: 'openai',
+            api_key: config.openai.api_key || '',
+            modello: config.openai.modello || 'gpt-4-turbo-preview',
+            temperatura: config.openai.temperatura || 0.7
+          });
+        }
         if (config.seo) setSeo(config.seo);
         if (config.tono_e_stile) setTono(config.tono_e_stile);
         if (config.knowledge_base) setKnowledge(config.knowledge_base);
