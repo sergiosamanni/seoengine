@@ -398,15 +398,22 @@ export const ArticlesPage = () => {
       </Card>
 
       {/* Article Preview Modal */}
-      {previewArticle && (
+      {(previewArticle || previewLoading) && (
         <div 
           className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={() => setPreviewArticle(null)}
+          onClick={() => { setPreviewArticle(null); setPreviewLoading(false); }}
         >
           <Card 
             className="w-full max-w-4xl max-h-[90vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
+            data-testid="article-preview-modal"
           >
+            {previewLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+              </div>
+            ) : previewArticle && (
+              <>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-xl">{previewArticle.titolo}</CardTitle>
@@ -415,44 +422,64 @@ export const ArticlesPage = () => {
                   <span>{formatDate(previewArticle.created_at)}</span>
                 </CardDescription>
               </div>
-              <Button variant="outline" onClick={() => setPreviewArticle(null)}>
+              <Button variant="outline" onClick={() => { setPreviewArticle(null); setPreviewLoading(false); }} data-testid="close-preview-btn">
                 Chiudi
               </Button>
             </CardHeader>
             <CardContent>
               {/* SEO Metadata Section */}
               {previewArticle.seo_metadata && (
-                <div className="mb-4 p-4 bg-slate-50 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-slate-900 text-sm">Metadati SEO</h4>
+                <div className="mb-4 p-4 bg-slate-50 rounded-lg space-y-3" data-testid="seo-metadata-section">
+                  <h4 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                    <Search className="w-4 h-4 text-slate-500" />
+                    Metadati SEO
+                  </h4>
                   {previewArticle.seo_metadata.meta_description && (
-                    <p className="text-sm text-slate-600">
-                      <span className="font-medium">Meta Description:</span> {previewArticle.seo_metadata.meta_description}
-                    </p>
+                    <div data-testid="seo-meta-description">
+                      <span className="font-medium text-sm text-slate-700">Meta Description:</span>
+                      <p className="text-sm text-slate-600 mt-0.5 bg-white p-2 rounded border border-slate-200">
+                        {previewArticle.seo_metadata.meta_description}
+                      </p>
+                    </div>
                   )}
                   {previewArticle.seo_metadata.focus_keyword && (
-                    <p className="text-sm text-slate-600">
-                      <span className="font-medium">Focus Keyword:</span> {previewArticle.seo_metadata.focus_keyword}
-                    </p>
+                    <div data-testid="seo-focus-keyword">
+                      <span className="font-medium text-sm text-slate-700">Focus Keyword:</span>
+                      <Badge className="ml-2 bg-blue-50 text-blue-700 border-blue-200">{previewArticle.seo_metadata.focus_keyword}</Badge>
+                    </div>
                   )}
                   {previewArticle.seo_metadata.tags && previewArticle.seo_metadata.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 items-center">
-                      <span className="font-medium text-sm text-slate-600">Tags:</span>
-                      {previewArticle.seo_metadata.tags.map((tag, i) => (
-                        <Badge key={i} variant="outline" className="text-xs">{tag}</Badge>
-                      ))}
+                    <div data-testid="seo-tags">
+                      <span className="font-medium text-sm text-slate-700">Tags:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {previewArticle.seo_metadata.tags.map((tag, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">{tag}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {previewArticle.seo_metadata.categories && previewArticle.seo_metadata.categories.length > 0 && (
+                    <div data-testid="seo-categories">
+                      <span className="font-medium text-sm text-slate-700">Categorie:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {previewArticle.seo_metadata.categories.map((cat, i) => (
+                          <Badge key={i} className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">{cat}</Badge>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {previewArticle.seo_metadata.slug && (
-                    <p className="text-sm text-slate-600 font-mono">
-                      <span className="font-medium font-sans">Slug:</span> /{previewArticle.seo_metadata.slug}
-                    </p>
+                    <div data-testid="seo-slug">
+                      <span className="font-medium text-sm text-slate-700">Slug:</span>
+                      <span className="text-sm text-slate-600 font-mono ml-2">/{previewArticle.seo_metadata.slug}</span>
+                    </div>
                   )}
                 </div>
               )}
               
               {/* WordPress Link if published */}
               {previewArticle.wordpress_link && (
-                <div className="mb-4 p-3 bg-emerald-50 rounded-lg flex items-center justify-between">
+                <div className="mb-4 p-3 bg-emerald-50 rounded-lg flex items-center justify-between" data-testid="wordpress-link-section">
                   <span className="text-sm text-emerald-700">Pubblicato su WordPress</span>
                   <a 
                     href={previewArticle.wordpress_link} 
@@ -467,7 +494,7 @@ export const ArticlesPage = () => {
               
               {/* Publish Error if failed */}
               {previewArticle.publish_error && (
-                <div className="mb-4 p-3 bg-red-50 rounded-lg">
+                <div className="mb-4 p-3 bg-red-50 rounded-lg" data-testid="publish-error-section">
                   <p className="text-sm text-red-700 font-medium">Errore pubblicazione:</p>
                   <p className="text-sm text-red-600">{previewArticle.publish_error}</p>
                 </div>
@@ -477,9 +504,12 @@ export const ArticlesPage = () => {
                 <div 
                   className="article-preview prose max-w-none"
                   dangerouslySetInnerHTML={{ __html: previewArticle.contenuto }}
+                  data-testid="article-content-preview"
                 />
               </ScrollArea>
             </CardContent>
+              </>
+            )}
           </Card>
         </div>
       )}
