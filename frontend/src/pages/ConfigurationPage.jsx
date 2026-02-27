@@ -210,7 +210,8 @@ export const ConfigurationPage = () => {
     try {
       await axios.put(`${API}/clients/${effectiveClientId}/configuration`, {
         wordpress,
-        openai,
+        llm,  // New unified LLM config
+        openai: llm,  // Backward compatibility
         seo,
         tono_e_stile: tono,
         knowledge_base: knowledge,
@@ -225,6 +226,22 @@ export const ConfigurationPage = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Get available models for selected provider
+  const getModelsForProvider = (providerId) => {
+    const provider = LLM_PROVIDERS.find(p => p.id === providerId);
+    return provider ? provider.models : [];
+  };
+
+  // Handle provider change - reset model to first available
+  const handleProviderChange = (newProvider) => {
+    const models = getModelsForProvider(newProvider);
+    setLlm({
+      ...llm,
+      provider: newProvider,
+      modello: models.length > 0 ? models[0].id : ''
+    });
   };
 
   const addToList = (list, setList, field, value, setValue) => {
