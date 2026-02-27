@@ -116,7 +116,8 @@ class KeywordCombinations(BaseModel):
 
 class ClientConfiguration(BaseModel):
     wordpress: Optional[WordPressConfig] = None
-    openai: Optional[OpenAIConfig] = None
+    llm: Optional[LLMConfig] = None  # New unified LLM config
+    openai: Optional[OpenAIConfig] = None  # Backward compatibility
     seo: Optional[SEOConfig] = None
     tono_e_stile: Optional[ToneStyle] = None
     knowledge_base: Optional[KnowledgeBase] = None
