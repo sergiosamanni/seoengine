@@ -241,7 +241,8 @@ export const GeneratorPage = () => {
               
               <div className="space-y-2">
                 <p className="text-sm text-slate-500">Cliente: <span className="text-slate-900 font-medium">{client?.nome}</span></p>
-                <p className="text-sm text-slate-500">Modello: <span className="text-slate-900 font-mono">{client?.configuration?.openai?.modello || 'gpt-4-turbo'}</span></p>
+                <p className="text-sm text-slate-500">Provider: <span className="text-slate-900 font-medium">{providerName}</span></p>
+                <p className="text-sm text-slate-500">Modello: <span className="text-slate-900 font-mono">{llmConfig?.modello || 'gpt-4-turbo'}</span></p>
               </div>
               
               <Button
