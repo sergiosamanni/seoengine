@@ -574,39 +574,74 @@ async def generate_articles(request: ArticleGenerate, current_user: dict = Depen
 
 @api_router.post("/articles/publish")
 async def publish_articles(request: ArticlePublish, current_user: dict = Depends(get_current_user)):
+    """
+    Pubblica articoli su WordPress con supporto per tag, categorie e meta SEO.
+    Include gestione errori robusta e retry automatico.
+    """
     published = []
     failed = []
     
     for article_id in request.article_ids:
         article = await db.articles.find_one({"id": article_id}, {"_id": 0})
         if not article:
-            failed.append({"id": article_id, "error": "Articolo non trovato"})
+            failed.append({
+                "id": article_id, 
+                "error": "Articolo non trovato",
+                "error_code": "NOT_FOUND"
+            })
             continue
         
         if current_user["role"] != "admin" and current_user.get("client_id") != article["client_id"]:
-            failed.append({"id": article_id, "error": "Accesso non autorizzato"})
+            failed.append({
+                "id": article_id, 
+                "error": "Accesso non autorizzato",
+                "error_code": "UNAUTHORIZED"
+            })
             continue
         
         client = await db.clients.find_one({"id": article["client_id"]}, {"_id": 0})
         if not client:
-            failed.append({"id": article_id, "error": "Cliente non trovato"})
+            failed.append({
+                "id": article_id, 
+                "error": "Cliente non trovato",
+                "error_code": "CLIENT_NOT_FOUND"
+            })
             continue
         
         config = client.get("configuration", {})
         wp_config = config.get("wordpress", {})
         
-        if not wp_config.get("url_api") or not wp_config.get("utente") or not wp_config.get("password_applicazione"):
-            failed.append({"id": article_id, "error": "WordPress non configurato"})
+        # Validate WordPress configuration
+        if not wp_config.get("url_api"):
+            failed.append({
+                "id": article_id, 
+                "error": "URL API WordPress non configurato",
+                "error_code": "WP_URL_MISSING"
+            })
+            continue
+            
+        if not wp_config.get("utente") or not wp_config.get("password_applicazione"):
+            failed.append({
+                "id": article_id, 
+                "error": "Credenziali WordPress non configurate",
+                "error_code": "WP_CREDENTIALS_MISSING"
+            })
             continue
         
         try:
-            post_id = await publish_to_wordpress(
+            # Get SEO metadata from article
+            seo_metadata = article.get("seo_metadata", {})
+            
+            # Publish to WordPress with SEO metadata
+            result = await publish_to_wordpress(
                 url=wp_config["url_api"],
                 username=wp_config["utente"],
                 password=wp_config["password_applicazione"],
                 title=article["titolo"],
                 content=article["contenuto"],
-                status=wp_config.get("stato_pubblicazione", "draft")
+                wp_status=wp_config.get("stato_pubblicazione", "draft"),
+                seo_metadata=seo_metadata,
+                tags=seo_metadata.get("tags", [])
             )
             
             now = datetime.now(timezone.utc).isoformat()
@@ -614,18 +649,64 @@ async def publish_articles(request: ArticlePublish, current_user: dict = Depends
                 {"id": article_id},
                 {"$set": {
                     "stato": "published",
-                    "wordpress_post_id": str(post_id),
+                    "wordpress_post_id": str(result["post_id"]),
+                    "wordpress_link": result.get("link"),
+                    "wordpress_slug": result.get("slug"),
                     "published_at": now
                 }}
             )
             
-            published.append({"id": article_id, "wordpress_post_id": post_id})
+            published.append({
+                "id": article_id, 
+                "wordpress_post_id": result["post_id"],
+                "link": result.get("link"),
+                "slug": result.get("slug")
+            })
+            
+            logger.info(f"Article {article_id} published successfully to WordPress (post_id: {result['post_id']})")
             
         except Exception as e:
-            logger.error(f"Error publishing article {article_id}: {e}")
-            failed.append({"id": article_id, "error": str(e)})
+            error_msg = str(e)
+            error_code = "PUBLISH_ERROR"
+            
+            # Categorize error
+            if "401" in error_msg or "Autenticazione" in error_msg:
+                error_code = "WP_AUTH_ERROR"
+            elif "403" in error_msg or "Permessi" in error_msg:
+                error_code = "WP_PERMISSION_ERROR"
+            elif "404" in error_msg or "non trovato" in error_msg.lower():
+                error_code = "WP_ENDPOINT_ERROR"
+            elif "Timeout" in error_msg or "timeout" in error_msg.lower():
+                error_code = "WP_TIMEOUT"
+            elif "Impossibile connettersi" in error_msg:
+                error_code = "WP_CONNECTION_ERROR"
+            
+            logger.error(f"Error publishing article {article_id}: {error_msg}")
+            failed.append({
+                "id": article_id, 
+                "error": error_msg,
+                "error_code": error_code
+            })
+            
+            # Update article state to failed
+            await db.articles.update_one(
+                {"id": article_id},
+                {"$set": {
+                    "stato": "publish_failed",
+                    "publish_error": error_msg,
+                    "publish_error_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
     
-    return {"published": published, "failed": failed}
+    return {
+        "published": published, 
+        "failed": failed,
+        "summary": {
+            "total_requested": len(request.article_ids),
+            "published_count": len(published),
+            "failed_count": len(failed)
+        }
+    }
 
 @api_router.delete("/articles/{article_id}")
 async def delete_article(article_id: str, current_user: dict = Depends(get_current_user)):
