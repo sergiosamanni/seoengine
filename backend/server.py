@@ -651,65 +651,181 @@ async def get_overview_stats(current_user: dict = Depends(get_current_user)):
 
 # ============== HELPER FUNCTIONS ==============
 
-def build_system_prompt(kb: dict, tone: dict, seo: dict, client_name: str) -> str:
+def build_system_prompt(kb: dict, tone: dict, seo: dict, client_name: str, advanced_prompt: dict = None) -> str:
+    """
+    Costruisce un prompt di sistema completo per la generazione di articoli SEO.
+    Basato sulla logica del notebook SEO_Batch_MultiCliente.
+    """
     lingua = seo.get("lingua", "italiano")
     lunghezza = seo.get("lunghezza_minima_parole", 1500)
+    include_faq = seo.get("include_faq_in_fondo", False)
+    
+    # Tone and style parameters
     registro = tone.get("registro", "professionale_accessibile")
     persona = tone.get("persona_narrativa", "seconda_singolare")
     tono_desc = tone.get("descrizione_tono_libera", "")
-    aggettivi = ", ".join(tone.get("aggettivi_brand", []))
-    parole_vietate = ", ".join(tone.get("parole_vietate", []))
-    frasi_vietate = ", ".join(tone.get("frasi_vietate", []))
+    aggettivi = tone.get("aggettivi_brand", [])
+    parole_vietate = tone.get("parole_vietate", [])
+    frasi_vietate = tone.get("frasi_vietate", [])
     
+    # Knowledge base parameters
     descrizione = kb.get("descrizione_attivita", "")
     storia = kb.get("storia_brand", "")
     citta = kb.get("citta_principale", "")
     regione = kb.get("regione", "")
     territorio = kb.get("descrizione_geografica", "")
-    punti_interesse = ", ".join(kb.get("punti_di_interesse_locali", []))
-    punti_forza = "\n- ".join(kb.get("punti_di_forza", []))
+    punti_interesse = kb.get("punti_di_interesse_locali", [])
+    punti_forza = kb.get("punti_di_forza", [])
     target_primario = kb.get("pubblico_target_primario", "")
+    target_secondario = kb.get("pubblico_target_secondario", "")
     cta = kb.get("call_to_action_principale", "")
     
-    prompt = f"""Rispondi ESCLUSIVAMENTE in {lingua}. Sei un esperto copywriter SEO specializzato in contenuti ottimizzati per i motori di ricerca.
+    # Build persona instruction
+    persona_map = {
+        "seconda_singolare": "Usa sempre la seconda persona singolare (tu, il tuo, ti)",
+        "prima_plurale": "Usa sempre la prima persona plurale (noi, il nostro, ci)",
+        "terza_neutrale": "Usa uno stile impersonale e neutro (si consiglia, è possibile)"
+    }
+    persona_instruction = persona_map.get(persona, persona_map["seconda_singolare"])
+    
+    # Build registro description
+    registro_map = {
+        "formale": "Mantieni un tono formale e istituzionale, adatto a un contesto professionale",
+        "professionale_accessibile": "Sii professionale ma accessibile, evita tecnicismi eccessivi",
+        "amichevole_conversazionale": "Usa un tono amichevole e conversazionale, come parlare con un amico",
+        "entusiasta_coinvolgente": "Sii entusiasta e coinvolgente, trasmetti energia e motivazione",
+        "autorevole_tecnico": "Mantieni un tono autorevole e tecnico, mostra competenza nel settore"
+    }
+    registro_desc = registro_map.get(registro, registro_map["professionale_accessibile"])
+    
+    # Build the comprehensive system prompt
+    prompt = f"""RUOLO: Sei un esperto copywriter SEO italiano specializzato in contenuti ottimizzati per i motori di ricerca. Scrivi ESCLUSIVAMENTE in {lingua}.
 
+=== IDENTITÀ DEL BRAND ===
 AZIENDA: {client_name}
 {descrizione}
-{storia}
 
-TERRITORIO:
-- Città principale: {citta}, {regione}
-- Descrizione: {territorio}
-- Punti di interesse: {punti_interesse}
+STORIA: {storia}
 
-PUNTI DI FORZA:
-- {punti_forza}
+TARGET PRIMARIO: {target_primario}
+TARGET SECONDARIO: {target_secondario}
 
-TARGET: {target_primario}
+=== TERRITORIO E LOCALIZZAZIONE ===
+- Città principale: {citta}
+- Regione: {regione}
+- Descrizione territorio: {territorio}
+- Punti di interesse locali: {', '.join(punti_interesse) if punti_interesse else 'N/A'}
 
-STILE E TONO:
-- Registro: {registro}
-- Persona narrativa: {persona}
-- {tono_desc}
-- Aggettivi del brand da far emergere: {aggettivi}
+Quando scrivi, menziona dettagli locali specifici per rafforzare la rilevanza geografica.
 
-REGOLE DI SCRITTURA:
-1. Output SOLO in formato HTML, inizia direttamente con il tag <h1>
-2. Lunghezza minima: {lunghezza} parole
-3. Usa intestazioni (h2, h3), elenchi puntati e paragrafi di 200-250 parole
-4. Parole da EVITARE: {parole_vietate}
-5. Frasi da EVITARE: {frasi_vietate}
-6. NON iniziare MAI con frasi generiche tipo "Certo", "Posso aiutarti"
-7. Usa frasi brevi e voce attiva
-8. Metti in grassetto 2-3 parole significative per paragrafo
-9. Includi parole chiave naturalmente nel testo
-10. Spiega i termini tecnici in modo semplice
+=== PUNTI DI FORZA DA EVIDENZIARE ===
+{chr(10).join(['• ' + p for p in punti_forza]) if punti_forza else '• Qualità del servizio'}
 
-CALL TO ACTION: {cta}
+=== TONO E STILE ===
+REGISTRO: {registro_desc}
+PERSONA NARRATIVA: {persona_instruction}
+{f'ISTRUZIONI AGGIUNTIVE: {tono_desc}' if tono_desc else ''}
+AGGETTIVI DEL BRAND: {', '.join(aggettivi) if aggettivi else 'professionale, affidabile, esperto'}
 
-Genera un articolo SEO completo e dettagliato basato sul titolo fornito."""
+=== DIVIETI ASSOLUTI ===
+PAROLE VIETATE: {', '.join(parole_vietate) if parole_vietate else 'Nessuna restrizione specifica'}
+FRASI VIETATE: {', '.join(frasi_vietate) if frasi_vietate else 'Nessuna restrizione specifica'}
+
+NON usare MAI:
+- Frasi generiche come "Certo!", "Ecco qui", "Posso aiutarti"
+- Linguaggio troppo promozionale o superlativo senza sostanza
+- Riferimenti diretti ai competitor
+
+=== STRUTTURA HTML RICHIESTA ===
+Output SOLO in formato HTML valido. Inizia SEMPRE con <h1>.
+
+Struttura obbligatoria:
+1. <h1> - Titolo principale SEO ottimizzato con la keyword target
+2. <p> - Paragrafo introduttivo accattivante (150-200 parole)
+3. <h2> - Sezioni principali (almeno 3-4)
+4. <h3> - Sottosezioni per approfondimenti
+5. <ul><li> - Elenchi puntati per caratteristiche e vantaggi
+6. <strong> - Evidenzia 2-3 parole chiave per paragrafo
+7. <p> finale con call to action
+
+{'8. <h2>Domande Frequenti</h2> con 3-5 FAQ rilevanti in formato <h3>Domanda</h3><p>Risposta</p>' if include_faq else ''}
+
+=== REGOLE SEO TECNICHE ===
+1. LUNGHEZZA: Minimo {lunghezza} parole
+2. PARAGRAFI: 200-250 parole ciascuno, mai blocchi troppo lunghi
+3. KEYWORD: Inserisci la keyword principale nel titolo H1, nei primi 100 caratteri, in almeno un H2
+4. KEYWORD DENSITY: Usa la keyword 1-2 volte per paragrafo, in modo naturale
+5. LOCALIZZAZIONE: Menziona la città/zona target almeno 3-4 volte
+6. SEMANTICA: Usa sinonimi e termini correlati per ampliare la copertura semantica
+7. LEGGIBILITÀ: Frasi brevi (max 20-25 parole), forma attiva, linguaggio diretto
+8. TECNICISMI: Spiega sempre i termini tecnici in modo semplice tra parentesi
+
+=== CALL TO ACTION ===
+{cta if cta else 'Contattaci per maggiori informazioni'}
+
+Inserisci la CTA in modo naturale nel paragrafo conclusivo.
+"""
+
+    # Add advanced prompt if provided (secondo livello)
+    if advanced_prompt:
+        secondo_livello = advanced_prompt.get("secondo_livello_prompt", "")
+        keyword_template = advanced_prompt.get("keyword_injection_template", "")
+        
+        if secondo_livello:
+            prompt += f"\n=== ISTRUZIONI AVANZATE ===\n{secondo_livello}\n"
+        
+        if keyword_template:
+            prompt += f"\n=== TEMPLATE KEYWORD ===\n{keyword_template}\n"
+
+    prompt += "\n=== ISTRUZIONE FINALE ===\nGenera un articolo SEO completo, dettagliato e ottimizzato basato sul titolo fornito. L'articolo deve essere pronto per la pubblicazione su WordPress."
 
     return prompt
+
+
+def generate_seo_metadata(title: str, content: str, kb: dict, combination: dict) -> dict:
+    """
+    Genera metadati SEO per l'articolo: meta description, tags, slug.
+    """
+    cta = kb.get("call_to_action_principale", "")
+    citta = kb.get("citta_principale", "")
+    
+    # Generate meta description (max 160 chars)
+    meta_desc = f"{title}. {cta}"[:155] + "..." if len(f"{title}. {cta}") > 155 else f"{title}. {cta}"
+    
+    # Generate tags from combination and knowledge base
+    tags = []
+    if combination.get("servizio"):
+        tags.append(combination["servizio"])
+    if combination.get("citta"):
+        tags.append(combination["citta"])
+    if combination.get("tipo"):
+        tags.append(combination["tipo"])
+    if citta:
+        tags.append(citta)
+    
+    # Add additional tags from knowledge base
+    punti_forza = kb.get("punti_di_forza", [])
+    if punti_forza:
+        tags.extend(punti_forza[:2])  # Add first 2 strengths as tags
+    
+    # Generate slug from title
+    import re
+    slug = title.lower()
+    slug = re.sub(r'[àáâãäå]', 'a', slug)
+    slug = re.sub(r'[èéêë]', 'e', slug)
+    slug = re.sub(r'[ìíîï]', 'i', slug)
+    slug = re.sub(r'[òóôõö]', 'o', slug)
+    slug = re.sub(r'[ùúûü]', 'u', slug)
+    slug = re.sub(r'[^a-z0-9\s-]', '', slug)
+    slug = re.sub(r'[\s]+', '-', slug)
+    slug = slug[:100]  # Limit slug length
+    
+    return {
+        "meta_description": meta_desc,
+        "tags": list(set(tags)),  # Remove duplicates
+        "slug": slug,
+        "focus_keyword": f"{combination.get('servizio', '')} {combination.get('citta', '')}".strip()
+    }
 
 # LLM Provider configurations
 LLM_PROVIDERS = {
