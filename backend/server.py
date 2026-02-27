@@ -1957,8 +1957,8 @@ async def get_all_activity_logs(limit: int = 100, current_user: dict = Depends(g
 @api_router.post("/articles/generate-and-publish")
 async def generate_and_publish_articles(request: ArticleGenerateAndPublish, current_user: dict = Depends(get_current_user)):
     """
-    Genera articoli SEO e li pubblica direttamente su WordPress in un unico step.
-    Logga ogni operazione nell'activity log.
+    Avvia un job asincrono per generare e pubblicare articoli.
+    Restituisce subito un job_id. Il frontend fa polling su /api/jobs/{job_id}.
     """
     if current_user["role"] != "admin" and current_user.get("client_id") != request.client_id:
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
@@ -1978,6 +1978,33 @@ async def generate_and_publish_articles(request: ArticleGenerateAndPublish, curr
         if not wp_config.get("url_api") or not wp_config.get("utente") or not wp_config.get("password_applicazione"):
             raise HTTPException(status_code=400, detail="Credenziali WordPress non configurate. Vai su Configurazione > API Keys.")
     
+    # Create job
+    job_id = str(uuid.uuid4())
+    job_doc = {
+        "id": job_id,
+        "client_id": request.client_id,
+        "status": "running",
+        "total": len(request.combinations),
+        "completed": 0,
+        "results": [],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.jobs.insert_one(job_doc)
+    
+    # Launch background task
+    asyncio.create_task(_run_generate_and_publish(
+        job_id, request.client_id, request.combinations,
+        request.publish_to_wordpress, client_doc
+    ))
+    
+    return {"job_id": job_id, "status": "running", "total": len(request.combinations)}
+
+
+async def _run_generate_and_publish(job_id: str, client_id: str, combinations: list, publish_to_wp: bool, client_doc: dict):
+    """Background task that generates and publishes articles."""
+    config = client_doc.get("configuration", {})
+    llm_config = config.get("llm", {}) or config.get("openai", {})
+    wp_config = config.get("wordpress", {})
     provider = llm_config.get("provider", "openai")
     kb = config.get("knowledge_base", {})
     tone = config.get("tono_e_stile", {})
@@ -1987,14 +2014,15 @@ async def generate_and_publish_articles(request: ArticleGenerateAndPublish, curr
     
     results = []
     
-    await log_activity(request.client_id, "batch_start", "running", {
-        "total_combinations": len(request.combinations),
+    await log_activity(client_id, "batch_start", "running", {
+        "job_id": job_id,
+        "total_combinations": len(combinations),
         "provider": provider,
         "model": llm_config.get("modello"),
-        "publish_to_wordpress": request.publish_to_wordpress
+        "publish_to_wordpress": publish_to_wp
     })
     
-    for idx, combo in enumerate(request.combinations):
+    for idx, combo in enumerate(combinations):
         titolo = f"{combo['servizio']} {combo['tipo']} a {combo['citta']}"
         titolo_formatted = titolo.title()
         article_result = {
@@ -2004,9 +2032,8 @@ async def generate_and_publish_articles(request: ArticleGenerateAndPublish, curr
             "publish_status": "pending"
         }
         
-        # Step 1: Generate with LLM
-        await log_activity(request.client_id, "article_generate", "running", {
-            "titolo": titolo_formatted, "step": f"{idx+1}/{len(request.combinations)}"
+        await log_activity(client_id, "article_generate", "running", {
+            "titolo": titolo_formatted, "step": f"{idx+1}/{len(combinations)}"
         })
         
         content = None
@@ -2033,7 +2060,7 @@ async def generate_and_publish_articles(request: ArticleGenerateAndPublish, curr
         
         if not content:
             article_doc = {
-                "id": article_id, "client_id": request.client_id,
+                "id": article_id, "client_id": client_id,
                 "titolo": titolo_formatted, "contenuto": f"Errore: {gen_error}",
                 "stato": "failed", "wordpress_post_id": None,
                 "created_at": now, "published_at": None, "combination": combo
@@ -2043,16 +2070,16 @@ async def generate_and_publish_articles(request: ArticleGenerateAndPublish, curr
             article_result["generation_status"] = "failed"
             article_result["generation_error"] = gen_error
             article_result["publish_status"] = "skipped"
-            await log_activity(request.client_id, "article_generate", "failed", {
+            await log_activity(client_id, "article_generate", "failed", {
                 "titolo": titolo_formatted, "error": gen_error
             })
             results.append(article_result)
+            await db.jobs.update_one({"id": job_id}, {"$set": {"completed": idx + 1, "results": results}})
             continue
         
-        # Generation succeeded
         seo_metadata = generate_seo_metadata(titolo_formatted, content, kb, combo)
         article_doc = {
-            "id": article_id, "client_id": request.client_id,
+            "id": article_id, "client_id": client_id,
             "titolo": titolo_formatted, "contenuto": content,
             "stato": "generated", "wordpress_post_id": None,
             "created_at": now, "published_at": None,
@@ -2063,18 +2090,16 @@ async def generate_and_publish_articles(request: ArticleGenerateAndPublish, curr
         article_result["generation_status"] = "success"
         article_result["seo_metadata"] = seo_metadata
         
-        await log_activity(request.client_id, "article_generate", "success", {
+        await log_activity(client_id, "article_generate", "success", {
             "titolo": titolo_formatted, "article_id": article_id,
             "word_count": len(content.split())
         })
         
-        # Step 2: Publish to WordPress
-        if request.publish_to_wordpress:
-            await log_activity(request.client_id, "wordpress_publish", "running", {
+        if publish_to_wp:
+            await log_activity(client_id, "wordpress_publish", "running", {
                 "titolo": titolo_formatted, "article_id": article_id,
                 "wp_url": wp_config["url_api"]
             })
-            
             try:
                 wp_result = await publish_to_wordpress(
                     url=wp_config["url_api"],
@@ -2086,7 +2111,6 @@ async def generate_and_publish_articles(request: ArticleGenerateAndPublish, curr
                     seo_metadata=seo_metadata,
                     tags=seo_metadata.get("tags", [])
                 )
-                
                 await db.articles.update_one(
                     {"id": article_id},
                     {"$set": {
@@ -2100,13 +2124,11 @@ async def generate_and_publish_articles(request: ArticleGenerateAndPublish, curr
                 article_result["publish_status"] = "success"
                 article_result["wordpress_post_id"] = wp_result["post_id"]
                 article_result["wordpress_link"] = wp_result.get("link")
-                
-                await log_activity(request.client_id, "wordpress_publish", "success", {
+                await log_activity(client_id, "wordpress_publish", "success", {
                     "titolo": titolo_formatted, "article_id": article_id,
                     "post_id": wp_result["post_id"], "link": wp_result.get("link")
                 })
                 logger.info(f"Article '{titolo_formatted}' generated and published (WP post_id: {wp_result['post_id']})")
-                
             except Exception as e:
                 pub_error = str(e)
                 await db.articles.update_one(
@@ -2115,8 +2137,7 @@ async def generate_and_publish_articles(request: ArticleGenerateAndPublish, curr
                 )
                 article_result["publish_status"] = "failed"
                 article_result["publish_error"] = pub_error
-                
-                await log_activity(request.client_id, "wordpress_publish", "failed", {
+                await log_activity(client_id, "wordpress_publish", "failed", {
                     "titolo": titolo_formatted, "article_id": article_id, "error": pub_error
                 })
                 logger.error(f"Failed to publish '{titolo_formatted}' to WP: {pub_error}")
@@ -2124,31 +2145,44 @@ async def generate_and_publish_articles(request: ArticleGenerateAndPublish, curr
             article_result["publish_status"] = "skipped"
         
         results.append(article_result)
+        await db.jobs.update_one({"id": job_id}, {"$set": {"completed": idx + 1, "results": results}})
     
-    # Summary
     gen_ok = len([r for r in results if r["generation_status"] == "success"])
     pub_ok = len([r for r in results if r["publish_status"] == "success"])
     
-    await log_activity(request.client_id, "batch_complete", "success", {
+    await log_activity(client_id, "batch_complete", "success", {
         "total": len(results), "generated": gen_ok, "published": pub_ok
     })
     
     await db.clients.update_one(
-        {"id": request.client_id},
+        {"id": client_id},
         {"$set": {"ultimo_run": datetime.now(timezone.utc).isoformat()}}
     )
     
-    return {
+    await db.jobs.update_one({"id": job_id}, {"$set": {
+        "status": "completed",
+        "completed": len(results),
         "results": results,
         "summary": {
-            "total": len(results),
-            "generated_ok": gen_ok,
+            "total": len(results), "generated_ok": gen_ok,
             "generated_failed": len(results) - gen_ok,
             "published_ok": pub_ok,
             "published_failed": len([r for r in results if r["publish_status"] == "failed"]),
             "published_skipped": len([r for r in results if r["publish_status"] == "skipped"])
-        }
-    }
+        },
+        "finished_at": datetime.now(timezone.utc).isoformat()
+    }})
+
+
+@api_router.get("/jobs/{job_id}")
+async def get_job_status(job_id: str, current_user: dict = Depends(get_current_user)):
+    """Restituisce lo stato di un job di generazione/pubblicazione."""
+    job = await db.jobs.find_one({"id": job_id}, {"_id": 0})
+    if not job:
+        raise HTTPException(status_code=404, detail="Job non trovato")
+    if current_user["role"] != "admin" and current_user.get("client_id") != job.get("client_id"):
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    return job
 
 # ============== MAIN APP ==============
 
