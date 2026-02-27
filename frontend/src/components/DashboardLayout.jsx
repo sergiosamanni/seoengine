@@ -11,7 +11,8 @@ import {
   Zap,
   PenTool,
   History,
-  ChevronRight
+  ChevronRight,
+  Activity
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { ScrollArea } from '../components/ui/scroll-area';
@@ -22,6 +23,7 @@ const adminNavItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/clients', icon: Users, label: 'Clienti' },
   { path: '/articles', icon: FileText, label: 'Articoli' },
+  { path: '/activity', icon: Activity, label: 'Activity Log' },
 ];
 
 const clientNavItems = [
