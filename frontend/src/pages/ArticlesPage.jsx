@@ -357,7 +357,7 @@ export const ArticlesPage = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setPreviewArticle(article)}>
+                          <DropdownMenuItem onClick={() => loadArticlePreview(article.id)}>
                             <Eye className="w-4 h-4 mr-2" />
                             Anteprima
                           </DropdownMenuItem>
