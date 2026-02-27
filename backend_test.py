@@ -222,6 +222,81 @@ class SEOEngineAPITester:
             print(f"   Generated {len(response['articles'])} articles")
         return success
 
+    def test_verify_admin_password(self):
+        """Test admin master password verification"""
+        # Test with correct password
+        success, response = self.run_test(
+            "Verify Admin Password (Correct)",
+            "POST",
+            "verify-admin-password",
+            200,
+            data={"password": "seo_admin_2024"}
+        )
+        if success and response.get('valid'):
+            print("   ✅ Master password verification successful")
+        
+        # Test with wrong password
+        success2, response2 = self.run_test(
+            "Verify Admin Password (Wrong)",
+            "POST", 
+            "verify-admin-password",
+            200,
+            data={"password": "wrong_password"}
+        )
+        if success2 and not response2.get('valid'):
+            print("   ✅ Correctly rejected wrong password")
+            
+        return success and response.get('valid') and success2 and not response2.get('valid')
+
+    def test_verify_prompt_password(self):
+        """Test client prompt password verification"""
+        # Test with master password (should always work)
+        success, response = self.run_test(
+            "Verify Prompt Password (Master)",
+            "POST",
+            "verify-prompt-password", 
+            200,
+            data={"password": "seo_admin_2024", "client_id": self.client_id}
+        )
+        if success and response.get('valid'):
+            print("   ✅ Master password works for prompt access")
+        return success and response.get('valid')
+
+    def test_advanced_prompt_update(self):
+        """Test updating advanced prompt with password"""
+        prompt_data = {
+            "password": "seo_admin_2024",
+            "secondo_livello_prompt": "Test advanced prompt for article generation {keyword}",
+            "keyword_injection_template": "Strategically use {keyword} in the content",
+            "prompt_password": "client_password_123"
+        }
+        
+        success, response = self.run_test(
+            "Update Advanced Prompt",
+            "PUT",
+            f"clients/{self.client_id}/advanced-prompt",
+            200,
+            data=prompt_data
+        )
+        return success
+
+    def test_serp_analysis_no_api_key(self):
+        """Test SERP analysis without Apify API key (should fail gracefully)"""
+        serp_data = {
+            "keyword": "test keyword",
+            "country": "it",
+            "num_results": 4
+        }
+        
+        success, response = self.run_test(
+            "SERP Analysis (No API Key)",
+            "POST", 
+            f"clients/{self.client_id}/serp-analysis",
+            400,  # Should fail with 400 due to missing API key
+            data=serp_data
+        )
+        return success
+
 def main():
     """Run all backend API tests"""
     tester = SEOEngineAPITester()
