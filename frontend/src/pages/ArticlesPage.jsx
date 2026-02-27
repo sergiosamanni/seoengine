@@ -167,6 +167,8 @@ export const ArticlesPage = () => {
         return <Badge className="bg-amber-50 text-amber-700 border-amber-200">Generato</Badge>;
       case 'published':
         return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">Pubblicato</Badge>;
+      case 'publish_failed':
+        return <Badge className="bg-red-50 text-red-700 border-red-200">Pubblicazione Fallita</Badge>;
       case 'failed':
         return <Badge className="bg-red-50 text-red-700 border-red-200">Errore</Badge>;
       default:
