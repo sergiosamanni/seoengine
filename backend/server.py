@@ -435,10 +435,15 @@ async def generate_articles(request: ArticleGenerate, current_user: dict = Depen
         raise HTTPException(status_code=404, detail="Cliente non trovato")
     
     config = client.get("configuration", {})
-    openai_config = config.get("openai", {})
     
-    if not openai_config.get("api_key"):
-        raise HTTPException(status_code=400, detail="API Key OpenAI non configurata")
+    # Support both new llm config and legacy openai config
+    llm_config = config.get("llm", {}) or config.get("openai", {})
+    
+    if not llm_config.get("api_key"):
+        raise HTTPException(status_code=400, detail="API Key LLM non configurata. Configura OpenAI, Claude, DeepSeek o Perplexity.")
+    
+    # Get provider (default to openai for backward compatibility)
+    provider = llm_config.get("provider", "openai")
     
     # Build system prompt from configuration
     kb = config.get("knowledge_base", {})
@@ -454,10 +459,11 @@ async def generate_articles(request: ArticleGenerate, current_user: dict = Depen
         titolo_formatted = titolo.title()
         
         try:
-            content = await generate_with_openai(
-                api_key=openai_config["api_key"],
-                model=openai_config.get("modello", "gpt-4-turbo-preview"),
-                temperature=openai_config.get("temperatura", 0.7),
+            content = await generate_with_llm(
+                provider=provider,
+                api_key=llm_config["api_key"],
+                model=llm_config.get("modello", "gpt-4-turbo-preview"),
+                temperature=llm_config.get("temperatura", 0.7),
                 system_prompt=system_prompt,
                 user_prompt=titolo_formatted
             )
