@@ -1,126 +1,76 @@
-# Programmatic SEO Engine - PRD
+# SEO Engine - PRD (Product Requirements Document)
 
-## Data: 27 Febbraio 2026
+## Problema Originale
+Trasformare script Python per la SEO programmatica in un'applicazione web completa multi-tenant con generazione di articoli, pubblicazione su WordPress e analisi SERP.
 
-## Problem Statement Originale
-Trasformare script Python esistenti (che gestiscono file .json) in applicazioni web interattive per SEO programmatico. Il sistema deve:
-- Gestire un registry multi-cliente con configurazioni JSON complete
-- Generare articoli SEO con OpenAI GPT-4 basati su combinazioni di servizi/città/tipi
-- Pubblicare articoli come bozze su WordPress
-- Sistema multi-tenant: Admin vede tutti, Cliente vede solo la sua area
+## Architettura
+- **Backend**: FastAPI + MongoDB (Motor/Beanie)
+- **Frontend**: React + TailwindCSS + Shadcn/UI
+- **Auth**: JWT con ruoli Admin/Client
 
-## Scelte Utente
-- Backend Python diretto (no Google Colab/Google Drive)
-- MongoDB per storage JSON e configurazioni
-- Ogni cliente ha la propria API key OpenAI
-- Accesso centralizzato admin + accesso cliente dedicato
+## Funzionalita Implementate
 
-## Architettura Implementata
+### Core
+- [x] Architettura multi-tenant (Admin + Client)
+- [x] Login/Auth JWT con ruoli
+- [x] Dashboard Admin con statistiche
+- [x] Dashboard Cliente dedicata
+- [x] Gestione Clienti (CRUD)
 
-### Backend (FastAPI + MongoDB)
-- **Auth JWT** con ruoli admin/client
-- **Collections**: users, clients, articles
-- **Endpoints**:
-  - `/api/auth/*` - login, register, me
-  - `/api/clients/*` - CRUD clienti
-  - `/api/clients/{id}/configuration` - configurazione completa
-  - `/api/clients/{id}/combinations` - preview combinazioni keyword
-  - `/api/articles/*` - CRUD articoli
-  - `/api/articles/generate` - generazione con OpenAI
-  - `/api/articles/publish` - pubblicazione WordPress
-  - `/api/stats/overview` - statistiche dashboard
-  - `/api/users/*` - gestione utenti e assegnazione clienti
+### Configurazione Cliente (6 Tab)
+- [x] API Keys (LLM multi-provider + WordPress + Apify)
+- [x] Knowledge Base (info azienda, territorio, target)
+- [x] Tono & Stile (registro, persona narrativa, parole vietate)
+- [x] Keywords (servizi, citta, tipi + upload XLSX)
+- [x] Analisi SERP (integrazione Apify)
+- [x] Prompt Avanzato (protetto da password)
 
-### Frontend (React + Shadcn/UI)
-- **Login Page**: split layout con features + auth form
-- **Dashboard Admin**: stats globali, clienti recenti
-- **Dashboard Cliente**: stats personali, quick actions
-- **Gestione Clienti**: tabella, CRUD, assegnazione utenti
-- **Configurazione**: 4 tab (API Keys, Knowledge Base, Tono & Stile, Keywords)
-- **Generatore Articoli**: selezione combinazioni, preview, generazione batch
-- **Storico Articoli**: tabella, filtri, anteprima, pubblicazione bulk
+### Generazione Contenuti
+- [x] Supporto multi-LLM (OpenAI, Claude, DeepSeek, Perplexity)
+- [x] Generazione articoli SEO con metadati
+- [x] Metadati SEO: meta description, tags, slug, focus keyword
+- [x] Anteprima articoli con tutti i metadati SEO
 
-## User Personas
+### Pubblicazione
+- [x] Integrazione WordPress REST API
+- [x] Pubblicazione con tag, categorie, Yoast/RankMath meta
+- [x] Gestione errori e retry automatico
 
-### Admin SEO Agency
-- Gestisce multipli clienti
-- Configura knowledge base e keyword per ogni cliente
-- Monitora generazione e pubblicazione articoli
-- Accesso completo a tutte le funzionalità
-
-### Cliente (Proprietario Business)
-- Vede solo i propri dati
-- Gestisce la propria configurazione
-- Genera articoli per il proprio sito
-- Pubblica su WordPress personale
-
-## Funzionalità Implementate
-
-### P0 - Core (Completato)
-- [x] Sistema autenticazione multi-tenant
-- [x] Dashboard admin con overview clienti
-- [x] Dashboard cliente con stats personali
-- [x] CRUD clienti con tabella e ricerca
-- [x] Configurazione completa (LLM multi-provider, WordPress, SEO, Tono, Knowledge Base, Keywords)
-- [x] **Supporto multi-LLM: OpenAI, Claude (Anthropic), DeepSeek, Perplexity**
-- [x] Generatore combinazioni keyword automatico
-- [x] Selezione combinazioni per generazione
-- [x] Generazione articoli con API LLM selezionato
+### Storico
+- [x] Storico sessioni SEO con snapshot configurazione
 - [x] Storico articoli con filtri
-- [x] Anteprima articoli HTML
-- [x] Pubblicazione articoli su WordPress
 
-### P0.5 - Funzionalità Avanzate (Completato)
-- [x] **Area Amministratore Protetta**: Password master (seo_admin_2024) per accesso avanzato
-- [x] **Prompt di Secondo Livello**: Editor prompt avanzato con template keyword injection
-- [x] **Password Cliente**: Admin può impostare password specifiche per ogni cliente
-- [x] **Integrazione Apify**: SERP scraping dei primi 4 risultati Google per keyword target
-- [x] **Upload XLSX**: Import automatico keyword da file Excel con detect colonne
-- [x] **Merge/Replace Mode**: Scelta tra aggiungere o sostituire keyword esistenti
+### Refactoring (27 Feb 2026)
+- [x] ConfigurationPage.jsx suddiviso in 6 sotto-componenti
+- [x] Fix bug anteprima articoli (SEO metadata non caricati)
 
-### P1 - In Backlog
-- [ ] Import/Export configurazione JSON
-- [ ] Schedulazione generazione automatica
-- [ ] Template prompt personalizzabili
-- [ ] Analytics articoli (performance SEO)
-- [ ] Integrazione Google Search Console
+## Credenziali Test
+- Admin: admin@seoengine.it / admin123
+- Client: cliente@noleggiosalerno.it
+- Password prompt avanzato: seo_admin_2024
 
-### P2 - Future
-- [ ] Multi-language support
-- [ ] A/B testing titoli
-- [ ] AI image generation per articoli
-- [ ] Dashboard analytics avanzata
+## Struttura File
+```
+backend/
+  server.py          # API FastAPI completa
+frontend/src/
+  pages/
+    ArticlesPage.jsx
+    ClientsPage.jsx
+    ConfigurationPage.jsx      # Orchestratore tab
+    configuration/
+      ApiKeysTab.jsx
+      KnowledgeBaseTab.jsx
+      ToneStyleTab.jsx
+      KeywordsTab.jsx
+      SerpAnalysisTab.jsx
+      AdvancedPromptTab.jsx
+    DashboardPage.jsx
+    GeneratorPage.jsx
+    LoginPage.jsx
+    SessionHistoryPage.jsx
+```
 
-## Credenziali Demo
-
-### Admin
-- Email: admin@seoengine.it
-- Password: admin123
-
-### Cliente Demo
-- Email: cliente@noleggiosalerno.it
-- Password: cliente123
-- Cliente: Noleggio Auto Salerno
-
-## File Principali
-
-### Backend
-- `/app/backend/server.py` - API FastAPI completa
-- `/app/backend/.env` - Configurazione MongoDB
-
-### Frontend
-- `/app/frontend/src/App.js` - Router e auth provider
-- `/app/frontend/src/contexts/AuthContext.jsx` - Gestione auth
-- `/app/frontend/src/pages/LoginPage.jsx` - Login/Register
-- `/app/frontend/src/pages/DashboardPage.jsx` - Dashboard
-- `/app/frontend/src/pages/ClientsPage.jsx` - Gestione clienti
-- `/app/frontend/src/pages/ConfigurationPage.jsx` - Configurazione completa
-- `/app/frontend/src/pages/GeneratorPage.jsx` - Generatore articoli
-- `/app/frontend/src/pages/ArticlesPage.jsx` - Storico articoli
-- `/app/frontend/src/components/DashboardLayout.jsx` - Layout sidebar
-
-## Next Action Items
-1. Implementare import/export JSON configurazione
-2. Aggiungere preview articolo prima della generazione
-3. Implementare schedulazione batch
-4. Dashboard analytics con metriche SEO
+## Backlog
+- Nessun task pendente definito
+- Possibili miglioramenti futuri: analytics dettagliata, A/B testing contenuti, integrazione Google Search Console
