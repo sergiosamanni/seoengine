@@ -463,6 +463,10 @@ async def get_article(article_id: str, current_user: dict = Depends(get_current_
 
 @api_router.post("/articles/generate")
 async def generate_articles(request: ArticleGenerate, current_user: dict = Depends(get_current_user)):
+    """
+    Genera articoli SEO basati sulle combinazioni di keyword.
+    Include metadati SEO: meta description, tags, slug.
+    """
     if current_user["role"] != "admin" and current_user.get("client_id") != request.client_id:
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     
@@ -485,8 +489,10 @@ async def generate_articles(request: ArticleGenerate, current_user: dict = Depen
     kb = config.get("knowledge_base", {})
     tone = config.get("tono_e_stile", {})
     seo = config.get("seo", {})
+    advanced_prompt = config.get("advanced_prompt", {})
     
-    system_prompt = build_system_prompt(kb, tone, seo, client["nome"])
+    # Build comprehensive system prompt
+    system_prompt = build_system_prompt(kb, tone, seo, client["nome"], advanced_prompt)
     
     generated_articles = []
     
@@ -494,15 +500,31 @@ async def generate_articles(request: ArticleGenerate, current_user: dict = Depen
         titolo = f"{combo['servizio']} {combo['tipo']} a {combo['citta']}"
         titolo_formatted = titolo.title()
         
-        try:
-            content = await generate_with_llm(
-                provider=provider,
-                api_key=llm_config["api_key"],
-                model=llm_config.get("modello", "gpt-4-turbo-preview"),
-                temperature=llm_config.get("temperatura", 0.7),
-                system_prompt=system_prompt,
-                user_prompt=titolo_formatted
-            )
+        # Retry logic for LLM generation
+        max_retries = 3
+        content = None
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                content = await generate_with_llm(
+                    provider=provider,
+                    api_key=llm_config["api_key"],
+                    model=llm_config.get("modello", "gpt-4-turbo-preview"),
+                    temperature=llm_config.get("temperatura", 0.7),
+                    system_prompt=system_prompt,
+                    user_prompt=titolo_formatted
+                )
+                break  # Success, exit retry loop
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Generation attempt {attempt + 1} failed: {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
+        
+        if content:
+            # Generate SEO metadata
+            seo_metadata = generate_seo_metadata(titolo_formatted, content, kb, combo)
             
             article_id = str(uuid.uuid4())
             now = datetime.now(timezone.utc).isoformat()
@@ -516,18 +538,39 @@ async def generate_articles(request: ArticleGenerate, current_user: dict = Depen
                 "wordpress_post_id": None,
                 "created_at": now,
                 "published_at": None,
-                "combination": combo
+                "combination": combo,
+                # SEO Metadata
+                "seo_metadata": seo_metadata
             }
             
             await db.articles.insert_one(article_doc)
-            generated_articles.append(ArticleResponse(**article_doc))
+            generated_articles.append(ArticleResponse(**{k: v for k, v in article_doc.items() if k != 'seo_metadata'}))
             
-        except Exception as e:
-            logger.error(f"Error generating article: {e}")
+        else:
+            logger.error(f"Error generating article after {max_retries} attempts: {last_error}")
             article_id = str(uuid.uuid4())
             now = datetime.now(timezone.utc).isoformat()
             
             article_doc = {
+                "id": article_id,
+                "client_id": request.client_id,
+                "titolo": titolo_formatted,
+                "contenuto": f"Errore nella generazione dopo {max_retries} tentativi: {str(last_error)}",
+                "stato": "failed",
+                "wordpress_post_id": None,
+                "created_at": now,
+                "published_at": None
+            }
+            await db.articles.insert_one(article_doc)
+            generated_articles.append(ArticleResponse(**article_doc))
+    
+    # Update ultimo_run
+    await db.clients.update_one(
+        {"id": request.client_id},
+        {"$set": {"ultimo_run": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"articles": generated_articles, "generated": len([a for a in generated_articles if a.stato == "generated"])}
                 "id": article_id,
                 "client_id": request.client_id,
                 "titolo": titolo_formatted,
