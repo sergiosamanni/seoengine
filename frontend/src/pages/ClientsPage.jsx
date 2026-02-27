@@ -343,6 +343,10 @@ export const ClientsPage = () => {
                             <Settings className="w-4 h-4 mr-2" />
                             Configura
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}/generate`)}>
+                            <PenTool className="w-4 h-4 mr-2" />
+                            Genera Articoli
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEditDialog(client)}>
                             <Edit className="w-4 h-4 mr-2" />
                             Modifica
