@@ -119,6 +119,12 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
+      <Route path="/activity" element={
+        <ProtectedRoute adminOnly>
+          <ActivityLogPage />
+        </ProtectedRoute>
+      } />
+
       <Route path="/settings" element={
         <ProtectedRoute adminOnly>
           <div className="p-8">
