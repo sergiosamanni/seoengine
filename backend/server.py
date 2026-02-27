@@ -852,15 +852,15 @@ async def get_llm_providers():
         ]
     }
 
-async def publish_to_wordpress(url: str, username: str, password: str, title: str, content: str, status: str = "draft") -> int:
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
+async def publish_to_wordpress(url: str, username: str, password: str, title: str, content: str, wp_status: str = "draft") -> int:
+    async with httpx.AsyncClient() as http_client:
+        response = await http_client.post(
             url,
             auth=(username, password),
             json={
                 "title": title,
                 "content": content,
-                "status": status
+                "status": wp_status
             },
             timeout=30.0
         )
