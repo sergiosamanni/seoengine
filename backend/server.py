@@ -234,6 +234,33 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Utente non trovato")
     return UserResponse(**user)
 
+class AssignClientRequest(BaseModel):
+    user_id: str
+    client_id: str
+
+@api_router.post("/users/assign-client")
+async def assign_user_to_client(request: AssignClientRequest, current_user: dict = Depends(require_admin)):
+    # Verify client exists
+    client = await db.clients.find_one({"id": request.client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    # Update user
+    result = await db.users.update_one(
+        {"id": request.user_id},
+        {"$set": {"client_id": request.client_id}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    return {"message": "Utente assegnato al cliente", "user_id": request.user_id, "client_id": request.client_id}
+
+@api_router.get("/users", response_model=List[UserResponse])
+async def get_users(current_user: dict = Depends(require_admin)):
+    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(100)
+    return [UserResponse(**u) for u in users]
+
 # ============== CLIENTS ENDPOINTS ==============
 
 @api_router.get("/clients", response_model=List[ClientResponse])
