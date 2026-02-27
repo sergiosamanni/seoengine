@@ -74,10 +74,15 @@ class WordPressConfig(BaseModel):
     password_applicazione: str
     stato_pubblicazione: str = "draft"
 
-class OpenAIConfig(BaseModel):
-    api_key: str
+class LLMConfig(BaseModel):
+    provider: str = "openai"  # openai, anthropic, deepseek, perplexity
+    api_key: str = ""
     modello: str = "gpt-4-turbo-preview"
     temperatura: float = 0.7
+
+# Alias for backward compatibility
+class OpenAIConfig(LLMConfig):
+    pass
 
 class SEOConfig(BaseModel):
     lingua: str = "italiano"
