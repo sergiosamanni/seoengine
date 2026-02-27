@@ -669,31 +669,182 @@ Genera un articolo SEO completo e dettagliato basato sul titolo fornito."""
 
     return prompt
 
-async def generate_with_openai(api_key: str, model: str, temperature: float, system_prompt: str, user_prompt: str) -> str:
+# LLM Provider configurations
+LLM_PROVIDERS = {
+    "openai": {
+        "base_url": "https://api.openai.com/v1/chat/completions",
+        "models": ["gpt-4-turbo-preview", "gpt-4o", "gpt-4", "gpt-3.5-turbo"]
+    },
+    "anthropic": {
+        "base_url": "https://api.anthropic.com/v1/messages",
+        "models": ["claude-sonnet-4-5-20250929", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"]
+    },
+    "deepseek": {
+        "base_url": "https://api.deepseek.com/v1/chat/completions",
+        "models": ["deepseek-chat", "deepseek-coder", "deepseek-reasoner"]
+    },
+    "perplexity": {
+        "base_url": "https://api.perplexity.ai/chat/completions",
+        "models": ["sonar-pro", "sonar", "sonar-small", "llama-3.1-sonar-large-128k-online"]
+    }
+}
+
+async def generate_with_llm(provider: str, api_key: str, model: str, temperature: float, system_prompt: str, user_prompt: str) -> str:
+    """Unified LLM generation function supporting multiple providers"""
+    
     async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": temperature,
-                "max_tokens": 4000
-            },
-            timeout=120.0
-        )
+        if provider == "anthropic":
+            # Anthropic has different API format
+            response = await client.post(
+                LLM_PROVIDERS["anthropic"]["base_url"],
+                headers={
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": model,
+                    "max_tokens": 4000,
+                    "system": system_prompt,
+                    "messages": [
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "temperature": temperature
+                },
+                timeout=120.0
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"Anthropic API error: {response.status_code} - {response.text}")
+            
+            data = response.json()
+            return data["content"][0]["text"]
         
-        if response.status_code != 200:
-            raise Exception(f"OpenAI API error: {response.status_code} - {response.text}")
+        elif provider == "deepseek":
+            # DeepSeek uses OpenAI-compatible API
+            response = await client.post(
+                LLM_PROVIDERS["deepseek"]["base_url"],
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "temperature": temperature,
+                    "max_tokens": 4000
+                },
+                timeout=120.0
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"DeepSeek API error: {response.status_code} - {response.text}")
+            
+            data = response.json()
+            return data["choices"][0]["message"]["content"]
         
-        data = response.json()
-        return data["choices"][0]["message"]["content"]
+        elif provider == "perplexity":
+            # Perplexity uses OpenAI-compatible API
+            response = await client.post(
+                LLM_PROVIDERS["perplexity"]["base_url"],
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "temperature": temperature,
+                    "max_tokens": 4000
+                },
+                timeout=120.0
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"Perplexity API error: {response.status_code} - {response.text}")
+            
+            data = response.json()
+            return data["choices"][0]["message"]["content"]
+        
+        else:  # OpenAI (default)
+            response = await client.post(
+                LLM_PROVIDERS["openai"]["base_url"],
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "temperature": temperature,
+                    "max_tokens": 4000
+                },
+                timeout=120.0
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"OpenAI API error: {response.status_code} - {response.text}")
+            
+            data = response.json()
+            return data["choices"][0]["message"]["content"]
+
+# Backward compatibility alias
+async def generate_with_openai(api_key: str, model: str, temperature: float, system_prompt: str, user_prompt: str) -> str:
+    return await generate_with_llm("openai", api_key, model, temperature, system_prompt, user_prompt)
+
+# Endpoint to get available LLM providers and models
+@api_router.get("/llm-providers")
+async def get_llm_providers():
+    return {
+        "providers": [
+            {
+                "id": "openai",
+                "name": "OpenAI",
+                "models": [
+                    {"id": "gpt-4-turbo-preview", "name": "GPT-4 Turbo (Raccomandato)"},
+                    {"id": "gpt-4o", "name": "GPT-4o"},
+                    {"id": "gpt-4", "name": "GPT-4"},
+                    {"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo (Economico)"}
+                ]
+            },
+            {
+                "id": "anthropic",
+                "name": "Claude (Anthropic)",
+                "models": [
+                    {"id": "claude-sonnet-4-5-20250929", "name": "Claude Sonnet 4.5"},
+                    {"id": "claude-3-5-haiku-20241022", "name": "Claude Haiku 3.5"},
+                    {"id": "claude-3-opus-20240229", "name": "Claude Opus 3"}
+                ]
+            },
+            {
+                "id": "deepseek",
+                "name": "DeepSeek",
+                "models": [
+                    {"id": "deepseek-chat", "name": "DeepSeek Chat"},
+                    {"id": "deepseek-coder", "name": "DeepSeek Coder"},
+                    {"id": "deepseek-reasoner", "name": "DeepSeek Reasoner (R1)"}
+                ]
+            },
+            {
+                "id": "perplexity",
+                "name": "Perplexity",
+                "models": [
+                    {"id": "sonar-pro", "name": "Sonar Pro (Con Ricerca Web)"},
+                    {"id": "sonar", "name": "Sonar"},
+                    {"id": "llama-3.1-sonar-large-128k-online", "name": "Llama 3.1 Sonar Large"}
+                ]
+            }
+        ]
+    }
 
 async def publish_to_wordpress(url: str, username: str, password: str, title: str, content: str, status: str = "draft") -> int:
     async with httpx.AsyncClient() as client:
