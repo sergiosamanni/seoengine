@@ -1927,13 +1927,13 @@ async def seed_data():
 
 # ============== ACTIVITY LOG ==============
 
-async def log_activity(client_id: str, action: str, status: str, details: dict = None):
+async def log_activity(client_id: str, action: str, log_status: str, details: dict = None):
     """Log an activity event for a client."""
     await db.activity_logs.insert_one({
         "id": str(uuid.uuid4()),
         "client_id": client_id,
         "action": action,
-        "status": status,
+        "status": log_status,
         "details": details or {},
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
