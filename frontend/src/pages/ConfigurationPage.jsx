@@ -156,7 +156,7 @@ export const ConfigurationPage = () => {
   });
 
   // Advanced features state
-  const [apify, setApify] = useState({ api_key: '', actor_id: 'apify/google-search-scraper' });
+  const [apify, setApify] = useState({ enabled: false, api_key: '', actor_id: 'apify/google-search-scraper' });
   const [advancedPrompt, setAdvancedPrompt] = useState({
     prompt_password: '',
     secondo_livello_prompt: '',
