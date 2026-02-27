@@ -647,6 +647,45 @@ export const ConfigurationPage = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Apify Configuration */}
+            <Card className="border-slate-200 lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <Search className="w-4 h-4 text-purple-600" />
+                  </div>
+                  Apify (SERP Scraping)
+                </CardTitle>
+                <CardDescription>Configurazione per l'analisi dei risultati di ricerca Google</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>API Key Apify</Label>
+                    <Input
+                      type="password"
+                      value={apify.api_key}
+                      onChange={(e) => setApify({ ...apify, api_key: e.target.value })}
+                      placeholder="apify_api_..."
+                      data-testid="apify-api-key-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Actor ID</Label>
+                    <Input
+                      value={apify.actor_id}
+                      onChange={(e) => setApify({ ...apify, actor_id: e.target.value })}
+                      placeholder="apify/google-search-scraper"
+                      data-testid="apify-actor-input"
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-slate-500 mt-3">
+                  Ottieni la tua API key su <a href="https://apify.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">apify.com</a>
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
