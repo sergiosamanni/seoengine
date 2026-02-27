@@ -155,6 +155,27 @@ export const ConfigurationPage = () => {
     tipi_o_qualificatori: []
   });
 
+  // Advanced features state
+  const [apify, setApify] = useState({ api_key: '', actor_id: 'apify/google-search-scraper' });
+  const [advancedPrompt, setAdvancedPrompt] = useState({
+    prompt_password: '',
+    secondo_livello_prompt: '',
+    keyword_injection_template: ''
+  });
+  const [promptPasswordInput, setPromptPasswordInput] = useState('');
+  const [promptPasswordVerified, setPromptPasswordVerified] = useState(false);
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
+  
+  // SERP Analysis state
+  const [serpKeyword, setSerpKeyword] = useState('');
+  const [serpCountry, setSerpCountry] = useState('it');
+  const [serpLoading, setSerpLoading] = useState(false);
+  const [serpResults, setSerpResults] = useState([]);
+  
+  // XLSX Upload state
+  const [xlsxUploading, setXlsxUploading] = useState(false);
+  const [xlsxResult, setXlsxResult] = useState(null);
+
   // Input states for adding items
   const [newAggettivo, setNewAggettivo] = useState('');
   const [newParolaVietata, setNewParolaVietata] = useState('');
