@@ -38,7 +38,8 @@ import {
   Edit, 
   Trash2, 
   ExternalLink,
-  Settings
+  Settings,
+  PenTool
 } from 'lucide-react';
 import {
   DropdownMenu,
