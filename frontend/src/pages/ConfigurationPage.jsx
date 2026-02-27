@@ -1226,6 +1226,314 @@ export const ConfigurationPage = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* XLSX Upload Section */}
+          <Card className="border-slate-200 mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="w-5 h-5 text-slate-600" />
+                Import da XLSX
+              </CardTitle>
+              <CardDescription>Carica un file Excel per importare keyword automaticamente</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleXlsxUpload}
+                  disabled={xlsxUploading}
+                  className="max-w-sm"
+                  data-testid="xlsx-upload-input"
+                />
+                {xlsxUploading && <Loader2 className="w-5 h-5 animate-spin text-slate-500" />}
+              </div>
+              
+              {xlsxResult && (
+                <div className="p-4 bg-slate-50 rounded-lg space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-slate-900">{xlsxResult.filename}</p>
+                      <p className="text-sm text-slate-500">{xlsxResult.row_count} righe • {xlsxResult.columns.length} colonne</p>
+                    </div>
+                  </div>
+                  
+                  {xlsxResult.suggestions && (
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-xs font-medium text-slate-500 mb-1">Servizi rilevati</p>
+                        <p className="text-lg font-bold text-slate-900">{xlsxResult.suggestions.servizi?.length || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-500 mb-1">Città rilevate</p>
+                        <p className="text-lg font-bold text-slate-900">{xlsxResult.suggestions.citta_e_zone?.length || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-500 mb-1">Tipi rilevati</p>
+                        <p className="text-lg font-bold text-slate-900">{xlsxResult.suggestions.tipi_o_qualificatori?.length || 0}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => applyXlsxSuggestions('append')}
+                      variant="default"
+                      className="bg-slate-900"
+                      data-testid="xlsx-append-btn"
+                    >
+                      Aggiungi ai dati esistenti
+                    </Button>
+                    <Button 
+                      onClick={() => applyXlsxSuggestions('replace')}
+                      variant="outline"
+                      data-testid="xlsx-replace-btn"
+                    >
+                      Sostituisci dati esistenti
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* SERP Analysis Tab */}
+        <TabsContent value="serp" className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="border-slate-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="w-5 h-5 text-purple-600" />
+                  Analisi SERP
+                </CardTitle>
+                <CardDescription>Scraping dei primi 4 risultati Google per una keyword</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!apify.api_key && (
+                  <Alert className="bg-amber-50 border-amber-200">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-700">
+                      Configura prima la API Key Apify nella tab "API Keys"
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Keyword da analizzare</Label>
+                    <Input
+                      value={serpKeyword}
+                      onChange={(e) => setSerpKeyword(e.target.value)}
+                      placeholder="es: noleggio auto salerno"
+                      data-testid="serp-keyword-input"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Paese</Label>
+                    <Select value={serpCountry} onValueChange={setSerpCountry}>
+                      <SelectTrigger data-testid="serp-country-select">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="it">Italia</SelectItem>
+                        <SelectItem value="us">Stati Uniti</SelectItem>
+                        <SelectItem value="gb">Regno Unito</SelectItem>
+                        <SelectItem value="de">Germania</SelectItem>
+                        <SelectItem value="fr">Francia</SelectItem>
+                        <SelectItem value="es">Spagna</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <Button
+                    onClick={runSerpAnalysis}
+                    disabled={serpLoading || !apify.api_key}
+                    className="w-full bg-purple-600 hover:bg-purple-700"
+                    data-testid="serp-analyze-btn"
+                  >
+                    {serpLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analisi in corso...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="w-4 h-4 mr-2" />
+                        Analizza SERP
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-slate-200">
+              <CardHeader>
+                <CardTitle>Risultati SERP</CardTitle>
+                <CardDescription>Top 4 risultati per la keyword analizzata</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {serpResults.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    <Search className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                    <p>Esegui un'analisi per vedere i risultati</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[400px]">
+                    <div className="space-y-4">
+                      {serpResults.map((result, i) => (
+                        <div key={i} className="p-4 bg-slate-50 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold">
+                              {result.position || i + 1}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <a 
+                                href={result.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="font-medium text-blue-600 hover:underline line-clamp-1"
+                              >
+                                {result.title}
+                              </a>
+                              <p className="text-xs text-emerald-600 truncate mt-1">{result.displayed_url}</p>
+                              <p className="text-sm text-slate-600 mt-2 line-clamp-2">{result.description}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Advanced Prompt Tab (Password Protected) */}
+        <TabsContent value="advanced" className="mt-6">
+          <div className="max-w-3xl mx-auto">
+            {!promptPasswordVerified ? (
+              <Card className="border-slate-200">
+                <CardHeader className="text-center">
+                  <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                    <Lock className="w-8 h-8 text-slate-600" />
+                  </div>
+                  <CardTitle>Area Protetta</CardTitle>
+                  <CardDescription>
+                    Inserisci la password per accedere alla modifica del Prompt di Secondo Livello
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="max-w-sm mx-auto space-y-4">
+                    <Input
+                      type="password"
+                      value={promptPasswordInput}
+                      onChange={(e) => setPromptPasswordInput(e.target.value)}
+                      placeholder="Password di accesso"
+                      onKeyPress={(e) => e.key === 'Enter' && verifyPromptPassword()}
+                      data-testid="prompt-password-input"
+                    />
+                    <Button
+                      onClick={verifyPromptPassword}
+                      className="w-full bg-slate-900"
+                      disabled={verifyingPassword || !promptPasswordInput}
+                      data-testid="verify-password-btn"
+                    >
+                      {verifyingPassword ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Lock className="w-4 h-4 mr-2" />
+                      )}
+                      Verifica Password
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                <Alert className="bg-emerald-50 border-emerald-200">
+                  <AlertCircle className="h-4 w-4 text-emerald-600" />
+                  <AlertDescription className="text-emerald-700">
+                    Accesso verificato. Puoi modificare il prompt di generazione.
+                  </AlertDescription>
+                </Alert>
+                
+                <Card className="border-slate-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-orange-500" />
+                      Prompt di Secondo Livello
+                    </CardTitle>
+                    <CardDescription>
+                      Questo prompt viene iniettato durante la generazione degli articoli per guidare lo stile e l'inserimento delle keyword.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                      <Label>Prompt Principale</Label>
+                      <Textarea
+                        value={advancedPrompt.secondo_livello_prompt}
+                        onChange={(e) => setAdvancedPrompt({ ...advancedPrompt, secondo_livello_prompt: e.target.value })}
+                        placeholder="Inserisci istruzioni avanzate per la generazione degli articoli..."
+                        rows={8}
+                        className="font-mono text-sm"
+                        data-testid="secondo-livello-prompt-input"
+                      />
+                      <p className="text-xs text-slate-500">
+                        Usa {'{keyword}'} per inserire la keyword target dinamicamente.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Template Iniezione Keyword</Label>
+                      <Textarea
+                        value={advancedPrompt.keyword_injection_template}
+                        onChange={(e) => setAdvancedPrompt({ ...advancedPrompt, keyword_injection_template: e.target.value })}
+                        placeholder="Template per l'inserimento strategico delle keyword..."
+                        rows={4}
+                        className="font-mono text-sm"
+                        data-testid="keyword-injection-input"
+                      />
+                    </div>
+                    
+                    {isAdmin && (
+                      <>
+                        <Separator />
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <Key className="w-4 h-4" />
+                            Password Cliente (Solo Admin)
+                          </Label>
+                          <Input
+                            type="text"
+                            value={advancedPrompt.prompt_password}
+                            onChange={(e) => setAdvancedPrompt({ ...advancedPrompt, prompt_password: e.target.value })}
+                            placeholder="Imposta password per questo cliente"
+                            data-testid="client-prompt-password-input"
+                          />
+                          <p className="text-xs text-slate-500">
+                            Questa password permette al cliente di modificare il proprio prompt.
+                          </p>
+                        </div>
+                      </>
+                    )}
+                    
+                    <Button
+                      onClick={saveAdvancedPrompt}
+                      className="w-full bg-orange-500 hover:bg-orange-600"
+                      data-testid="save-advanced-prompt-btn"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      Salva Prompt Avanzato
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
