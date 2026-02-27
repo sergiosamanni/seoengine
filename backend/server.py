@@ -1925,6 +1925,231 @@ async def seed_data():
     
     return {"message": "Seed completato"}
 
+# ============== ACTIVITY LOG ==============
+
+async def log_activity(client_id: str, action: str, status: str, details: dict = None):
+    """Log an activity event for a client."""
+    await db.activity_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "client_id": client_id,
+        "action": action,
+        "status": status,
+        "details": details or {},
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+
+@api_router.get("/activity-logs/{client_id}")
+async def get_activity_logs(client_id: str, limit: int = 50, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    logs = await db.activity_logs.find(
+        {"client_id": client_id}, {"_id": 0}
+    ).sort("timestamp", -1).limit(limit).to_list(limit)
+    return logs
+
+@api_router.get("/activity-logs")
+async def get_all_activity_logs(limit: int = 100, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    logs = await db.activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
+    return logs
+
+@api_router.post("/articles/generate-and-publish")
+async def generate_and_publish_articles(request: ArticleGenerateAndPublish, current_user: dict = Depends(get_current_user)):
+    """
+    Genera articoli SEO e li pubblica direttamente su WordPress in un unico step.
+    Logga ogni operazione nell'activity log.
+    """
+    if current_user["role"] != "admin" and current_user.get("client_id") != request.client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    client_doc = await db.clients.find_one({"id": request.client_id}, {"_id": 0})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    config = client_doc.get("configuration", {})
+    llm_config = config.get("llm", {}) or config.get("openai", {})
+    
+    if not llm_config.get("api_key"):
+        raise HTTPException(status_code=400, detail="API Key LLM non configurata")
+    
+    wp_config = config.get("wordpress", {})
+    if request.publish_to_wordpress:
+        if not wp_config.get("url_api") or not wp_config.get("utente") or not wp_config.get("password_applicazione"):
+            raise HTTPException(status_code=400, detail="Credenziali WordPress non configurate. Vai su Configurazione > API Keys.")
+    
+    provider = llm_config.get("provider", "openai")
+    kb = config.get("knowledge_base", {})
+    tone = config.get("tono_e_stile", {})
+    seo = config.get("seo", {})
+    advanced_prompt = config.get("advanced_prompt", {})
+    system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt)
+    
+    results = []
+    
+    await log_activity(request.client_id, "batch_start", "running", {
+        "total_combinations": len(request.combinations),
+        "provider": provider,
+        "model": llm_config.get("modello"),
+        "publish_to_wordpress": request.publish_to_wordpress
+    })
+    
+    for idx, combo in enumerate(request.combinations):
+        titolo = f"{combo['servizio']} {combo['tipo']} a {combo['citta']}"
+        titolo_formatted = titolo.title()
+        article_result = {
+            "titolo": titolo_formatted,
+            "combination": combo,
+            "generation_status": "pending",
+            "publish_status": "pending"
+        }
+        
+        # Step 1: Generate with LLM
+        await log_activity(request.client_id, "article_generate", "running", {
+            "titolo": titolo_formatted, "step": f"{idx+1}/{len(request.combinations)}"
+        })
+        
+        content = None
+        gen_error = None
+        for attempt in range(3):
+            try:
+                content = await generate_with_llm(
+                    provider=provider,
+                    api_key=llm_config["api_key"],
+                    model=llm_config.get("modello", "gpt-4-turbo-preview"),
+                    temperature=llm_config.get("temperatura", 0.7),
+                    system_prompt=system_prompt,
+                    user_prompt=titolo_formatted
+                )
+                break
+            except Exception as e:
+                gen_error = str(e)
+                logger.warning(f"Generation attempt {attempt+1} failed for '{titolo_formatted}': {e}")
+                if attempt < 2:
+                    await asyncio.sleep(2 ** attempt)
+        
+        article_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        
+        if not content:
+            article_doc = {
+                "id": article_id, "client_id": request.client_id,
+                "titolo": titolo_formatted, "contenuto": f"Errore: {gen_error}",
+                "stato": "failed", "wordpress_post_id": None,
+                "created_at": now, "published_at": None, "combination": combo
+            }
+            await db.articles.insert_one(article_doc)
+            article_result["id"] = article_id
+            article_result["generation_status"] = "failed"
+            article_result["generation_error"] = gen_error
+            article_result["publish_status"] = "skipped"
+            await log_activity(request.client_id, "article_generate", "failed", {
+                "titolo": titolo_formatted, "error": gen_error
+            })
+            results.append(article_result)
+            continue
+        
+        # Generation succeeded
+        seo_metadata = generate_seo_metadata(titolo_formatted, content, kb, combo)
+        article_doc = {
+            "id": article_id, "client_id": request.client_id,
+            "titolo": titolo_formatted, "contenuto": content,
+            "stato": "generated", "wordpress_post_id": None,
+            "created_at": now, "published_at": None,
+            "combination": combo, "seo_metadata": seo_metadata
+        }
+        await db.articles.insert_one(article_doc)
+        article_result["id"] = article_id
+        article_result["generation_status"] = "success"
+        article_result["seo_metadata"] = seo_metadata
+        
+        await log_activity(request.client_id, "article_generate", "success", {
+            "titolo": titolo_formatted, "article_id": article_id,
+            "word_count": len(content.split())
+        })
+        
+        # Step 2: Publish to WordPress
+        if request.publish_to_wordpress:
+            await log_activity(request.client_id, "wordpress_publish", "running", {
+                "titolo": titolo_formatted, "article_id": article_id,
+                "wp_url": wp_config["url_api"]
+            })
+            
+            try:
+                wp_result = await publish_to_wordpress(
+                    url=wp_config["url_api"],
+                    username=wp_config["utente"],
+                    password=wp_config["password_applicazione"],
+                    title=titolo_formatted,
+                    content=content,
+                    wp_status=wp_config.get("stato_pubblicazione", "draft"),
+                    seo_metadata=seo_metadata,
+                    tags=seo_metadata.get("tags", [])
+                )
+                
+                await db.articles.update_one(
+                    {"id": article_id},
+                    {"$set": {
+                        "stato": "published",
+                        "wordpress_post_id": str(wp_result["post_id"]),
+                        "wordpress_link": wp_result.get("link"),
+                        "wordpress_slug": wp_result.get("slug"),
+                        "published_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                article_result["publish_status"] = "success"
+                article_result["wordpress_post_id"] = wp_result["post_id"]
+                article_result["wordpress_link"] = wp_result.get("link")
+                
+                await log_activity(request.client_id, "wordpress_publish", "success", {
+                    "titolo": titolo_formatted, "article_id": article_id,
+                    "post_id": wp_result["post_id"], "link": wp_result.get("link")
+                })
+                logger.info(f"Article '{titolo_formatted}' generated and published (WP post_id: {wp_result['post_id']})")
+                
+            except Exception as e:
+                pub_error = str(e)
+                await db.articles.update_one(
+                    {"id": article_id},
+                    {"$set": {"stato": "publish_failed", "publish_error": pub_error}}
+                )
+                article_result["publish_status"] = "failed"
+                article_result["publish_error"] = pub_error
+                
+                await log_activity(request.client_id, "wordpress_publish", "failed", {
+                    "titolo": titolo_formatted, "article_id": article_id, "error": pub_error
+                })
+                logger.error(f"Failed to publish '{titolo_formatted}' to WP: {pub_error}")
+        else:
+            article_result["publish_status"] = "skipped"
+        
+        results.append(article_result)
+    
+    # Summary
+    gen_ok = len([r for r in results if r["generation_status"] == "success"])
+    pub_ok = len([r for r in results if r["publish_status"] == "success"])
+    
+    await log_activity(request.client_id, "batch_complete", "success", {
+        "total": len(results), "generated": gen_ok, "published": pub_ok
+    })
+    
+    await db.clients.update_one(
+        {"id": request.client_id},
+        {"$set": {"ultimo_run": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {
+        "results": results,
+        "summary": {
+            "total": len(results),
+            "generated_ok": gen_ok,
+            "generated_failed": len(results) - gen_ok,
+            "published_ok": pub_ok,
+            "published_failed": len([r for r in results if r["publish_status"] == "failed"]),
+            "published_skipped": len([r for r in results if r["publish_status"] == "skipped"])
+        }
+    }
+
 # ============== MAIN APP ==============
 
 @api_router.get("/")
