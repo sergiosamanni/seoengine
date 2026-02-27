@@ -1,39 +1,119 @@
-import { useEffect } from "react";
+import React from 'react';
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LoginPage } from './pages/LoginPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { ClientsPage } from './pages/ClientsPage';
+import { ConfigurationPage } from './pages/ConfigurationPage';
+import { GeneratorPage } from './pages/GeneratorPage';
+import { ArticlesPage } from './pages/ArticlesPage';
+import { DashboardLayout } from './components/DashboardLayout';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+// Protected Route Component
+const ProtectedRoute = ({ children, adminOnly = false }) => {
+  const { isAuthenticated, loading, isAdmin } = useAuth();
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
+  if (adminOnly && !isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <DashboardLayout>{children}</DashboardLayout>;
+};
+
+// Public Route Component (redirects to dashboard if authenticated)
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
+
+const AppRoutes = () => {
   return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={
+        <PublicRoute>
+          <LoginPage />
+        </PublicRoute>
+      } />
+
+      {/* Protected Routes */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute>
+          <DashboardPage />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/clients" element={
+        <ProtectedRoute adminOnly>
+          <ClientsPage />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/clients/:clientId" element={
+        <ProtectedRoute adminOnly>
+          <ConfigurationPage />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/configuration" element={
+        <ProtectedRoute>
+          <ConfigurationPage />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/generator" element={
+        <ProtectedRoute>
+          <GeneratorPage />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/articles" element={
+        <ProtectedRoute>
+          <ArticlesPage />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/settings" element={
+        <ProtectedRoute adminOnly>
+          <div className="p-8">
+            <h1 className="text-3xl font-bold text-slate-900 font-['Manrope']">Impostazioni</h1>
+            <p className="text-slate-500 mt-2">Coming soon...</p>
+          </div>
+        </ProtectedRoute>
+      } />
+
+      {/* Redirect root to dashboard or login */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      
+      {/* 404 */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
   );
 };
 
@@ -41,11 +121,9 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
       </BrowserRouter>
     </div>
   );
