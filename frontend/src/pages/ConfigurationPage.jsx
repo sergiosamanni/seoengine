@@ -1331,6 +1331,25 @@ export const ConfigurationPage = () => {
 
         {/* SERP Analysis Tab */}
         <TabsContent value="serp" className="mt-6">
+          {!apify.enabled ? (
+            <Card className="border-slate-200">
+              <CardContent className="py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">Apify non abilitato</h3>
+                <p className="text-slate-500 max-w-md mx-auto mb-4">
+                  Per utilizzare l'analisi SERP, abilita Apify nella tab "API Keys" e configura la tua API key.
+                </p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => document.querySelector('[data-testid="tab-api"]')?.click()}
+                >
+                  Vai alle API Keys
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="border-slate-200">
               <CardHeader>
