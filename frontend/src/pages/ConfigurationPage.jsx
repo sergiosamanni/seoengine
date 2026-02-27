@@ -461,7 +461,7 @@ export const ConfigurationPage = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="api" className="w-full">
-        <TabsList className="w-full justify-start bg-slate-100 p-1 rounded-xl">
+        <TabsList className="w-full justify-start bg-slate-100 p-1 rounded-xl overflow-x-auto">
           <TabsTrigger value="api" className="rounded-lg" data-testid="tab-api">
             <Key className="w-4 h-4 mr-2" />
             API Keys
@@ -477,6 +477,14 @@ export const ConfigurationPage = () => {
           <TabsTrigger value="keywords" className="rounded-lg" data-testid="tab-keywords">
             <Globe className="w-4 h-4 mr-2" />
             Keywords
+          </TabsTrigger>
+          <TabsTrigger value="serp" className="rounded-lg" data-testid="tab-serp">
+            <Search className="w-4 h-4 mr-2" />
+            SERP Analysis
+          </TabsTrigger>
+          <TabsTrigger value="advanced" className="rounded-lg" data-testid="tab-advanced">
+            <Lock className="w-4 h-4 mr-2" />
+            Prompt Avanzato
           </TabsTrigger>
         </TabsList>
 
