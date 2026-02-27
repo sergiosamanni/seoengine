@@ -1,0 +1,159 @@
+{
+  "identity": {
+    "name": "Programmatic SEO Engine",
+    "persona": "The Swiss Precision Instrument",
+    "core_values": ["Data Density", "Visual Clarity", "Process Efficiency"],
+    "emotional_tone": "Professional, Trustworthy, Powerful"
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Manrope, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "weights": {
+      "light": 300,
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700,
+      "black": 800
+    },
+    "scale": {
+      "h1": "text-4xl md:text-5xl font-bold tracking-tight",
+      "h2": "text-3xl font-semibold tracking-tight",
+      "h3": "text-2xl font-semibold tracking-tight",
+      "body_lg": "text-lg leading-relaxed",
+      "body": "text-base leading-relaxed text-slate-600",
+      "small": "text-sm font-medium text-slate-500 uppercase tracking-wider"
+    },
+    "instructions": "Use 'Manrope' for all headings to give a modern, geometric feel. Use 'Inter' for body text for maximum readability. Use 'JetBrains Mono' for anything related to keywords, code, or prompts."
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "DEFAULT": "#0F172A",
+        "foreground": "#F8FAFC"
+      },
+      "secondary": {
+        "DEFAULT": "#F1F5F9",
+        "foreground": "#0F172A"
+      },
+      "accent": {
+        "DEFAULT": "#2563EB",
+        "foreground": "#FFFFFF"
+      },
+      "destructive": {
+        "DEFAULT": "#EF4444",
+        "foreground": "#FFFFFF"
+      },
+      "kinetic": {
+        "DEFAULT": "#F97316",
+        "foreground": "#FFFFFF",
+        "description": "Use ONLY for the 'Generate' or 'Publish' primary actions"
+      },
+      "background": "#F8FAFC",
+      "surface": "#FFFFFF",
+      "border": "#E2E8F0",
+      "muted": "#64748B"
+    },
+    "gradients": {
+      "subtle_glow": "bg-gradient-to-tr from-slate-50 to-slate-100",
+      "active_beam": "bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500"
+    },
+    "rules": [
+      "No gradients for backgrounds unless it is a subtle surface distinction.",
+      "Text contrast must be WCAG AA compliant.",
+      "Use 'Kinetic Orange' (#F97316) sparingly - only for the main conversion action."
+    ]
+  },
+  "layout": {
+    "spacing_scale": ["p-4", "p-6", "p-8", "p-12", "gap-4", "gap-6", "gap-8"],
+    "grid_system": {
+      "dashboard": "grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-6",
+      "card_span": {
+        "hero": "col-span-full lg:col-span-8",
+        "stat": "col-span-1 md:col-span-2 lg:col-span-3",
+        "list": "col-span-full lg:col-span-4"
+      }
+    },
+    "containers": {
+      "main": "max-w-[1600px] mx-auto w-full",
+      "card": "bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden"
+    },
+    "z_index": {
+      "toast": 50,
+      "modal": 40,
+      "dropdown": 30,
+      "sticky_nav": 20
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-slate-800 h-10 px-6 rounded-md font-medium transition-all shadow-sm active:scale-95",
+      "secondary": "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-6 rounded-md font-medium transition-all shadow-sm",
+      "ghost": "hover:bg-slate-100 text-slate-600 hover:text-slate-900",
+      "kinetic": "bg-orange-500 text-white hover:bg-orange-600 h-12 px-8 rounded-full font-bold shadow-md hover:shadow-lg transition-all active:scale-95"
+    },
+    "cards": {
+      "default": "bg-white border border-slate-200 rounded-xl p-6 shadow-sm",
+      "interactive": "bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group"
+    },
+    "inputs": {
+      "default": "flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    },
+    "badges": {
+      "success": "inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-950 focus:ring-offset-2 text-emerald-700",
+      "warning": "inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-amber-950 focus:ring-offset-2 text-amber-700",
+      "neutral": "inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 text-slate-600"
+    },
+    "tables": {
+      "container": "w-full caption-bottom text-sm",
+      "header": "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+      "row": "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+      "cell": "p-4 align-middle [&:has([role=checkbox])]:pr-0"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "bg-white/80 backdrop-blur-md border-b border-white/20",
+    "tracing_beam": "relative after:absolute after:inset-0 after:rounded-xl after:border-2 after:border-blue-500/0 hover:after:border-blue-500/50 after:transition-colors after:pointer-events-none",
+    "noise_texture": "before:fixed before:inset-0 before:z-[-1] before:opacity-[0.03] before:bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"
+  },
+  "image_urls": {
+    "hero_abstract": "https://images.unsplash.com/photo-1769541607705-3b3c5095679b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMDNkJTIwc2hhcGVzJTIwZ2VvbWV0cmljJTIwbWluaW1hbGlzdCUyMHdoaXRlJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3NzIyMDUxMzB8MA&ixlib=rb-4.1.0&q=85",
+    "login_bg": "https://images.unsplash.com/photo-1770321428579-4d1ddcdf0225?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHw0fHxhYnN0cmFjdCUyMDNkJTIwc2hhcGVzJTIwZ2VvbWV0cmljJTIwbWluaW1hbGlzdCUyMHdoaXRlJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3NzIyMDUxMzB8MA&ixlib=rb-4.1.0&q=85",
+    "avatars": [
+      "https://images.unsplash.com/photo-1589220286904-3dcef62c68ee?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0JTIwZGl2ZXJzZXxlbnwwfHx8fDE3NzIyMDUxMzF8MA&ixlib=rb-4.1.0&q=85",
+      "https://images.unsplash.com/photo-1575299833801-85ce40813bac?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0JTIwZGl2ZXJzZXxlbnwwfHx8fDE3NzIyMDUxMzF8MA&ixlib=rb-4.1.0&q=85"
+    ],
+    "success_illustration": "https://images.unsplash.com/photo-1762290899574-7a628ca71587?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzJ8MHwxfHNlYXJjaHwyfHxyb2NrZXQlMjBsYXVuY2glMjBtaW5pbWFsaXN0JTIwaWxsdXN0cmF0aW9ufGVufDB8fHx8MTc3MjIwNTEzMXww&ixlib=rb-4.1.0&q=85"
+  },
+  "motion": {
+    "hover_lift": "hover:-translate-y-1 transition-transform duration-200",
+    "fade_in": "animate-in fade-in duration-500",
+    "slide_up": "animate-in slide-in-from-bottom-4 duration-500"
+  },
+  "accessibility": {
+    "contrast_check": "Ensure all text on colored backgrounds meets WCAG AA 4.5:1 ratio.",
+    "focus_states": "All interactive elements must have a visible focus ring (focus-visible:ring-2).",
+    "labels": "All icon-only buttons must have aria-label."
+  },
+  "instructions_to_main_agent": [
+    "Install 'lucide-react' for icons.",
+    "Install 'sonner' for toasts.",
+    "Install 'recharts' for data visualization.",
+    "Use 'clsx' and 'tailwind-merge' for class handling.",
+    "Sidebar should be fixed on the left (w-64) in dark mode (#0F172A), main content on the right in light mode (#F8FAFC).",
+    "Use the Bento Grid layout for the Dashboard Overview.",
+    "For the Article Generator, use a split-view layout (Inputs on Left, Preview on Right).",
+    "ALL interactive elements MUST have 'data-testid' attributes."
+  ],
+  "UNIVERSAL_GUIDELINES": [
+    "Do not use gradients for main backgrounds, only for subtle highlights.",
+    "Use 2-3x more spacing than default for a premium feel (e.g., p-8 instead of p-4).",
+    "Add micro-interactions to every button and card (hover lift, border color change).",
+    "Never center text in the main app container.",
+    "Use 'sonner' for all notifications.",
+    "Components must use named exports."
+  ]
+}
