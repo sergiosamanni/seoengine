@@ -175,6 +175,12 @@ export const ConfigurationPage = () => {
   // XLSX Upload state
   const [xlsxUploading, setXlsxUploading] = useState(false);
   const [xlsxResult, setXlsxResult] = useState(null);
+  
+  // Save and Generate state
+  const [saveAndGenerating, setSaveAndGenerating] = useState(false);
+  const [sessionName, setSessionName] = useState('');
+  const [sessionNotes, setSessionNotes] = useState('');
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
 
   // Input states for adding items
   const [newAggettivo, setNewAggettivo] = useState('');
