@@ -100,6 +100,18 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
+      <Route path="/history" element={
+        <ProtectedRoute>
+          <SessionHistoryPage />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/clients/:clientId/history" element={
+        <ProtectedRoute adminOnly>
+          <SessionHistoryPage />
+        </ProtectedRoute>
+      } />
+
       <Route path="/settings" element={
         <ProtectedRoute adminOnly>
           <div className="p-8">
