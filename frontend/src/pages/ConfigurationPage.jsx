@@ -1460,6 +1460,7 @@ export const ConfigurationPage = () => {
               </CardContent>
             </Card>
           </div>
+          )}
         </TabsContent>
 
         {/* Advanced Prompt Tab (Password Protected) */}
