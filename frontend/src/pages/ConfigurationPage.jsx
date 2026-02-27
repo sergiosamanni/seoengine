@@ -220,6 +220,8 @@ export const ConfigurationPage = () => {
         if (config.tono_e_stile) setTono(config.tono_e_stile);
         if (config.knowledge_base) setKnowledge(config.knowledge_base);
         if (config.keyword_combinations) setKeywords(config.keyword_combinations);
+        if (config.apify) setApify(config.apify);
+        if (config.advanced_prompt) setAdvancedPrompt(config.advanced_prompt);
       } catch (error) {
         toast.error('Errore nel caricamento della configurazione');
       } finally {
