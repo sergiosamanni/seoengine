@@ -53,6 +53,7 @@ export const ArticlesPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [previewArticle, setPreviewArticle] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [clients, setClients] = useState([]);
   const [clientFilter, setClientFilter] = useState('all');
 
