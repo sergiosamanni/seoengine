@@ -126,7 +126,14 @@ export const GeneratorPage = () => {
     );
   }
 
-  const hasApiKey = client?.configuration?.openai?.api_key;
+  const hasApiKey = client?.configuration?.llm?.api_key || client?.configuration?.openai?.api_key;
+  const llmConfig = client?.configuration?.llm || client?.configuration?.openai || {};
+  const providerName = {
+    'openai': 'OpenAI',
+    'anthropic': 'Claude',
+    'deepseek': 'DeepSeek', 
+    'perplexity': 'Perplexity'
+  }[llmConfig.provider] || 'OpenAI';
 
   return (
     <div className="space-y-6 animate-fade-in">
