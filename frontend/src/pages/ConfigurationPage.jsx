@@ -392,14 +392,17 @@ export const ConfigurationPage = () => {
   };
 
   const addToList = (list, setList, field, value, setValue) => {
-    if (value.trim() && !list.includes(value.trim())) {
-      setList({ ...list, [field]: [...list[field], value.trim()] });
+    const trimmedValue = value.trim();
+    const currentArray = list[field] || [];
+    if (trimmedValue && !currentArray.includes(trimmedValue)) {
+      setList({ ...list, [field]: [...currentArray, trimmedValue] });
       setValue('');
     }
   };
 
   const removeFromList = (list, setList, field, value) => {
-    setList({ ...list, [field]: list[field].filter(v => v !== value) });
+    const currentArray = list[field] || [];
+    setList({ ...list, [field]: currentArray.filter(v => v !== value) });
   };
 
   if (loading) {
