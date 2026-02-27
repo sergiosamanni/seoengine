@@ -15,6 +15,7 @@ import jwt
 import httpx
 import itertools
 import io
+import asyncio
 import pandas as pd
 
 ROOT_DIR = Path(__file__).parent
