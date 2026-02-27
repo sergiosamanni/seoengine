@@ -93,6 +93,8 @@ export const ArticlesPage = () => {
 
   // Load full article data for preview
   const loadArticlePreview = async (articleId) => {
+    setPreviewLoading(true);
+    setPreviewArticle(null);
     try {
       const response = await axios.get(`${API}/articles/${articleId}/full`, {
         headers: getAuthHeaders()
@@ -102,6 +104,9 @@ export const ArticlesPage = () => {
       // Fallback to basic article data
       const article = articles.find(a => a.id === articleId);
       if (article) setPreviewArticle(article);
+      toast.error('Errore nel caricamento dei dettagli completi');
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
