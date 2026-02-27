@@ -1290,6 +1290,238 @@ async def get_xlsx_uploads(client_id: str, current_user: dict = Depends(get_curr
     
     return {"uploads": uploads}
 
+# ============== SEO SESSION HISTORY ==============
+
+@api_router.post("/clients/{client_id}/seo-sessions")
+async def create_seo_session(
+    client_id: str,
+    session: SEOSessionCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Save current SEO configuration as a session for history"""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    # Get client data
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    config = client.get("configuration", {})
+    
+    # Get keyword combinations from session or current config
+    keywords = session.keywords or config.get("keyword_combinations", {})
+    
+    # Get advanced prompt from session or current config
+    advanced_prompt = session.advanced_prompt or config.get("advanced_prompt", {})
+    
+    # Get SERP analyses if provided
+    serp_data = []
+    if session.serp_analyses:
+        serp_docs = await db.serp_analyses.find(
+            {"id": {"$in": session.serp_analyses}, "client_id": client_id},
+            {"_id": 0}
+        ).to_list(100)
+        serp_data = serp_docs
+    
+    # Generate session name if not provided
+    session_name = session.session_name or f"Sessione {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')}"
+    
+    # Create session document
+    session_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    session_doc = {
+        "id": session_id,
+        "client_id": client_id,
+        "session_name": session_name,
+        "keywords": keywords,
+        "serp_analyses": serp_data,
+        "advanced_prompt": advanced_prompt,
+        "notes": session.notes,
+        "articles_generated": 0,
+        "created_at": now
+    }
+    
+    await db.seo_sessions.insert_one(session_doc)
+    
+    return SEOSessionResponse(**session_doc)
+
+@api_router.get("/clients/{client_id}/seo-sessions")
+async def get_seo_sessions(
+    client_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all SEO sessions history for a client"""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    sessions = await db.seo_sessions.find(
+        {"client_id": client_id},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    
+    return {"sessions": sessions}
+
+@api_router.get("/clients/{client_id}/seo-sessions/{session_id}")
+async def get_seo_session(
+    client_id: str,
+    session_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a specific SEO session"""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    session = await db.seo_sessions.find_one(
+        {"id": session_id, "client_id": client_id},
+        {"_id": 0}
+    )
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Sessione non trovata")
+    
+    return SEOSessionResponse(**session)
+
+@api_router.post("/clients/{client_id}/seo-sessions/{session_id}/restore")
+async def restore_seo_session(
+    client_id: str,
+    session_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Restore a saved SEO session to current configuration"""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    session = await db.seo_sessions.find_one(
+        {"id": session_id, "client_id": client_id},
+        {"_id": 0}
+    )
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Sessione non trovata")
+    
+    # Restore keywords and advanced prompt to current config
+    update_data = {}
+    if session.get("keywords"):
+        update_data["configuration.keyword_combinations"] = session["keywords"]
+    if session.get("advanced_prompt"):
+        update_data["configuration.advanced_prompt.secondo_livello_prompt"] = session["advanced_prompt"].get("secondo_livello_prompt", "")
+        update_data["configuration.advanced_prompt.keyword_injection_template"] = session["advanced_prompt"].get("keyword_injection_template", "")
+    
+    if update_data:
+        await db.clients.update_one({"id": client_id}, {"$set": update_data})
+    
+    return {"message": "Sessione ripristinata", "session_name": session["session_name"]}
+
+@api_router.delete("/clients/{client_id}/seo-sessions/{session_id}")
+async def delete_seo_session(
+    client_id: str,
+    session_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a SEO session from history"""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    result = await db.seo_sessions.delete_one({"id": session_id, "client_id": client_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Sessione non trovata")
+    
+    return {"message": "Sessione eliminata"}
+
+@api_router.post("/clients/{client_id}/save-and-generate")
+async def save_and_generate(
+    client_id: str,
+    session_name: str = "",
+    notes: str = "",
+    generate_articles: bool = True,
+    current_user: dict = Depends(get_current_user)
+):
+    """Save current config as session and optionally generate articles"""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    # Get client data
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    config = client.get("configuration", {})
+    keywords = config.get("keyword_combinations", {})
+    advanced_prompt = config.get("advanced_prompt", {})
+    
+    # Get recent SERP analyses (last 24 hours)
+    from datetime import timedelta
+    yesterday = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    serp_docs = await db.serp_analyses.find(
+        {"client_id": client_id, "created_at": {"$gte": yesterday}},
+        {"_id": 0}
+    ).to_list(20)
+    
+    # Generate session name
+    if not session_name:
+        session_name = f"Sessione {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')}"
+    
+    # Create session
+    session_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    session_doc = {
+        "id": session_id,
+        "client_id": client_id,
+        "session_name": session_name,
+        "keywords": keywords,
+        "serp_analyses": serp_docs,
+        "advanced_prompt": {
+            "secondo_livello_prompt": advanced_prompt.get("secondo_livello_prompt", ""),
+            "keyword_injection_template": advanced_prompt.get("keyword_injection_template", "")
+        },
+        "notes": notes,
+        "articles_generated": 0,
+        "created_at": now
+    }
+    
+    await db.seo_sessions.insert_one(session_doc)
+    
+    # Generate articles if requested
+    generated_count = 0
+    if generate_articles:
+        # Get all combinations
+        servizi = keywords.get("servizi", [])
+        citta = keywords.get("citta_e_zone", [])
+        tipi = keywords.get("tipi_o_qualificatori", [])
+        
+        combinations = []
+        for combo in itertools.product(servizi, citta, tipi):
+            combinations.append({
+                "servizio": combo[0],
+                "citta": combo[1],
+                "tipo": combo[2]
+            })
+        
+        generated_count = len(combinations)
+        
+        # Update session with article count
+        await db.seo_sessions.update_one(
+            {"id": session_id},
+            {"$set": {"articles_generated": generated_count, "combinations": combinations}}
+        )
+    
+    return {
+        "session_id": session_id,
+        "session_name": session_name,
+        "message": "Sessione salvata con successo",
+        "keywords_saved": {
+            "servizi": len(keywords.get("servizi", [])),
+            "citta": len(keywords.get("citta_e_zone", [])),
+            "tipi": len(keywords.get("tipi_o_qualificatori", []))
+        },
+        "serp_analyses_saved": len(serp_docs),
+        "combinations_ready": generated_count
+    }
+
 # ============== SEED DATA ==============
 
 @api_router.post("/seed")
