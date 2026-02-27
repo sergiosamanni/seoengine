@@ -118,37 +118,68 @@ export const GeneratorPage = () => {
     pollRef.current = setInterval(fetchLogs, 3000);
 
     try {
-      const endpoint = publishToWp ? 'articles/generate-and-publish' : 'articles/generate';
-      const payload = publishToWp
-        ? { client_id: effectiveClientId, combinations: selectedCombinations, publish_to_wordpress: true }
-        : { client_id: effectiveClientId, combinations: selectedCombinations };
-
-      const response = await axios.post(`${API}/${endpoint}`, payload, {
-        headers: getAuthHeaders(),
-        timeout: 600000 // 10 min for large batches
-      });
-
       if (publishToWp) {
-        setResults(response.data.results || []);
-        const s = response.data.summary;
-        toast.success(`Completato: ${s.generated_ok} generati, ${s.published_ok} pubblicati su WP`);
+        // Async job: generate and publish
+        const response = await axios.post(`${API}/articles/generate-and-publish`, {
+          client_id: effectiveClientId,
+          combinations: selectedCombinations,
+          publish_to_wordpress: true
+        }, { headers: getAuthHeaders() });
+
+        const jobId = response.data.job_id;
+        const totalItems = response.data.total;
+        toast.info(`Job avviato: ${totalItems} articoli in elaborazione...`);
+
+        // Poll job status
+        const pollJob = async () => {
+          try {
+            const jobRes = await axios.get(`${API}/jobs/${jobId}`, { headers: getAuthHeaders() });
+            const job = jobRes.data;
+            setResults(job.results || []);
+            setProgressPercent(Math.round((job.completed / totalItems) * 100));
+            fetchLogs();
+
+            if (job.status === 'completed') {
+              const s = job.summary || {};
+              toast.success(`Completato: ${s.generated_ok || 0} generati, ${s.published_ok || 0} pubblicati su WP`);
+              setSelectedCombinations([]);
+              setGenerating(false);
+              clearInterval(pollRef.current);
+              return;
+            }
+            // Continue polling
+            setTimeout(pollJob, 4000);
+          } catch (e) {
+            // Retry on network errors
+            setTimeout(pollJob, 5000);
+          }
+        };
+        setTimeout(pollJob, 5000);
+        return; // Don't set generating=false yet
       } else {
+        // Sync: generate only (fast)
+        const response = await axios.post(`${API}/articles/generate`, {
+          client_id: effectiveClientId,
+          combinations: selectedCombinations
+        }, { headers: getAuthHeaders(), timeout: 600000 });
+
         setResults((response.data.articles || []).map(a => ({
           id: a.id, titolo: a.titolo,
           generation_status: a.stato === 'generated' ? 'success' : 'failed',
           publish_status: 'skipped'
         })));
         toast.success(`Generati ${response.data.generated} articoli`);
+        setSelectedCombinations([]);
+        setProgressPercent(100);
       }
-
-      setSelectedCombinations([]);
-      setProgressPercent(100);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Errore durante la generazione');
     } finally {
-      setGenerating(false);
-      clearInterval(pollRef.current);
-      fetchLogs(); // Final refresh
+      if (!publishToWp) {
+        setGenerating(false);
+        clearInterval(pollRef.current);
+        fetchLogs();
+      }
     }
   };
 
