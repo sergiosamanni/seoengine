@@ -48,6 +48,51 @@ const PERSONA = [
   { value: 'terza_neutrale', label: 'Neutrale (terza persona)', desc: 'Più giornalistico' },
 ];
 
+// LLM Providers and Models
+const LLM_PROVIDERS = [
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    icon: '🤖',
+    models: [
+      { id: 'gpt-4-turbo-preview', name: 'GPT-4 Turbo (Raccomandato)' },
+      { id: 'gpt-4o', name: 'GPT-4o' },
+      { id: 'gpt-4', name: 'GPT-4' },
+      { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo (Economico)' }
+    ]
+  },
+  {
+    id: 'anthropic',
+    name: 'Claude (Anthropic)',
+    icon: '🎭',
+    models: [
+      { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5' },
+      { id: 'claude-3-5-haiku-20241022', name: 'Claude Haiku 3.5' },
+      { id: 'claude-3-opus-20240229', name: 'Claude Opus 3' }
+    ]
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    icon: '🔍',
+    models: [
+      { id: 'deepseek-chat', name: 'DeepSeek Chat' },
+      { id: 'deepseek-coder', name: 'DeepSeek Coder' },
+      { id: 'deepseek-reasoner', name: 'DeepSeek Reasoner (R1)' }
+    ]
+  },
+  {
+    id: 'perplexity',
+    name: 'Perplexity',
+    icon: '🌐',
+    models: [
+      { id: 'sonar-pro', name: 'Sonar Pro (Con Ricerca Web)' },
+      { id: 'sonar', name: 'Sonar' },
+      { id: 'llama-3.1-sonar-large-128k-online', name: 'Llama 3.1 Sonar Large' }
+    ]
+  }
+];
+
 export const ConfigurationPage = () => {
   const { getAuthHeaders, isAdmin, user } = useAuth();
   const { clientId } = useParams();
