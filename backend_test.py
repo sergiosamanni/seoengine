@@ -337,6 +337,14 @@ def main():
     # 8. Article generation (may fail due to API key)
     test_results.append(tester.test_generate_articles())
     
+    # 9. NEW FEATURES - Password Management
+    test_results.append(tester.test_verify_admin_password())
+    test_results.append(tester.test_verify_prompt_password())
+    test_results.append(tester.test_advanced_prompt_update())
+    
+    # 10. NEW FEATURES - SERP Analysis (without API key)
+    test_results.append(tester.test_serp_analysis_no_api_key())
+    
     # Print final results
     print(f"\n📊 Final Results:")
     print(f"Tests run: {tester.tests_run}")
