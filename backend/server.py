@@ -114,10 +114,21 @@ class KeywordCombinations(BaseModel):
     citta_e_zone: List[str] = []
     tipi_o_qualificatori: List[str] = []
 
+class ApifyConfig(BaseModel):
+    api_key: str = ""
+    actor_id: str = "apify/google-search-scraper"
+
+class AdvancedPromptConfig(BaseModel):
+    prompt_password: str = ""  # Password to access prompt editing
+    secondo_livello_prompt: str = ""  # Second level prompt for article generation
+    keyword_injection_template: str = ""  # Template for keyword injection
+
 class ClientConfiguration(BaseModel):
     wordpress: Optional[WordPressConfig] = None
     llm: Optional[LLMConfig] = None  # New unified LLM config
     openai: Optional[OpenAIConfig] = None  # Backward compatibility
+    apify: Optional[ApifyConfig] = None
+    advanced_prompt: Optional[AdvancedPromptConfig] = None
     seo: Optional[SEOConfig] = None
     tono_e_stile: Optional[ToneStyle] = None
     knowledge_base: Optional[KnowledgeBase] = None
