@@ -28,7 +28,8 @@ const clientNavItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/configuration', icon: Settings, label: 'Configurazione' },
   { path: '/generator', icon: PenTool, label: 'Genera Articoli' },
-  { path: '/articles', icon: History, label: 'Storico' },
+  { path: '/articles', icon: FileText, label: 'Articoli' },
+  { path: '/history', icon: History, label: 'Storico Sessioni' },
 ];
 
 export const DashboardLayout = ({ children }) => {
