@@ -1028,24 +1028,165 @@ async def get_llm_providers():
         ]
     }
 
-async def publish_to_wordpress(url: str, username: str, password: str, title: str, content: str, wp_status: str = "draft") -> int:
+async def publish_to_wordpress(
+    url: str, 
+    username: str, 
+    password: str, 
+    title: str, 
+    content: str, 
+    wp_status: str = "draft",
+    seo_metadata: dict = None,
+    categories: List[int] = None,
+    tags: List[str] = None
+) -> dict:
+    """
+    Pubblica un articolo su WordPress tramite REST API.
+    Supporta tag, categorie e metadati SEO per Yoast/RankMath.
+    
+    Args:
+        url: WordPress REST API endpoint (e.g., https://site.com/wp-json/wp/v2/posts)
+        username: WordPress username
+        password: Application password
+        title: Article title
+        content: HTML content
+        wp_status: Post status (draft, publish, pending)
+        seo_metadata: Dict with meta_description, focus_keyword, slug
+        categories: List of category IDs
+        tags: List of tag names (will be created if not exist)
+    
+    Returns:
+        Dict with post_id and status
+    """
+    
     async with httpx.AsyncClient() as http_client:
-        response = await http_client.post(
-            url,
-            auth=(username, password),
-            json={
-                "title": title,
-                "content": content,
-                "status": wp_status
-            },
-            timeout=30.0
-        )
+        # Build the post data
+        post_data = {
+            "title": title,
+            "content": content,
+            "status": wp_status
+        }
         
-        if response.status_code not in [200, 201]:
-            raise Exception(f"WordPress API error: {response.status_code} - {response.text}")
+        # Add slug if provided
+        if seo_metadata and seo_metadata.get("slug"):
+            post_data["slug"] = seo_metadata["slug"]
         
-        data = response.json()
-        return data.get("id")
+        # Add categories if provided
+        if categories:
+            post_data["categories"] = categories
+        
+        # Handle tags - WordPress REST API accepts tag names directly with "tags" endpoint
+        # or we can pass tag IDs. For simplicity, we'll use tag names with a separate call
+        tag_ids = []
+        if tags:
+            # Get base URL for tags endpoint
+            base_url = url.replace("/posts", "")
+            
+            for tag_name in tags:
+                try:
+                    # Check if tag exists
+                    search_response = await http_client.get(
+                        f"{base_url}/tags",
+                        auth=(username, password),
+                        params={"search": tag_name},
+                        timeout=10.0
+                    )
+                    
+                    if search_response.status_code == 200:
+                        existing_tags = search_response.json()
+                        # Find exact match
+                        tag_found = None
+                        for t in existing_tags:
+                            if t.get("name", "").lower() == tag_name.lower():
+                                tag_found = t
+                                break
+                        
+                        if tag_found:
+                            tag_ids.append(tag_found["id"])
+                        else:
+                            # Create new tag
+                            create_response = await http_client.post(
+                                f"{base_url}/tags",
+                                auth=(username, password),
+                                json={"name": tag_name},
+                                timeout=10.0
+                            )
+                            if create_response.status_code in [200, 201]:
+                                new_tag = create_response.json()
+                                tag_ids.append(new_tag["id"])
+                except Exception as e:
+                    logger.warning(f"Error handling tag '{tag_name}': {e}")
+                    continue
+        
+        if tag_ids:
+            post_data["tags"] = tag_ids
+        
+        # Add SEO metadata as excerpt (meta description)
+        if seo_metadata and seo_metadata.get("meta_description"):
+            post_data["excerpt"] = seo_metadata["meta_description"]
+        
+        # Try to add Yoast/RankMath SEO meta if available
+        # These require the respective plugins to be active
+        if seo_metadata:
+            meta_fields = {}
+            
+            # Yoast SEO meta fields
+            if seo_metadata.get("meta_description"):
+                meta_fields["_yoast_wpseo_metadesc"] = seo_metadata["meta_description"]
+            if seo_metadata.get("focus_keyword"):
+                meta_fields["_yoast_wpseo_focuskw"] = seo_metadata["focus_keyword"]
+            
+            # RankMath SEO meta fields (alternative)
+            if seo_metadata.get("meta_description"):
+                meta_fields["rank_math_description"] = seo_metadata["meta_description"]
+            if seo_metadata.get("focus_keyword"):
+                meta_fields["rank_math_focus_keyword"] = seo_metadata["focus_keyword"]
+            
+            if meta_fields:
+                post_data["meta"] = meta_fields
+        
+        # Make the API call with retry logic
+        max_retries = 3
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                response = await http_client.post(
+                    url,
+                    auth=(username, password),
+                    json=post_data,
+                    timeout=60.0
+                )
+                
+                if response.status_code in [200, 201]:
+                    data = response.json()
+                    return {
+                        "post_id": data.get("id"),
+                        "link": data.get("link"),
+                        "slug": data.get("slug"),
+                        "status": "success"
+                    }
+                elif response.status_code == 401:
+                    raise Exception("Autenticazione WordPress fallita. Verifica username e password applicazione.")
+                elif response.status_code == 403:
+                    raise Exception("Permessi insufficienti per pubblicare su WordPress.")
+                elif response.status_code == 404:
+                    raise Exception("Endpoint WordPress non trovato. Verifica l'URL API.")
+                else:
+                    last_error = f"WordPress API error: {response.status_code} - {response.text}"
+                    
+            except httpx.TimeoutException:
+                last_error = "Timeout nella connessione a WordPress"
+            except httpx.ConnectError:
+                last_error = "Impossibile connettersi al server WordPress"
+            except Exception as e:
+                last_error = str(e)
+                if "401" in str(e) or "403" in str(e) or "404" in str(e):
+                    raise  # Don't retry auth/permission errors
+            
+            if attempt < max_retries - 1:
+                await asyncio.sleep(2 ** attempt)  # Exponential backoff
+        
+        raise Exception(last_error or "Errore sconosciuto nella pubblicazione")
 
 # ============== ADMIN PASSWORD MANAGEMENT ==============
 
