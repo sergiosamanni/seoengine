@@ -238,8 +238,9 @@ export const ConfigurationPage = () => {
     try {
       await axios.put(`${API}/clients/${effectiveClientId}/configuration`, {
         wordpress,
-        llm,  // New unified LLM config
-        openai: llm,  // Backward compatibility
+        llm,
+        openai: llm,
+        apify,
         seo,
         tono_e_stile: tono,
         knowledge_base: knowledge,
@@ -253,6 +254,124 @@ export const ConfigurationPage = () => {
       toast.error('Errore durante il salvataggio');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Verify prompt password
+  const verifyPromptPassword = async () => {
+    setVerifyingPassword(true);
+    try {
+      const response = await axios.post(`${API}/verify-prompt-password`, {
+        password: promptPasswordInput,
+        client_id: effectiveClientId
+      }, { headers: getAuthHeaders() });
+      
+      if (response.data.valid) {
+        setPromptPasswordVerified(true);
+        toast.success('Accesso verificato');
+      } else {
+        toast.error('Password non valida');
+      }
+    } catch (error) {
+      toast.error('Errore verifica password');
+    } finally {
+      setVerifyingPassword(false);
+    }
+  };
+
+  // Save advanced prompt
+  const saveAdvancedPrompt = async () => {
+    try {
+      await axios.put(`${API}/clients/${effectiveClientId}/advanced-prompt`, {
+        password: promptPasswordInput,
+        secondo_livello_prompt: advancedPrompt.secondo_livello_prompt,
+        keyword_injection_template: advancedPrompt.keyword_injection_template,
+        prompt_password: isAdmin ? advancedPrompt.prompt_password : undefined
+      }, { headers: getAuthHeaders() });
+      
+      toast.success('Prompt avanzato salvato');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Errore salvataggio prompt');
+    }
+  };
+
+  // SERP Analysis
+  const runSerpAnalysis = async () => {
+    if (!serpKeyword.trim()) {
+      toast.error('Inserisci una keyword');
+      return;
+    }
+    
+    setSerpLoading(true);
+    try {
+      const response = await axios.post(`${API}/clients/${effectiveClientId}/serp-analysis`, {
+        keyword: serpKeyword,
+        country: serpCountry,
+        num_results: 4
+      }, { headers: getAuthHeaders() });
+      
+      setSerpResults(response.data.results);
+      toast.success(`Trovati ${response.data.results.length} risultati`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Errore analisi SERP');
+    } finally {
+      setSerpLoading(false);
+    }
+  };
+
+  // XLSX Upload
+  const handleXlsxUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setXlsxUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const response = await axios.post(
+        `${API}/clients/${effectiveClientId}/upload-xlsx`,
+        formData,
+        { 
+          headers: { 
+            ...getAuthHeaders(),
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      
+      setXlsxResult(response.data);
+      toast.success(`File elaborato: ${response.data.row_count} righe`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Errore upload file');
+    } finally {
+      setXlsxUploading(false);
+    }
+  };
+
+  // Apply XLSX suggestions
+  const applyXlsxSuggestions = async (mergeMode = 'append') => {
+    if (!xlsxResult?.upload_id) return;
+    
+    const formData = new FormData();
+    formData.append('upload_id', xlsxResult.upload_id);
+    formData.append('apply_servizi', 'true');
+    formData.append('apply_citta', 'true');
+    formData.append('apply_tipi', 'true');
+    formData.append('merge_mode', mergeMode);
+    
+    try {
+      await axios.post(
+        `${API}/clients/${effectiveClientId}/apply-xlsx-suggestions`,
+        formData,
+        { headers: getAuthHeaders() }
+      );
+      
+      toast.success('Suggerimenti applicati! Ricarica per vedere le modifiche.');
+      // Reload config
+      window.location.reload();
+    } catch (error) {
+      toast.error('Errore applicazione suggerimenti');
     }
   };
 
