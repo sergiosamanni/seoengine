@@ -461,6 +461,20 @@ async def get_article(article_id: str, current_user: dict = Depends(get_current_
     
     return ArticleResponse(**article)
 
+@api_router.get("/articles/{article_id}/full")
+async def get_article_full(article_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Restituisce l'articolo completo con tutti i metadati SEO e info WordPress.
+    """
+    article = await db.articles.find_one({"id": article_id}, {"_id": 0})
+    if not article:
+        raise HTTPException(status_code=404, detail="Articolo non trovato")
+    
+    if current_user["role"] != "admin" and current_user.get("client_id") != article["client_id"]:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    return article
+
 @api_router.post("/articles/generate")
 async def generate_articles(request: ArticleGenerate, current_user: dict = Depends(get_current_user)):
     """
