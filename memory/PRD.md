@@ -70,6 +70,14 @@ Trasformare script Python esistenti (che gestiscono file .json) in applicazioni 
 - [x] Anteprima articoli HTML
 - [x] Pubblicazione articoli su WordPress
 
+### P0.5 - Funzionalità Avanzate (Completato)
+- [x] **Area Amministratore Protetta**: Password master (seo_admin_2024) per accesso avanzato
+- [x] **Prompt di Secondo Livello**: Editor prompt avanzato con template keyword injection
+- [x] **Password Cliente**: Admin può impostare password specifiche per ogni cliente
+- [x] **Integrazione Apify**: SERP scraping dei primi 4 risultati Google per keyword target
+- [x] **Upload XLSX**: Import automatico keyword da file Excel con detect colonne
+- [x] **Merge/Replace Mode**: Scelta tra aggiungere o sostituire keyword esistenti
+
 ### P1 - In Backlog
 - [ ] Import/Export configurazione JSON
 - [ ] Schedulazione generazione automatica
