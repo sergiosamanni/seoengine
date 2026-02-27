@@ -336,65 +336,104 @@ export const ConfigurationPage = () => {
         {/* API Keys Tab */}
         <TabsContent value="api" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* OpenAI */}
-            <Card className="border-slate-200">
+            {/* LLM Configuration */}
+            <Card className="border-slate-200 lg:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-100 to-blue-100 flex items-center justify-center">
                     <Sparkles className="w-4 h-4 text-emerald-600" />
                   </div>
-                  OpenAI
+                  Modello LLM per Generazione
                 </CardTitle>
-                <CardDescription>Configurazione per la generazione AI</CardDescription>
+                <CardDescription>Scegli il provider e il modello per generare gli articoli SEO</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>API Key</Label>
-                  <Input
-                    type="password"
-                    value={openai.api_key}
-                    onChange={(e) => setOpenai({ ...openai, api_key: e.target.value })}
-                    placeholder="sk-..."
-                    data-testid="openai-api-key-input"
-                  />
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Provider Selection */}
+                  <div className="space-y-2">
+                    <Label>Provider</Label>
+                    <Select
+                      value={llm.provider}
+                      onValueChange={handleProviderChange}
+                    >
+                      <SelectTrigger data-testid="llm-provider-select">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LLM_PROVIDERS.map((provider) => (
+                          <SelectItem key={provider.id} value={provider.id}>
+                            <div className="flex items-center gap-2">
+                              <span>{provider.icon}</span>
+                              <span>{provider.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Model Selection */}
+                  <div className="space-y-2">
+                    <Label>Modello</Label>
+                    <Select
+                      value={llm.modello}
+                      onValueChange={(v) => setLlm({ ...llm, modello: v })}
+                    >
+                      <SelectTrigger data-testid="llm-model-select">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getModelsForProvider(llm.provider).map((model) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            {model.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* API Key */}
+                  <div className="space-y-2">
+                    <Label>API Key</Label>
+                    <Input
+                      type="password"
+                      value={llm.api_key}
+                      onChange={(e) => setLlm({ ...llm, api_key: e.target.value })}
+                      placeholder={llm.provider === 'openai' ? 'sk-...' : 'API Key...'}
+                      data-testid="llm-api-key-input"
+                    />
+                  </div>
+
+                  {/* Temperature */}
+                  <div className="space-y-2">
+                    <Label>Temperatura ({llm.temperatura})</Label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={llm.temperatura}
+                      onChange={(e) => setLlm({ ...llm, temperatura: parseFloat(e.target.value) })}
+                      className="w-full h-10 accent-slate-900"
+                      data-testid="llm-temp-slider"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Modello</Label>
-                  <Select
-                    value={openai.modello}
-                    onValueChange={(v) => setOpenai({ ...openai, modello: v })}
-                  >
-                    <SelectTrigger data-testid="openai-model-select">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="gpt-4-turbo-preview">GPT-4 Turbo (Raccomandato)</SelectItem>
-                      <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                      <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo (Economico)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Temperatura ({openai.temperatura})</Label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={openai.temperatura}
-                    onChange={(e) => setOpenai({ ...openai, temperatura: parseFloat(e.target.value) })}
-                    className="w-full"
-                    data-testid="openai-temp-slider"
-                  />
-                  <p className="text-xs text-slate-500">
-                    0.0 = deterministico | 1.0 = creativo | 0.7 = equilibrato
+
+                {/* Provider Info */}
+                <div className="mt-4 p-4 bg-slate-50 rounded-lg">
+                  <p className="text-sm text-slate-600">
+                    {llm.provider === 'openai' && '🤖 OpenAI offre i modelli GPT più avanzati per generazione di contenuti di alta qualità.'}
+                    {llm.provider === 'anthropic' && '🎭 Claude di Anthropic eccelle nella scrittura naturale e nel rispetto delle istruzioni complesse.'}
+                    {llm.provider === 'deepseek' && '🔍 DeepSeek offre modelli potenti a costi competitivi, ideali per grandi volumi di contenuti.'}
+                    {llm.provider === 'perplexity' && '🌐 Perplexity integra ricerca web real-time, perfetto per contenuti sempre aggiornati.'}
                   </p>
                 </div>
               </CardContent>
             </Card>
 
             {/* WordPress */}
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 lg:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -402,22 +441,59 @@ export const ConfigurationPage = () => {
                   </div>
                   WordPress
                 </CardTitle>
-                <CardDescription>Credenziali per la pubblicazione</CardDescription>
+                <CardDescription>Credenziali per la pubblicazione degli articoli</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>URL API</Label>
-                  <Input
-                    value={wordpress.url_api}
-                    onChange={(e) => setWordpress({ ...wordpress, url_api: e.target.value })}
-                    placeholder="https://sito.it/wp-json/wp/v2/posts"
-                    data-testid="wp-url-input"
-                  />
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>URL API</Label>
+                    <Input
+                      value={wordpress.url_api}
+                      onChange={(e) => setWordpress({ ...wordpress, url_api: e.target.value })}
+                      placeholder="https://sito.it/wp-json/wp/v2/posts"
+                      data-testid="wp-url-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Utente</Label>
+                    <Input
+                      value={wordpress.utente}
+                      onChange={(e) => setWordpress({ ...wordpress, utente: e.target.value })}
+                      placeholder="username"
+                      data-testid="wp-user-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Password Applicazione</Label>
+                    <Input
+                      type="password"
+                      value={wordpress.password_applicazione}
+                      onChange={(e) => setWordpress({ ...wordpress, password_applicazione: e.target.value })}
+                      placeholder="xxxx xxxx xxxx xxxx"
+                      data-testid="wp-pass-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Stato Pubblicazione</Label>
+                    <Select
+                      value={wordpress.stato_pubblicazione}
+                      onValueChange={(v) => setWordpress({ ...wordpress, stato_pubblicazione: v })}
+                    >
+                      <SelectTrigger data-testid="wp-status-select">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Bozza</SelectItem>
+                        <SelectItem value="publish">Pubblica</SelectItem>
+                        <SelectItem value="pending">In Revisione</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Utente</Label>
-                  <Input
-                    value={wordpress.utente}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
                     onChange={(e) => setWordpress({ ...wordpress, utente: e.target.value })}
                     placeholder="username"
                     data-testid="wp-user-input"
