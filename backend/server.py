@@ -166,6 +166,11 @@ class ArticleResponse(BaseModel):
 class ArticlePublish(BaseModel):
     article_ids: List[str]
 
+class ArticleGenerateAndPublish(BaseModel):
+    client_id: str
+    combinations: List[Dict[str, str]]
+    publish_to_wordpress: bool = True
+
 # ============== SEO SESSION HISTORY MODELS ==============
 
 class SEOSessionCreate(BaseModel):
