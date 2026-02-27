@@ -166,6 +166,27 @@ class ArticleResponse(BaseModel):
 class ArticlePublish(BaseModel):
     article_ids: List[str]
 
+# ============== SEO SESSION HISTORY MODELS ==============
+
+class SEOSessionCreate(BaseModel):
+    client_id: str
+    session_name: str = ""
+    keywords: Optional[Dict[str, List[str]]] = None  # keyword_combinations snapshot
+    serp_analyses: Optional[List[str]] = None  # list of serp_analysis IDs
+    advanced_prompt: Optional[Dict[str, str]] = None  # prompt snapshot
+    notes: str = ""
+
+class SEOSessionResponse(BaseModel):
+    id: str
+    client_id: str
+    session_name: str
+    keywords: Dict[str, List[str]]
+    serp_analyses: List[Dict]
+    advanced_prompt: Dict[str, str]
+    notes: str
+    articles_generated: int
+    created_at: str
+
 # ============== AUTH HELPERS ==============
 
 def hash_password(password: str) -> str:
