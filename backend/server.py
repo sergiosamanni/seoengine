@@ -884,6 +884,389 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
         data = response.json()
         return data.get("id")
 
+# ============== ADMIN PASSWORD MANAGEMENT ==============
+
+# Global admin password for accessing advanced features
+ADMIN_MASTER_PASSWORD = os.environ.get('ADMIN_MASTER_PASSWORD', 'seo_admin_2024')
+
+class VerifyPasswordRequest(BaseModel):
+    password: str
+    client_id: Optional[str] = None
+
+@api_router.post("/verify-admin-password")
+async def verify_admin_password(request: VerifyPasswordRequest, current_user: dict = Depends(get_current_user)):
+    """Verify admin master password for accessing advanced features"""
+    if request.password == ADMIN_MASTER_PASSWORD:
+        return {"valid": True, "access_level": "admin"}
+    return {"valid": False}
+
+@api_router.post("/verify-prompt-password")
+async def verify_prompt_password(request: VerifyPasswordRequest, current_user: dict = Depends(get_current_user)):
+    """Verify client-specific password for prompt editing"""
+    if not request.client_id:
+        raise HTTPException(status_code=400, detail="client_id richiesto")
+    
+    # Admin master password always works
+    if request.password == ADMIN_MASTER_PASSWORD:
+        return {"valid": True, "access_level": "admin"}
+    
+    # Check client-specific password
+    client = await db.clients.find_one({"id": request.client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    config = client.get("configuration", {})
+    advanced = config.get("advanced_prompt", {})
+    client_password = advanced.get("prompt_password", "")
+    
+    if client_password and request.password == client_password:
+        return {"valid": True, "access_level": "client"}
+    
+    return {"valid": False}
+
+# ============== ADVANCED PROMPT MANAGEMENT ==============
+
+class UpdateAdvancedPromptRequest(BaseModel):
+    password: str
+    secondo_livello_prompt: Optional[str] = None
+    keyword_injection_template: Optional[str] = None
+    prompt_password: Optional[str] = None  # Only admin can set this
+
+@api_router.put("/clients/{client_id}/advanced-prompt")
+async def update_advanced_prompt(
+    client_id: str, 
+    request: UpdateAdvancedPromptRequest, 
+    current_user: dict = Depends(get_current_user)
+):
+    """Update advanced prompt settings (password protected)"""
+    # Verify password
+    is_admin = request.password == ADMIN_MASTER_PASSWORD
+    
+    if not is_admin:
+        client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente non trovato")
+        
+        config = client.get("configuration", {})
+        advanced = config.get("advanced_prompt", {})
+        client_password = advanced.get("prompt_password", "")
+        
+        if not client_password or request.password != client_password:
+            raise HTTPException(status_code=403, detail="Password non valida")
+    
+    # Build update
+    update_data = {}
+    if request.secondo_livello_prompt is not None:
+        update_data["configuration.advanced_prompt.secondo_livello_prompt"] = request.secondo_livello_prompt
+    if request.keyword_injection_template is not None:
+        update_data["configuration.advanced_prompt.keyword_injection_template"] = request.keyword_injection_template
+    
+    # Only admin can change the prompt_password
+    if is_admin and request.prompt_password is not None:
+        update_data["configuration.advanced_prompt.prompt_password"] = request.prompt_password
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="Nessun dato da aggiornare")
+    
+    result = await db.clients.update_one({"id": client_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    return {"message": "Prompt avanzato aggiornato", "is_admin": is_admin}
+
+# ============== APIFY SERP SCRAPING ==============
+
+class SerpScrapingRequest(BaseModel):
+    keyword: str
+    country: str = "it"  # Country code
+    language: str = "it"  # Language code
+    num_results: int = 4
+
+@api_router.post("/clients/{client_id}/serp-analysis")
+async def analyze_serp(
+    client_id: str,
+    request: SerpScrapingRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Scrape top SERP results for a keyword using Apify"""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    config = client.get("configuration", {})
+    apify_config = config.get("apify", {})
+    api_key = apify_config.get("api_key")
+    
+    if not api_key:
+        raise HTTPException(status_code=400, detail="API Key Apify non configurata")
+    
+    actor_id = apify_config.get("actor_id", "apify/google-search-scraper")
+    
+    try:
+        # Call Apify Google Search Scraper
+        async with httpx.AsyncClient() as http_client:
+            # Start actor run
+            run_response = await http_client.post(
+                f"https://api.apify.com/v2/acts/{actor_id}/runs",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={
+                    "queries": request.keyword,
+                    "maxPagesPerQuery": 1,
+                    "resultsPerPage": request.num_results,
+                    "countryCode": request.country,
+                    "languageCode": request.language,
+                    "mobileResults": False
+                },
+                timeout=30.0
+            )
+            
+            if run_response.status_code not in [200, 201]:
+                raise Exception(f"Apify error: {run_response.status_code} - {run_response.text}")
+            
+            run_data = run_response.json()
+            run_id = run_data["data"]["id"]
+            
+            # Wait for completion (poll)
+            for _ in range(30):  # Max 30 attempts (60 seconds)
+                await asyncio.sleep(2)
+                
+                status_response = await http_client.get(
+                    f"https://api.apify.com/v2/actor-runs/{run_id}",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=10.0
+                )
+                
+                status_data = status_response.json()
+                run_status = status_data["data"]["status"]
+                
+                if run_status == "SUCCEEDED":
+                    break
+                elif run_status in ["FAILED", "ABORTED", "TIMED-OUT"]:
+                    raise Exception(f"Apify run failed: {run_status}")
+            
+            # Get results
+            dataset_id = status_data["data"]["defaultDatasetId"]
+            results_response = await http_client.get(
+                f"https://api.apify.com/v2/datasets/{dataset_id}/items",
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=30.0
+            )
+            
+            results = results_response.json()
+            
+            # Parse and format results
+            serp_results = []
+            for item in results:
+                organic = item.get("organicResults", [])
+                for result in organic[:request.num_results]:
+                    serp_results.append({
+                        "position": result.get("position"),
+                        "title": result.get("title"),
+                        "url": result.get("url"),
+                        "description": result.get("description"),
+                        "displayed_url": result.get("displayedUrl")
+                    })
+            
+            # Store in database for reference
+            serp_doc = {
+                "id": str(uuid.uuid4()),
+                "client_id": client_id,
+                "keyword": request.keyword,
+                "country": request.country,
+                "results": serp_results,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.serp_analyses.insert_one(serp_doc)
+            
+            return {
+                "keyword": request.keyword,
+                "country": request.country,
+                "results": serp_results,
+                "analysis_id": serp_doc["id"]
+            }
+            
+    except Exception as e:
+        logger.error(f"SERP analysis error: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore analisi SERP: {str(e)}")
+
+@api_router.get("/clients/{client_id}/serp-history")
+async def get_serp_history(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Get SERP analysis history for a client"""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    analyses = await db.serp_analyses.find(
+        {"client_id": client_id}, 
+        {"_id": 0}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    
+    return {"analyses": analyses}
+
+# ============== XLSX UPLOAD & SEO ANALYSIS ==============
+
+@api_router.post("/clients/{client_id}/upload-xlsx")
+async def upload_xlsx(
+    client_id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload XLSX file and extract SEO data"""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="File deve essere .xlsx o .xls")
+    
+    try:
+        contents = await file.read()
+        df = pd.read_excel(io.BytesIO(contents))
+        
+        # Extract potential keyword columns
+        columns = df.columns.tolist()
+        
+        # Detect common SEO-related columns
+        keyword_columns = [c for c in columns if any(k in c.lower() for k in ['keyword', 'parola', 'chiave', 'query', 'servizio', 'citta', 'città', 'zona', 'tipo'])]
+        
+        # Extract unique values from each column
+        extracted_data = {}
+        for col in columns:
+            unique_values = df[col].dropna().unique().tolist()
+            # Convert to strings and limit
+            extracted_data[col] = [str(v) for v in unique_values[:500]]
+        
+        # Auto-detect keyword combinations
+        suggestions = {
+            "servizi": [],
+            "citta_e_zone": [],
+            "tipi_o_qualificatori": []
+        }
+        
+        for col in columns:
+            col_lower = col.lower()
+            values = extracted_data[col][:100]  # Limit to 100
+            
+            if any(k in col_lower for k in ['servizio', 'service', 'prodotto', 'product']):
+                suggestions["servizi"].extend(values)
+            elif any(k in col_lower for k in ['citta', 'città', 'city', 'zona', 'area', 'location', 'luogo']):
+                suggestions["citta_e_zone"].extend(values)
+            elif any(k in col_lower for k in ['tipo', 'type', 'qualificatore', 'categoria', 'category']):
+                suggestions["tipi_o_qualificatori"].extend(values)
+        
+        # Remove duplicates
+        for key in suggestions:
+            suggestions[key] = list(set(suggestions[key]))
+        
+        # Store upload record
+        upload_doc = {
+            "id": str(uuid.uuid4()),
+            "client_id": client_id,
+            "filename": file.filename,
+            "columns": columns,
+            "row_count": len(df),
+            "extracted_data": extracted_data,
+            "suggestions": suggestions,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.xlsx_uploads.insert_one(upload_doc)
+        
+        return {
+            "upload_id": upload_doc["id"],
+            "filename": file.filename,
+            "columns": columns,
+            "row_count": len(df),
+            "keyword_columns_detected": keyword_columns,
+            "suggestions": suggestions,
+            "preview": df.head(10).to_dict(orient="records")
+        }
+        
+    except Exception as e:
+        logger.error(f"XLSX upload error: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore elaborazione file: {str(e)}")
+
+@api_router.post("/clients/{client_id}/apply-xlsx-suggestions")
+async def apply_xlsx_suggestions(
+    client_id: str,
+    upload_id: str = Form(...),
+    apply_servizi: bool = Form(True),
+    apply_citta: bool = Form(True),
+    apply_tipi: bool = Form(True),
+    merge_mode: str = Form("append"),  # append or replace
+    current_user: dict = Depends(get_current_user)
+):
+    """Apply XLSX suggestions to client keyword combinations"""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    # Get upload data
+    upload = await db.xlsx_uploads.find_one({"id": upload_id, "client_id": client_id}, {"_id": 0})
+    if not upload:
+        raise HTTPException(status_code=404, detail="Upload non trovato")
+    
+    suggestions = upload.get("suggestions", {})
+    
+    # Get current client config
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    config = client.get("configuration", {})
+    current_keywords = config.get("keyword_combinations", {})
+    
+    # Apply suggestions based on mode
+    update_data = {}
+    
+    if apply_servizi and suggestions.get("servizi"):
+        if merge_mode == "replace":
+            new_servizi = suggestions["servizi"]
+        else:
+            new_servizi = list(set(current_keywords.get("servizi", []) + suggestions["servizi"]))
+        update_data["configuration.keyword_combinations.servizi"] = new_servizi
+    
+    if apply_citta and suggestions.get("citta_e_zone"):
+        if merge_mode == "replace":
+            new_citta = suggestions["citta_e_zone"]
+        else:
+            new_citta = list(set(current_keywords.get("citta_e_zone", []) + suggestions["citta_e_zone"]))
+        update_data["configuration.keyword_combinations.citta_e_zone"] = new_citta
+    
+    if apply_tipi and suggestions.get("tipi_o_qualificatori"):
+        if merge_mode == "replace":
+            new_tipi = suggestions["tipi_o_qualificatori"]
+        else:
+            new_tipi = list(set(current_keywords.get("tipi_o_qualificatori", []) + suggestions["tipi_o_qualificatori"]))
+        update_data["configuration.keyword_combinations.tipi_o_qualificatori"] = new_tipi
+    
+    if not update_data:
+        return {"message": "Nessuna modifica applicata"}
+    
+    await db.clients.update_one({"id": client_id}, {"$set": update_data})
+    
+    return {
+        "message": "Suggerimenti applicati",
+        "merge_mode": merge_mode,
+        "applied": {
+            "servizi": apply_servizi,
+            "citta_e_zone": apply_citta,
+            "tipi_o_qualificatori": apply_tipi
+        }
+    }
+
+@api_router.get("/clients/{client_id}/xlsx-uploads")
+async def get_xlsx_uploads(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Get XLSX upload history"""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    uploads = await db.xlsx_uploads.find(
+        {"client_id": client_id},
+        {"_id": 0, "extracted_data": 0}  # Exclude large data
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    return {"uploads": uploads}
+
 # ============== SEED DATA ==============
 
 @api_router.post("/seed")
