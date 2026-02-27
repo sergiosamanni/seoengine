@@ -118,6 +118,7 @@ class KeywordCombinations(BaseModel):
     tipi_o_qualificatori: List[str] = []
 
 class ApifyConfig(BaseModel):
+    enabled: bool = False  # Toggle to enable/disable Apify for this client
     api_key: str = ""
     actor_id: str = "apify/google-search-scraper"
 
