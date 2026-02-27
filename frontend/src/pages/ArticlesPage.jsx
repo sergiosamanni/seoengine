@@ -400,7 +400,60 @@ export const ArticlesPage = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[60vh]">
+              {/* SEO Metadata Section */}
+              {previewArticle.seo_metadata && (
+                <div className="mb-4 p-4 bg-slate-50 rounded-lg space-y-2">
+                  <h4 className="font-semibold text-slate-900 text-sm">Metadati SEO</h4>
+                  {previewArticle.seo_metadata.meta_description && (
+                    <p className="text-sm text-slate-600">
+                      <span className="font-medium">Meta Description:</span> {previewArticle.seo_metadata.meta_description}
+                    </p>
+                  )}
+                  {previewArticle.seo_metadata.focus_keyword && (
+                    <p className="text-sm text-slate-600">
+                      <span className="font-medium">Focus Keyword:</span> {previewArticle.seo_metadata.focus_keyword}
+                    </p>
+                  )}
+                  {previewArticle.seo_metadata.tags && previewArticle.seo_metadata.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 items-center">
+                      <span className="font-medium text-sm text-slate-600">Tags:</span>
+                      {previewArticle.seo_metadata.tags.map((tag, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">{tag}</Badge>
+                      ))}
+                    </div>
+                  )}
+                  {previewArticle.seo_metadata.slug && (
+                    <p className="text-sm text-slate-600 font-mono">
+                      <span className="font-medium font-sans">Slug:</span> /{previewArticle.seo_metadata.slug}
+                    </p>
+                  )}
+                </div>
+              )}
+              
+              {/* WordPress Link if published */}
+              {previewArticle.wordpress_link && (
+                <div className="mb-4 p-3 bg-emerald-50 rounded-lg flex items-center justify-between">
+                  <span className="text-sm text-emerald-700">Pubblicato su WordPress</span>
+                  <a 
+                    href={previewArticle.wordpress_link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-emerald-600 hover:underline flex items-center gap-1"
+                  >
+                    Visualizza <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+              
+              {/* Publish Error if failed */}
+              {previewArticle.publish_error && (
+                <div className="mb-4 p-3 bg-red-50 rounded-lg">
+                  <p className="text-sm text-red-700 font-medium">Errore pubblicazione:</p>
+                  <p className="text-sm text-red-600">{previewArticle.publish_error}</p>
+                </div>
+              )}
+              
+              <ScrollArea className="h-[50vh]">
                 <div 
                   className="article-preview prose max-w-none"
                   dangerouslySetInnerHTML={{ __html: previewArticle.contenuto }}
