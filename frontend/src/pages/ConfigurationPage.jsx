@@ -411,6 +411,72 @@ export const ConfigurationPage = () => {
     setList({ ...list, [field]: currentArray.filter(v => v !== value) });
   };
 
+  // Reset all input fields after save
+  const resetInputFields = () => {
+    setNewAggettivo('');
+    setNewParolaVietata('');
+    setNewFraseVietata('');
+    setNewPuntoInteresse('');
+    setNewPuntoForza('');
+    setNewServizio('');
+    setNewCitta('');
+    setNewTipo('');
+    setSerpKeyword('');
+    setSerpResults([]);
+    setSessionName('');
+    setSessionNotes('');
+    setXlsxResult(null);
+  };
+
+  // Save and Generate - saves session to history and prepares for article generation
+  const handleSaveAndGenerate = async () => {
+    setSaveAndGenerating(true);
+    
+    try {
+      // First save the current configuration
+      await axios.put(`${API}/clients/${effectiveClientId}/configuration`, {
+        wordpress,
+        llm,
+        openai: llm,
+        apify,
+        seo,
+        tono_e_stile: tono,
+        knowledge_base: knowledge,
+        keyword_combinations: keywords
+      }, {
+        headers: getAuthHeaders()
+      });
+      
+      // Then create a session in history
+      const response = await axios.post(
+        `${API}/clients/${effectiveClientId}/save-and-generate?session_name=${encodeURIComponent(sessionName)}&notes=${encodeURIComponent(sessionNotes)}`,
+        {},
+        { headers: getAuthHeaders() }
+      );
+      
+      const result = response.data;
+      
+      toast.success(
+        `Sessione "${result.session_name}" salvata! ${result.combinations_ready} combinazioni pronte per la generazione.`,
+        { duration: 5000 }
+      );
+      
+      // Reset input fields
+      resetInputFields();
+      setShowSaveDialog(false);
+      
+      // Navigate to generator page
+      if (result.combinations_ready > 0) {
+        navigate(isAdmin ? `/clients/${effectiveClientId}` : '/generator');
+      }
+      
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Errore durante il salvataggio');
+    } finally {
+      setSaveAndGenerating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
