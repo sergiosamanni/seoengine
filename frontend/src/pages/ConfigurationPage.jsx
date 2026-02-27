@@ -16,6 +16,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
 import { 
   ArrowLeft, 
   Save, 
@@ -30,7 +38,9 @@ import {
   Search,
   Upload,
   Database,
-  Loader2
+  Loader2,
+  Zap,
+  History
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ScrollArea } from '../components/ui/scroll-area';
