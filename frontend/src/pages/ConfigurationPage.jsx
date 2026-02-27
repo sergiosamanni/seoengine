@@ -109,7 +109,8 @@ export const ConfigurationPage = () => {
     stato_pubblicazione: 'draft'
   });
   
-  const [openai, setOpenai] = useState({
+  const [llm, setLlm] = useState({
+    provider: 'openai',
     api_key: '',
     modello: 'gpt-4-turbo-preview',
     temperatura: 0.7
