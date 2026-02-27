@@ -90,6 +90,20 @@ export const ArticlesPage = () => {
     fetchClients();
   }, [statusFilter, clientFilter]);
 
+  // Load full article data for preview
+  const loadArticlePreview = async (articleId) => {
+    try {
+      const response = await axios.get(`${API}/articles/${articleId}/full`, {
+        headers: getAuthHeaders()
+      });
+      setPreviewArticle(response.data);
+    } catch (error) {
+      // Fallback to basic article data
+      const article = articles.find(a => a.id === articleId);
+      if (article) setPreviewArticle(article);
+    }
+  };
+
   const toggleArticle = (articleId) => {
     if (selectedArticles.includes(articleId)) {
       setSelectedArticles(selectedArticles.filter(id => id !== articleId));
