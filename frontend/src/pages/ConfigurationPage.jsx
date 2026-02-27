@@ -25,7 +25,12 @@ import {
   Sparkles,
   Plus,
   X,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  Search,
+  Upload,
+  Database,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ScrollArea } from '../components/ui/scroll-area';
