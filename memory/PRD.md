@@ -61,10 +61,11 @@ Trasformare script Python esistenti (che gestiscono file .json) in applicazioni 
 - [x] Dashboard admin con overview clienti
 - [x] Dashboard cliente con stats personali
 - [x] CRUD clienti con tabella e ricerca
-- [x] Configurazione completa (OpenAI, WordPress, SEO, Tono, Knowledge Base, Keywords)
+- [x] Configurazione completa (LLM multi-provider, WordPress, SEO, Tono, Knowledge Base, Keywords)
+- [x] **Supporto multi-LLM: OpenAI, Claude (Anthropic), DeepSeek, Perplexity**
 - [x] Generatore combinazioni keyword automatico
 - [x] Selezione combinazioni per generazione
-- [x] Generazione articoli con OpenAI API
+- [x] Generazione articoli con API LLM selezionato
 - [x] Storico articoli con filtri
 - [x] Anteprima articoli HTML
 - [x] Pubblicazione articoli su WordPress
