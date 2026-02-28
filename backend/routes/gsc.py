@@ -18,6 +18,10 @@ GSC_OAUTH_CLIENT_SECRET = os.environ.get("GSC_OAUTH_CLIENT_SECRET", "")
 
 
 def _get_gsc_redirect_uri():
+    # Use explicit override if set, otherwise derive from FRONTEND_URL
+    override = os.environ.get("GSC_REDIRECT_URI", "")
+    if override:
+        return override
     frontend_url = os.environ.get("FRONTEND_URL", "")
     if not frontend_url:
         raise HTTPException(status_code=500, detail="FRONTEND_URL non configurato")
