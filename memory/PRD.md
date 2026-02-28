@@ -9,64 +9,44 @@ Trasformare script Python per la SEO programmatica in un'applicazione web comple
 - **Auth**: JWT
 - **LLM**: Multi-provider (OpenAI, Claude, DeepSeek, Perplexity) via API key del cliente
 
-## Struttura Backend
-```
-/app/backend/
-├── server.py          # Entry point (~48 righe)
-├── database.py        # Connessione MongoDB
-├── auth.py            # Auth helpers (JWT, password hash/verify)
-├── helpers.py         # build_prompt, generate_with_llm, scrape_serp (DuckDuckGo + retry), publish_wp
-├── models.py          # Modelli Pydantic
-└── routes/
-    ├── auth_users.py  # Auth + gestione utenti
-    ├── clients.py     # CRUD clienti + config + siti + XLSX + sessioni
-    ├── articles.py    # Articoli + generazione + SERP + jobs + stats + logs
-    └── gsc.py         # Google Search Console OAuth
-```
-
 ## Navigazione App
 ### Admin
 - **Dashboard** (/) → Stats + Tabella Clienti unificata
 - **Utenti** → Gestione assegnazioni utenti-clienti
-- **Activity Log** → Log tutte le operazioni
-- Click cliente → **Genera Articoli** (5 step wizard)
-  - Sub-pagine: Configurazione, GSC
+- **Activity Log** → Log operazioni
+- Click cliente → **Genera Articoli** (5 step wizard) + Storico Articoli
+  - Sub-pagine: Configurazione (3 tab), GSC
 
 ### Client
-- **Genera** → Flusso semplificato (keyword → analisi auto → genera)
+- **Genera** → Flusso semplificato (keyword → analisi auto → genera) + Storico
 - **Activity Log** → Log proprie operazioni
 
 ## Flusso Genera Articoli (Admin) - 5 Step
 1. **Strategia**: Funnel, obiettivo, copywriting model, buyer persona
-2. **Analisi SERP**: Keyword → top 4 competitor → estrazione titoli + headings
-3. **Dati GSC**: Keyword + metriche dal sito (opzionale, se connesso)
+2. **Analisi SERP**: Top 4 competitor → titoli + headings
+3. **Dati GSC**: Auto-load keyword + metriche (se connesso, badge sky-blue)
 4. **Prompt Avanzato**: Auto-generato da SERP+GSC, editabile
-5. **Genera**: Articolo Singolo oppure SEO Programmatica (combinazioni)
-- **Storico Articoli**: Pannello collapsible in fondo alla pagina
-
-## Flusso Genera Articoli (Client) - Semplificato
-1. Inserisci keyword → analisi SERP automatica + GSC → conferma → genera
+5. **Genera**: Singolo (titolo+kw+obiettivo) o Programmatica (combinazioni)
+   - Contesto GSC e SERP iniettato nel system prompt
 
 ## Funzionalità Implementate
-- [x] Auth JWT + Dashboard Admin unificata (stats + clienti)
-- [x] CRUD Clienti multi-sito
-- [x] Generazione contenuti AI multi-provider
+- [x] Auth JWT + Dashboard Admin unificata
+- [x] CRUD Clienti multi-sito + Storico Articoli in-page
+- [x] Generazione AI multi-provider con contesto GSC+SERP
 - [x] Pubblicazione WordPress
 - [x] Activity Log dedicato
 - [x] Gestione Utenti admin
-- [x] Configurazione: API Keys, Knowledge Base, Tono & Stile
-- [x] GSC OAuth 2.0 (PKCE) + display redirect URI
-- [x] SERP scraping DuckDuckGo Lite (retry 3x + User-Agent rotation)
-- [x] Storico articoli dentro vista cliente
+- [x] Config: API Keys, Knowledge Base, Tono & Stile
+- [x] GSC OAuth 2.0 (PKCE) con persistenza sessione
+- [x] SERP DuckDuckGo Lite (retry 3x + User-Agent rotation)
+- [x] GSC step auto-load + badge connessione nel wizard
+
+## GSC Setup
+- Redirect URI: `https://gsc-content-builder.preview.emergentagent.com/api/gsc/callback`
 
 ## Credenziali Test
 - Admin: admin@seoengine.it / admin123
 
-## GSC Setup
-- Redirect URI da aggiungere in Google Cloud Console:
-  `https://gsc-content-builder.preview.emergentagent.com/api/gsc/callback`
-
 ## Backlog
-- [ ] Verificare fix GSC OAuth con utente reale (dopo aggiunta redirect URI in Cloud Console)
 - [ ] Verificare umanizzazione prompt AI
-- [ ] UI multi-sito nel modale clienti migliorata
+- [ ] UI multi-sito migliorata nel modale clienti
