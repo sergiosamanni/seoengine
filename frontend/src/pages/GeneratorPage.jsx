@@ -861,7 +861,8 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
         topic: clientNotes ? `${generatedPrompt}\n\n## Note del cliente:\n${clientNotes}` : generatedPrompt,
         gsc_context: gscData ? { top_keywords: gscData.keywords?.slice(0, 10), totals: gscData.totals } : undefined,
         serp_context: serpData ? { competitors: serpData.competitors, extracted: serpData.extracted } : undefined,
-        publish_to_wordpress: true
+        publish_to_wordpress: true,
+        image_ids: uploadedImages.length > 0 ? uploadedImages.map(img => img.id) : undefined
       }, { headers: getAuthHeaders() });
       setResult({ ...res.data, status: 'running' });
       toast.success('Generazione avviata!');
