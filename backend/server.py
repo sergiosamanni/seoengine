@@ -373,6 +373,7 @@ async def create_client(client: ClientCreate, current_user: dict = Depends(requi
         "nome": client.nome,
         "settore": client.settore,
         "sito_web": client.sito_web,
+        "siti_web": client.siti_web if client.siti_web else [client.sito_web] if client.sito_web else [],
         "attivo": client.attivo,
         "created_at": now,
         "ultimo_run": None,
