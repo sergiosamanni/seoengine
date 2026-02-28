@@ -134,7 +134,12 @@ async def gsc_disconnect(client_id: str, current_user: dict = Depends(get_curren
 
 @router.get("/gsc/status")
 async def gsc_integration_status(current_user: dict = Depends(get_current_user)):
-    return {"configured": bool(GSC_OAUTH_CLIENT_ID and GSC_OAUTH_CLIENT_SECRET)}
+    redirect_uri = _get_gsc_redirect_uri()
+    return {
+        "configured": bool(GSC_OAUTH_CLIENT_ID and GSC_OAUTH_CLIENT_SECRET),
+        "redirect_uri": redirect_uri,
+        "instructions": f"Aggiungi questo URI di reindirizzamento autorizzato nella Google Cloud Console: {redirect_uri}"
+    }
 
 
 @router.get("/clients/{client_id}/gsc-data")
