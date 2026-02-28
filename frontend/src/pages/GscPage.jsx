@@ -204,6 +204,29 @@ export const GscPage = () => {
         )}
       </div>
 
+      {/* Connected Status Banner */}
+      {gscConnected && (
+        <Card className="border-emerald-200 bg-emerald-50/60" data-testid="gsc-connected-banner">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-emerald-800">Google Search Console Connesso</p>
+                <p className="text-sm text-emerald-600">{siteUrl}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Attivo</Badge>
+              <Button variant="outline" size="sm" onClick={disconnectGoogle} className="text-red-600 border-red-200 hover:bg-red-50" data-testid="gsc-disconnect-btn">
+                <Unlink className="w-4 h-4 mr-1" />Disconnetti
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Connection Card */}
       {!gscConnected ? (
         <Card className="border-slate-200">
