@@ -366,7 +366,15 @@ async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp,
             result["generation_error"] = gen_error
             await log_activity(client_id, "article_generate", "failed", {"titolo": titolo, "error": gen_error})
         else:
+            # Extract LLM-generated meta description if present
+            import re as re_mod
+            meta_match = re_mod.search(r'<!--\s*META_DESCRIPTION:\s*(.+?)\s*-->', content)
+            llm_meta_desc = meta_match.group(1).strip() if meta_match else None
+            if meta_match:
+                content = content[:meta_match.start()].rstrip() + content[meta_match.end():]
             seo_metadata = generate_seo_metadata(titolo, content, kb, combo)
+            if llm_meta_desc and len(llm_meta_desc) >= 80:
+                seo_metadata["meta_description"] = llm_meta_desc[:160]
             await db.articles.insert_one({"id": article_id, "client_id": client_id, "titolo": titolo,
                 "contenuto": content, "contenuto_html": content,
                 "keyword_principale": keyword,
