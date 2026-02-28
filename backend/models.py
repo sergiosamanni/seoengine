@@ -201,6 +201,10 @@ class UpdateAdvancedPromptRequest(BaseModel):
 
 class SimpleGenerateRequest(BaseModel):
     keyword: str
+    client_id: Optional[str] = None
     topic: str = ""
     objective: str = "informazionale"
+    titolo_suggerito: Optional[str] = None
     publish_to_wordpress: bool = False
+    gsc_context: Optional[Dict] = None
+    serp_context: Optional[Dict] = None
