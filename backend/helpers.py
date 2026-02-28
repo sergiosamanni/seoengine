@@ -398,7 +398,7 @@ REGOLE DI UMANIZZAZIONE:
 # ============== SERP SCRAPING ==============
 
 async def scrape_google_serp(keyword: str, country: str = "it", num_results: int = 5) -> list:
-    """Search SERP using DuckDuckGo HTML + scrape page content."""
+    """Search SERP using DuckDuckGo Lite + scrape page content."""
     results = []
     search_urls = []
 
@@ -406,19 +406,21 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
         async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }) as http:
-            resp = await http.post("https://html.duckduckgo.com/html/",
-                data={"q": keyword, "kl": f"{country}-{country}"},
-                headers={"Content-Type": "application/x-www-form-urlencoded"})
+            resp = await http.get("https://lite.duckduckgo.com/lite/",
+                params={"q": keyword, "kl": f"{country}-{country}"})
             soup = BeautifulSoup(resp.text, "lxml")
-            for r in soup.find_all("div", class_="result")[:num_results]:
-                title_tag = r.find("a", class_="result__a")
-                snippet_tag = r.find("a", class_="result__snippet")
-                if title_tag:
-                    search_urls.append({
-                        "url": title_tag.get("href", ""),
-                        "title": title_tag.get_text(strip=True),
-                        "description": snippet_tag.get_text(strip=True) if snippet_tag else ""
-                    })
+            current = {}
+            for a in soup.find_all("a", class_="result-link"):
+                if len(search_urls) >= num_results:
+                    break
+                href = a.get("href", "")
+                title = a.get_text(strip=True)
+                if href and title:
+                    search_urls.append({"url": href, "title": title, "description": ""})
+            # Get snippets
+            for i, td in enumerate(soup.find_all("td", class_="result-snippet")):
+                if i < len(search_urls):
+                    search_urls[i]["description"] = td.get_text(strip=True)
     except Exception as e:
         logger.warning(f"DuckDuckGo search failed: {e}")
         return []
@@ -430,16 +432,16 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
             url = sr["url"]
             try:
                 resp = await client_http.get(url)
-                soup = BeautifulSoup(resp.text, "lxml")
-                title = soup.title.string.strip() if soup.title and soup.title.string else sr["title"]
+                page_soup = BeautifulSoup(resp.text, "lxml")
+                title = page_soup.title.string.strip() if page_soup.title and page_soup.title.string else sr["title"]
                 meta_desc = ""
-                meta_tag = soup.find("meta", attrs={"name": "description"})
+                meta_tag = page_soup.find("meta", attrs={"name": "description"})
                 if meta_tag and meta_tag.get("content"):
                     meta_desc = meta_tag["content"][:300]
-                for tag in soup(["script", "style", "nav", "header", "footer"]):
+                for tag in page_soup(["script", "style", "nav", "header", "footer"]):
                     tag.decompose()
-                text = soup.get_text(separator=" ", strip=True)[:500]
-                headings = [h.get_text(strip=True) for h in soup.find_all(["h1", "h2"])[:6]]
+                text = page_soup.get_text(separator=" ", strip=True)[:500]
+                headings = [h.get_text(strip=True) for h in page_soup.find_all(["h1", "h2"])[:6]]
                 results.append({
                     "position": i + 1, "url": url, "title": title,
                     "description": meta_desc or sr["description"] or text[:200],
