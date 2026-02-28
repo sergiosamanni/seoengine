@@ -217,8 +217,7 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
             post_data["categories"] = categories
 
         tag_ids = []
-        if tags:
-            base_url = url.replace("/posts", "")
+        if tags and wp_type == "post":
             for tag_name in tags:
                 try:
                     search_response = await http_client.get(
