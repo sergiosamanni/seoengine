@@ -277,7 +277,7 @@ export const ConfigurationPage = () => {
         </TabsContent>
 
         <TabsContent value="knowledge" className="mt-6">
-          <KnowledgeBaseTab knowledge={knowledge} setKnowledge={setKnowledge} />
+          <KnowledgeBaseTab knowledge={knowledge} setKnowledge={setKnowledge} isAdmin={isAdmin} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
         </TabsContent>
 
         <TabsContent value="tone" className="mt-6">
