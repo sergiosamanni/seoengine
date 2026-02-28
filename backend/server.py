@@ -2420,17 +2420,22 @@ async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp,
     }})
 
 
-# ============== GOOGLE SEARCH CONSOLE ==============
+# ============== GOOGLE SEARCH CONSOLE (OAuth) ==============
+
+GSC_SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
 
 @api_router.post("/clients/{client_id}/gsc-config")
 async def save_gsc_config(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
-    """Save Google Search Console credentials for a client."""
+    """Save Google OAuth Client ID and Secret for GSC."""
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
     gsc_config = {
-        "service_account_json": request.get("service_account_json", ""),
+        "oauth_client_id": request.get("oauth_client_id", ""),
+        "oauth_client_secret": request.get("oauth_client_secret", ""),
         "site_url": request.get("site_url", ""),
-        "enabled": request.get("enabled", True)
+        "enabled": request.get("enabled", True),
+        "connected": False,
+        "tokens": None
     }
     await db.clients.update_one(
         {"id": client_id},
@@ -2439,9 +2444,132 @@ async def save_gsc_config(client_id: str, request: dict, current_user: dict = De
     return {"message": "Configurazione GSC salvata"}
 
 
+@api_router.get("/gsc/authorize/{client_id}")
+async def gsc_authorize(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Generate Google OAuth authorization URL for GSC."""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+
+    gsc = client_doc.get("configuration", {}).get("gsc", {})
+    oauth_client_id = gsc.get("oauth_client_id", "")
+    oauth_client_secret = gsc.get("oauth_client_secret", "")
+    if not oauth_client_id or not oauth_client_secret:
+        raise HTTPException(status_code=400, detail="Configura prima il Client ID e il Client Secret OAuth")
+
+    # Build redirect URI from environment
+    frontend_url = os.environ.get("FRONTEND_URL", "")
+    if not frontend_url:
+        raise HTTPException(status_code=500, detail="FRONTEND_URL non configurato nel backend")
+
+    redirect_uri = f"{frontend_url}/api/gsc/callback"
+
+    from google_auth_oauthlib.flow import Flow
+
+    client_config = {
+        "web": {
+            "client_id": oauth_client_id,
+            "client_secret": oauth_client_secret,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [redirect_uri]
+        }
+    }
+
+    flow = Flow.from_client_config(client_config, scopes=GSC_SCOPES, redirect_uri=redirect_uri)
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true',
+        prompt='consent'
+    )
+
+    # Store state in DB for verification
+    await db.gsc_states.insert_one({
+        "state": state,
+        "client_id": client_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+    return {"authorization_url": authorization_url, "state": state}
+
+
+@api_router.get("/gsc/callback")
+async def gsc_callback(code: str, state: str):
+    """Handle Google OAuth callback, exchange code for tokens."""
+    # Find the state to get client_id
+    state_doc = await db.gsc_states.find_one({"state": state})
+    if not state_doc:
+        raise HTTPException(status_code=400, detail="State non valido o scaduto")
+    client_id = state_doc["client_id"]
+    await db.gsc_states.delete_one({"state": state})
+
+    client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+
+    gsc = client_doc.get("configuration", {}).get("gsc", {})
+    oauth_client_id = gsc.get("oauth_client_id", "")
+    oauth_client_secret = gsc.get("oauth_client_secret", "")
+
+    frontend_url = os.environ.get("FRONTEND_URL", "")
+    redirect_uri = f"{frontend_url}/api/gsc/callback"
+
+    from google_auth_oauthlib.flow import Flow
+
+    client_config = {
+        "web": {
+            "client_id": oauth_client_id,
+            "client_secret": oauth_client_secret,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [redirect_uri]
+        }
+    }
+
+    flow = Flow.from_client_config(client_config, scopes=GSC_SCOPES, redirect_uri=redirect_uri)
+
+    try:
+        flow.fetch_token(code=code)
+        credentials = flow.credentials
+        tokens = {
+            "token": credentials.token,
+            "refresh_token": credentials.refresh_token,
+            "token_uri": credentials.token_uri,
+            "client_id": credentials.client_id,
+            "client_secret": credentials.client_secret,
+            "expiry": credentials.expiry.isoformat() if credentials.expiry else None
+        }
+        await db.clients.update_one(
+            {"id": client_id},
+            {"$set": {"configuration.gsc.tokens": tokens, "configuration.gsc.connected": True}}
+        )
+    except Exception as e:
+        logger.error(f"GSC OAuth error: {e}")
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url=f"{frontend_url}/clients/{client_id}/gsc?error=auth_failed")
+
+    from starlette.responses import RedirectResponse
+    return RedirectResponse(url=f"{frontend_url}/clients/{client_id}/gsc?gsc_connected=true")
+
+
+@api_router.post("/clients/{client_id}/gsc-disconnect")
+async def gsc_disconnect(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Disconnect GSC (remove tokens)."""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    await db.clients.update_one(
+        {"id": client_id},
+        {"$set": {"configuration.gsc.tokens": None, "configuration.gsc.connected": False}}
+    )
+    return {"message": "GSC disconnesso"}
+
+
 @api_router.get("/clients/{client_id}/gsc-data")
 async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depends(get_current_user)):
-    """Fetch Google Search Console data for a client."""
+    """Fetch Google Search Console data using stored OAuth tokens."""
     if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
 
@@ -2450,26 +2578,51 @@ async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depe
         raise HTTPException(status_code=404, detail="Cliente non trovato")
 
     gsc_config = client_doc.get("configuration", {}).get("gsc", {})
-    if not gsc_config or not gsc_config.get("service_account_json") or not gsc_config.get("site_url"):
-        raise HTTPException(status_code=400, detail="Google Search Console non configurato. Inserisci il JSON del Service Account e l'URL del sito.")
+    tokens = gsc_config.get("tokens")
+    if not tokens or not gsc_config.get("connected"):
+        raise HTTPException(status_code=400, detail="Google Search Console non connesso. Clicca 'Connetti con Google' per autorizzare.")
+
+    site_url = gsc_config.get("site_url", "")
+    if not site_url:
+        raise HTTPException(status_code=400, detail="URL del sito non configurato.")
 
     try:
-        import json
-        from google.oauth2 import service_account
+        import google.oauth2.credentials
         from googleapiclient.discovery import build
+        from google.auth.transport.requests import Request
 
-        sa_json = json.loads(gsc_config["service_account_json"])
-        credentials = service_account.Credentials.from_service_account_info(
-            sa_json, scopes=["https://www.googleapis.com/auth/webmasters.readonly"]
+        creds = google.oauth2.credentials.Credentials(
+            token=tokens["token"],
+            refresh_token=tokens.get("refresh_token"),
+            token_uri=tokens.get("token_uri", "https://oauth2.googleapis.com/token"),
+            client_id=tokens.get("client_id"),
+            client_secret=tokens.get("client_secret")
         )
-        service = build("searchconsole", "v1", credentials=credentials)
+
+        # Refresh if expired
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            # Update stored tokens
+            new_tokens = {
+                "token": creds.token,
+                "refresh_token": creds.refresh_token,
+                "token_uri": creds.token_uri,
+                "client_id": creds.client_id,
+                "client_secret": creds.client_secret,
+                "expiry": creds.expiry.isoformat() if creds.expiry else None
+            }
+            await db.clients.update_one(
+                {"id": client_id},
+                {"$set": {"configuration.gsc.tokens": new_tokens}}
+            )
+
+        service = build("searchconsole", "v1", credentials=creds)
 
         end_date = datetime.now(timezone.utc).date()
         start_date = end_date - timedelta(days=days)
 
-        # Query: top keywords
         kw_response = service.searchanalytics().query(
-            siteUrl=gsc_config["site_url"],
+            siteUrl=site_url,
             body={
                 "startDate": start_date.isoformat(),
                 "endDate": end_date.isoformat(),
@@ -2478,9 +2631,8 @@ async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depe
             }
         ).execute()
 
-        # Query: top pages
         pages_response = service.searchanalytics().query(
-            siteUrl=gsc_config["site_url"],
+            siteUrl=site_url,
             body={
                 "startDate": start_date.isoformat(),
                 "endDate": end_date.isoformat(),
@@ -2521,10 +2673,15 @@ async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depe
             }
         }
 
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="JSON del Service Account non valido")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Errore GSC: {str(e)}")
+        error_msg = str(e)
+        if "invalid_grant" in error_msg or "Token has been expired" in error_msg:
+            await db.clients.update_one(
+                {"id": client_id},
+                {"$set": {"configuration.gsc.connected": False, "configuration.gsc.tokens": None}}
+            )
+            raise HTTPException(status_code=401, detail="Token GSC scaduto. Riconnetti con Google.")
+        raise HTTPException(status_code=500, detail=f"Errore GSC: {error_msg}")
 
 
 # ============== ACTIVITY LOG ==============
