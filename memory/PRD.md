@@ -9,41 +9,50 @@ Applicazione web full-stack per la SEO programmatica. Genera articoli SEO ottimi
 - **Database**: MongoDB
 - **LLM**: Multi-provider (OpenAI, Claude, DeepSeek, Perplexity) tramite API dirette
 - **SERP**: DuckDuckGo Lite con retry logic
-- **WordPress**: Pubblicazione via REST API + Application Password
+- **WordPress**: Pubblicazione via REST API + Application Password (post e pagine)
 - **GSC**: OAuth 2.0 per dati Google Search Console
+- **Object Storage**: Emergent Object Storage per upload immagini
 
 ## Core Features (Implemented)
 1. **Multi-Tenant**: Ruoli Admin e Cliente
-2. **Wizard 5 Step** (Admin): Strategia → Analisi SERP → GSC → Prompt → Genera
+2. **Wizard 5 Step** (Admin): Strategia -> Analisi SERP -> GSC -> Prompt -> Genera
 3. **Generazione Articoli**: Singolo e Programmatica (batch)
-4. **Pubblicazione WordPress**: Automatica come bozza con SEO metadata
-5. **Dashboard Unificata**: Lista clienti con stats
-6. **Storico Articoli**: Per-client con preview e eliminazione
-7. **Activity Log**: Tracciamento operazioni con stato running/success/failed
-8. **GSC Integration**: OAuth 2.0, dati keyword ultimi 28 giorni
+4. **3 Tipi Contenuto**: Articolo Blog, Landing Page, Pillar Page (con prompt differenziati)
+5. **Pubblicazione WordPress**: Post per articoli, Pagine per landing/pillar
+6. **Upload Immagini**: Prima=evidenza WP, altre inline nell'articolo
+7. **Dashboard Unificata**: Lista clienti con stats
+8. **Storico Articoli**: Per-client con preview e eliminazione
+9. **Activity Log**: Tracciamento operazioni con stato running/success/failed
+10. **GSC Integration**: OAuth 2.0, dati keyword ultimi 28 giorni
+11. **Meta Description Ottimizzata**: Generata dall'LLM (150-160 chars) con keyword + CTA
+12. **H1 Unico**: Regola critica nel prompt: un solo `<h1>` per documento
 
-## Key Fixes Applied (28/02/2026)
-- **CRITICAL**: `helpers.py` `log_activity` usava `update_one(sort=...)` che non è supportato da pymongo. Sostituito con `find_one_and_update` che supporta `sort`. Questo causava log bloccati in "running".
-- **Frontend**: Aggiunto flag `publish_to_wordpress` nel payload di generazione singola (mancava)
-- **Frontend**: Aggiunto toggle "Pubblica su WordPress" nella modalità Articolo Singolo
-- **Frontend**: Aggiunto job polling per la generazione singola (mostra progresso e risultato in tempo reale)
-- **Frontend**: Aggiunto job polling anche per il ClientGenerator
+## Files Key
+- `/app/backend/routes/articles.py` - Generazione e pubblicazione
+- `/app/backend/routes/uploads.py` - Upload immagini
+- `/app/backend/helpers.py` - Prompt builder, WP publish, SEO metadata
+- `/app/backend/storage.py` - Object storage integration
+- `/app/backend/models.py` - Modelli Pydantic
+- `/app/frontend/src/pages/GeneratorPage.jsx` - Wizard admin + client generator
 
 ## Verified Working (28/02/2026)
 - Login admin/client
-- Generazione articolo singolo con DeepSeek (deepseek-reasoner)
-- Pubblicazione automatica su WordPress (testato con noleggioautoasalerno.it, post 1528 e 1529)
-- Activity logs con stato corretto (0 log bloccati in "running")
-- Storico articoli con badge stato e link WordPress
-- Wizard 5 step con contesto GSC
+- Generazione articolo singolo con DeepSeek
+- Pubblicazione automatica su WordPress (post e pagine)
+- Upload immagini con object storage
+- Selettore tipo contenuto (3 opzioni) in modalita singola e programmatica
+- Activity logs senza log bloccati
+- Meta description ottimizzata con keyword, semantica, CTA
+- Prompt con regola H1 unico e strutture specifiche per tipo contenuto
 
 ## Pending / Backlog
-- **P1**: Verifica flusso semplificato ruolo "Cliente" (test end-to-end)
+- **P1**: Verifica flusso semplificato ruolo "Cliente" end-to-end
 - **P2**: Finalizzare UI gestione multi-sito
 - **P2**: Migliorare gestione errori UI
-- **Refactoring**: Scomporre GeneratorPage.jsx (1000+ righe) in componenti
+- **P2**: Responsive sidebar per mobile
+- **Refactoring**: Scomporre GeneratorPage.jsx (1200+ righe) in componenti
 
 ## Credentials
 - Admin: admin@seoengine.it / admin123
-- Client: mario.rossi / password
+- Client: testclient@test.it / test123
 - WordPress: sergio / d33X EFRx 2zdB wESU NKRb TS5V
