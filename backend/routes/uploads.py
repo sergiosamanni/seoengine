@@ -1,17 +1,27 @@
 """Image upload routes."""
 import uuid
+import jwt
+import os
 from datetime import datetime, timezone
 from fastapi import APIRouter, UploadFile, File, HTTPException, Response, Query
 from database import db
 from storage import put_object, get_object, ALLOWED_EXTENSIONS, MAX_FILE_SIZE, APP_NAME
-from auth_helpers import get_current_user_from_token
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
+
+JWT_SECRET = os.environ.get('JWT_SECRET', 'seo-engine-secret-key-2024')
+
+
+def _decode_token(token: str) -> dict:
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+    except Exception:
+        return None
 
 
 @router.post("")
 async def upload_image(file: UploadFile = File(...), token: str = Query(None)):
-    user = await get_current_user_from_token(token)
+    user = _decode_token(token) if token else None
     if not user:
         raise HTTPException(status_code=401, detail="Non autorizzato")
 
