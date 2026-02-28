@@ -959,11 +959,22 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
 
           {/* Result */}
           {result && (
-            <Card className="border-emerald-200 bg-emerald-50/30 mt-4" data-testid="client-result">
+            <Card className={`border-${result.status === 'completed' ? 'emerald' : 'blue'}-200 bg-${result.status === 'completed' ? 'emerald' : 'blue'}-50/30 mt-4`} data-testid="client-result">
               <CardContent className="p-4 space-y-2">
-                <div className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-emerald-600" /><span className="font-semibold">Generazione avviata!</span></div>
-                <p className="text-sm text-slate-600">Il tuo articolo per "{keyword}" e in fase di generazione e sara pubblicato automaticamente.</p>
-                <Button size="sm" variant="outline" onClick={() => navigate('/articles')}><FileText className="w-4 h-4 mr-1" />Vedi Articoli</Button>
+                {generating ? (
+                  <div className="flex items-center gap-2"><Loader2 className="w-5 h-5 text-blue-600 animate-spin" /><span className="font-semibold text-blue-700">Generazione e pubblicazione in corso...</span></div>
+                ) : result.generation_status === 'success' ? (
+                  <div className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-emerald-600" /><span className="font-semibold text-emerald-700">
+                    {result.publish_status === 'success' ? 'Articolo pubblicato!' : 'Articolo generato!'}
+                  </span></div>
+                ) : (
+                  <div className="flex items-center gap-2"><XCircle className="w-5 h-5 text-red-500" /><span className="font-semibold text-red-700">Errore nella generazione</span></div>
+                )}
+                {result.wordpress_link && (
+                  <a href={result.wordpress_link} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                    <ExternalLink className="w-3 h-3" />Vedi su WordPress
+                  </a>
+                )}
               </CardContent>
             </Card>
           )}
