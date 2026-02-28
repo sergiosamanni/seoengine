@@ -526,8 +526,9 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
                 <Badge variant={serpDone ? "default" : "secondary"} className={serpDone ? "bg-emerald-100 text-emerald-700" : ""}>
                   {serpDone ? <CheckCircle2 className="w-3 h-3 mr-1" /> : null}SERP {serpDone ? `(${serpData.count})` : ''}
                 </Badge>
-                <Badge variant={gscData ? "default" : "secondary"} className={gscData ? "bg-sky-100 text-sky-700" : ""}>
-                  {gscData ? <CheckCircle2 className="w-3 h-3 mr-1" /> : null}GSC {gscData ? `(${gscData.keywords?.length} kw)` : '(skip)'}
+                <Badge variant={gscData ? "default" : gscConnected ? "default" : "secondary"} className={gscData ? "bg-emerald-100 text-emerald-700" : gscConnected ? "bg-sky-100 text-sky-700" : ""}>
+                  {gscData ? <CheckCircle2 className="w-3 h-3 mr-1" /> : gscConnected ? <BarChart3 className="w-3 h-3 mr-1" /> : null}
+                  GSC {gscData ? `(${gscData.keywords?.length} kw)` : gscConnected ? '(connesso)' : '(N/C)'}
                 </Badge>
                 <Badge variant={promptDone ? "default" : "secondary"} className={promptDone ? "bg-purple-100 text-purple-700" : ""}>
                   {promptDone ? <CheckCircle2 className="w-3 h-3 mr-1" /> : null}Prompt {promptDone ? `(${advancedPrompt.length}c)` : ''}
