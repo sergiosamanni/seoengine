@@ -4,53 +4,35 @@
 Applicazione web full-stack per la SEO programmatica. Genera articoli SEO ottimizzati tramite LLM e li pubblica su WordPress.
 
 ## Architecture
-- **Frontend**: React + Shadcn UI + Tailwind CSS
+- **Frontend**: React + Shadcn UI + Tailwind CSS (mobile-first)
 - **Backend**: FastAPI (modulare con APIRouter)
 - **Database**: MongoDB
-- **LLM**: Multi-provider (OpenAI, Claude, DeepSeek, Perplexity) tramite API dirette
+- **LLM**: Multi-provider (OpenAI, Claude, DeepSeek) tramite API dirette
 - **SERP**: DuckDuckGo Lite con retry logic
-- **WordPress**: Pubblicazione via REST API + Application Password (post e pagine)
+- **WordPress**: Pubblicazione via REST API (post + pagine), formato Gutenberg blocks
 - **GSC**: OAuth 2.0 per dati Google Search Console
 - **Object Storage**: Emergent Object Storage per upload immagini
 
 ## Core Features (Implemented)
-1. **Multi-Tenant**: Ruoli Admin e Cliente
-2. **Wizard 5 Step** (Admin): Strategia -> Analisi SERP -> GSC -> Prompt -> Genera
-3. **Generazione Articoli**: Singolo e Programmatica (batch)
-4. **3 Tipi Contenuto**: Articolo Blog, Landing Page, Pillar Page (con prompt differenziati)
-5. **Pubblicazione WordPress**: Post per articoli, Pagine per landing/pillar
-6. **Upload Immagini**: Prima=evidenza WP, altre inline nell'articolo
-7. **Dashboard Unificata**: Lista clienti con stats
-8. **Storico Articoli**: Per-client con preview e eliminazione
-9. **Activity Log**: Tracciamento operazioni con stato running/success/failed
-10. **GSC Integration**: OAuth 2.0, dati keyword ultimi 28 giorni
-11. **Meta Description Ottimizzata**: Generata dall'LLM (150-160 chars) con keyword + CTA
-12. **H1 Unico**: Regola critica nel prompt: un solo `<h1>` per documento
-
-## Files Key
-- `/app/backend/routes/articles.py` - Generazione e pubblicazione
-- `/app/backend/routes/uploads.py` - Upload immagini
-- `/app/backend/helpers.py` - Prompt builder, WP publish, SEO metadata
-- `/app/backend/storage.py` - Object storage integration
-- `/app/backend/models.py` - Modelli Pydantic
-- `/app/frontend/src/pages/GeneratorPage.jsx` - Wizard admin + client generator
-
-## Verified Working (28/02/2026)
-- Login admin/client
-- Generazione articolo singolo con DeepSeek
-- Pubblicazione automatica su WordPress (post e pagine)
-- Upload immagini con object storage
-- Selettore tipo contenuto (3 opzioni) in modalita singola e programmatica
-- Activity logs senza log bloccati
-- Meta description ottimizzata con keyword, semantica, CTA
-- Prompt con regola H1 unico e strutture specifiche per tipo contenuto
+1. Multi-Tenant: Ruoli Admin e Cliente
+2. Wizard 5 Step (Admin): Strategia -> SERP -> GSC -> Prompt -> Genera
+3. Generazione Articoli: Singolo e Programmatica (batch)
+4. 3 Tipi Contenuto: Articolo Blog, Landing Page, Pillar Page (con prompt differenziati)
+5. Pubblicazione WordPress immediata: Post per articoli, Pagine per landing/pillar (status: publish)
+6. Upload Immagini (Admin + Client): Prima=evidenza WP, altre inline. Responsive/mobile-first
+7. Formato Gutenberg: Contenuto convertito in wp:heading, wp:paragraph, wp:list blocks
+8. H1 Unico: Sanitizzazione post-generazione rimuove H1 duplicati
+9. Meta Description Ottimizzata: Max 155 chars, frase completa, keyword + CTA
+10. Layout Responsive: Sidebar nascosta su mobile con hamburger menu
+11. Dashboard Unificata: Lista clienti con stats
+12. Storico Articoli per cliente
+13. Activity Log con stati running/success/failed
+14. GSC Integration OAuth 2.0
 
 ## Pending / Backlog
-- **P1**: Verifica flusso semplificato ruolo "Cliente" end-to-end
-- **P2**: Finalizzare UI gestione multi-sito
-- **P2**: Migliorare gestione errori UI
-- **P2**: Responsive sidebar per mobile
-- **Refactoring**: Scomporre GeneratorPage.jsx (1200+ righe) in componenti
+- P2: Finalizzare UI gestione multi-sito
+- P2: Migliorare gestione errori UI
+- Refactoring: Scomporre GeneratorPage.jsx (1200+ righe)
 
 ## Credentials
 - Admin: admin@seoengine.it / admin123
