@@ -257,19 +257,27 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                 except Exception as e:
                     logger.warning(f"Error uploading image {img_id} to WP: {e}")
 
-        # Insert non-featured images into content
+        # Insert non-featured images into content using Gutenberg image blocks
         if len(wp_media_ids) > 1:
-            img_tags = []
+            img_blocks = []
             for mid in wp_media_ids[1:]:
-                img_tags.append(f'<figure class="wp-block-image"><img src="{base_url.replace("/wp/v2","")}/wp-content/uploads/" data-media-id="{mid}" /></figure>')
-            # Insert images after first H2
+                try:
+                    media_info = await http_client.get(f"{base_url}/media/{mid}", auth=(username, password), timeout=10.0)
+                    if media_info.status_code == 200:
+                        src_url = media_info.json().get("source_url", "")
+                    else:
+                        src_url = ""
+                except Exception:
+                    src_url = ""
+                img_blocks.append(f'\n<!-- wp:image {{"id":{mid},"sizeSlug":"large"}} -->\n<figure class="wp-block-image size-large"><img src="{src_url}" alt="" class="wp-image-{mid}"/></figure>\n<!-- /wp:image -->')
+            # Insert after first heading block
             import re as re_mod
-            h2_match = re_mod.search(r'(</h2>)', content)
-            if h2_match:
-                insert_pos = h2_match.end()
-                content = content[:insert_pos] + "\n".join(img_tags) + content[insert_pos:]
+            heading_match = re_mod.search(r'(<!-- /wp:heading -->)', content)
+            if heading_match:
+                insert_pos = heading_match.end()
+                content = content[:insert_pos] + "".join(img_blocks) + content[insert_pos:]
             else:
-                content += "\n".join(img_tags)
+                content += "".join(img_blocks)
 
         post_data = {"title": title, "content": convert_to_gutenberg_blocks(content), "status": "publish"}
         if wp_media_ids:
