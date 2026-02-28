@@ -370,54 +370,84 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
       {/* STEP 3: GSC Data */}
       {step === 3 && (
         <div className="space-y-4">
-          <Card className={`border-sky-200 ${gscConnected ? 'bg-sky-50/50' : 'bg-slate-50'}`} data-testid="gsc-step">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><BarChart3 className="w-5 h-5 text-sky-600" />Google Search Console</CardTitle>
-              <CardDescription>{gscConnected ? `Connesso a ${gscSite}` : 'Non connesso. Puoi configurarlo nelle Impostazioni.'}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!gscConnected ? (
-                <Alert><AlertCircle className="h-4 w-4" />
-                  <AlertDescription>GSC non connesso. Puoi saltare questo step o connetterlo dalle Impostazioni del cliente.</AlertDescription>
-                </Alert>
-              ) : (
-                <div className="space-y-4">
-                  <Button onClick={loadGscData} disabled={gscLoading} className="bg-sky-600 hover:bg-sky-700" data-testid="load-gsc-btn">
-                    {gscLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <BarChart3 className="w-4 h-4 mr-2" />}
-                    {gscData ? 'Aggiorna dati GSC' : 'Carica dati GSC (ultimi 28 giorni)'}
-                  </Button>
-
+          {gscConnected ? (
+            <Card className="border-sky-200 bg-sky-50/50" data-testid="gsc-step">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-sky-600" />Google Search Console
+                      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 ml-2">Connesso</Badge>
+                    </CardTitle>
+                    <CardDescription>{gscSite}</CardDescription>
+                  </div>
                   {gscData && (
-                    <>
-                      <div className="grid grid-cols-4 gap-3">
-                        {[
-                          { label: 'Click', value: gscData.totals?.total_clicks || 0 },
-                          { label: 'Impressioni', value: gscData.totals?.total_impressions || 0 },
-                          { label: 'CTR medio', value: `${gscData.totals?.avg_ctr || 0}%` },
-                          { label: 'Posiz. media', value: gscData.totals?.avg_position || 0 },
-                        ].map(m => (
-                          <div key={m.label} className="p-3 bg-white rounded-lg text-center border border-sky-100">
-                            <p className="text-xl font-bold text-slate-900">{m.value}</p>
-                            <p className="text-xs text-slate-500">{m.label}</p>
-                          </div>
-                        ))}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-700 mb-2">Top keyword dal sito ({gscData.keywords?.length}):</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {gscData.keywords?.slice(0, 12).map((k, i) => (
-                            <Badge key={i} variant="outline" className="text-xs bg-white font-mono">
-                              {k.keyword} <span className="ml-1 text-slate-400">pos {k.position}</span>
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </>
+                    <Button variant="outline" size="sm" onClick={loadGscData} disabled={gscLoading} data-testid="refresh-gsc-btn">
+                      {gscLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <BarChart3 className="w-4 h-4 mr-1" />}
+                      Aggiorna
+                    </Button>
                   )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                {gscLoading && !gscData ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-sky-600 mr-3" />
+                    <span className="text-slate-600">Caricamento dati GSC in corso...</span>
+                  </div>
+                ) : gscData ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-4 gap-3">
+                      {[
+                        { label: 'Click', value: gscData.totals?.total_clicks || 0 },
+                        { label: 'Impressioni', value: gscData.totals?.total_impressions || 0 },
+                        { label: 'CTR medio', value: `${gscData.totals?.avg_ctr || 0}%` },
+                        { label: 'Posiz. media', value: gscData.totals?.avg_position || 0 },
+                      ].map(m => (
+                        <div key={m.label} className="p-3 bg-white rounded-lg text-center border border-sky-100">
+                          <p className="text-xl font-bold text-slate-900">{m.value}</p>
+                          <p className="text-xs text-slate-500">{m.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 mb-2">Top keyword dal sito ({gscData.keywords?.length}):</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {gscData.keywords?.slice(0, 12).map((k, i) => (
+                          <Badge key={i} variant="outline" className="text-xs bg-white font-mono">
+                            {k.keyword} <span className="ml-1 text-slate-400">pos {k.position}</span>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <Alert className="bg-emerald-50 border-emerald-200">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <AlertDescription className="text-emerald-700">
+                        Dati GSC caricati. Saranno utilizzati nel Prompt Avanzato e nella generazione degli articoli.
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                ) : (
+                  <Button onClick={loadGscData} disabled={gscLoading} className="bg-sky-600 hover:bg-sky-700" data-testid="load-gsc-btn">
+                    <BarChart3 className="w-4 h-4 mr-2" />Carica dati GSC (ultimi 28 giorni)
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-slate-200 bg-slate-50" data-testid="gsc-step-disconnected">
+              <CardContent className="p-6">
+                <div className="text-center space-y-3">
+                  <BarChart3 className="w-10 h-10 text-slate-300 mx-auto" />
+                  <div>
+                    <p className="font-medium text-slate-700">Google Search Console non connesso</p>
+                    <p className="text-sm text-slate-500 mt-1">Puoi connetterlo dalla pagina GSC del cliente per migliorare la qualita degli articoli.</p>
+                  </div>
+                  <p className="text-xs text-slate-400">Puoi saltare questo step e procedere con la generazione.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="flex justify-between">
             <Button variant="outline" onClick={() => setStep(2)}>Indietro</Button>
