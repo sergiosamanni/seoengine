@@ -323,17 +323,18 @@ async def simple_generate_article(request: SimpleGenerateRequest, current_user: 
 
     job_id = str(uuid.uuid4())
     combo = {"servizio": request.keyword, "citta": kb.get("citta_principale", ""), "tipo": request.objective}
+    titolo_suggerito = request.titolo_suggerito or ""
     await db.jobs.insert_one({"id": job_id, "client_id": client_id, "status": "running",
         "total": 1, "completed": 0, "results": [], "created_at": datetime.now(timezone.utc).isoformat()})
     asyncio.create_task(_run_simple_generate(job_id, client_id, request.keyword, request.topic,
-        request.publish_to_wordpress, system_prompt, llm_config, wp_config, kb, combo))
+        request.publish_to_wordpress, system_prompt, llm_config, wp_config, kb, combo, titolo_suggerito))
     return {"job_id": job_id, "status": "running", "keyword": request.keyword}
 
 
-async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp, system_prompt, llm_config, wp_config, kb, combo):
+async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp, system_prompt, llm_config, wp_config, kb, combo, titolo_suggerito=""):
     provider = llm_config.get("provider", "openai")
-    titolo = keyword.strip()
-    await log_activity(client_id, "article_generate", "running", {"titolo": titolo, "step": "1/1"})
+    titolo = titolo_suggerito or keyword.strip()
+    await log_activity(client_id, "article_generate", "running", {"titolo": titolo, "step": "generazione"})
     content = None
     gen_error = None
     for attempt in range(3):
