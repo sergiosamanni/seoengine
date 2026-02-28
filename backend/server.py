@@ -327,6 +327,55 @@ async def assign_user_to_client(request: AssignClientRequest, current_user: dict
     
     return {"message": "Utente assegnato al cliente", "user_id": request.user_id, "client_id": request.client_id}
 
+
+@api_router.post("/users/unassign-client")
+async def unassign_user_from_client(request: dict, current_user: dict = Depends(require_admin)):
+    user_id = request.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id richiesto")
+    result = await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"client_id": None}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    return {"message": "Utente rimosso dal cliente"}
+
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(user_id: str, current_user: dict = Depends(require_admin)):
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if user.get("role") == "admin":
+        raise HTTPException(status_code=400, detail="Non puoi eliminare un admin")
+    await db.users.delete_one({"id": user_id})
+    return {"message": "Utente eliminato"}
+
+
+@api_router.post("/clients/{client_id}/sites")
+async def add_site_to_client(client_id: str, request: dict, current_user: dict = Depends(require_admin)):
+    site_url = request.get("site_url", "").strip()
+    if not site_url:
+        raise HTTPException(status_code=400, detail="URL sito richiesto")
+    await db.clients.update_one(
+        {"id": client_id},
+        {"$addToSet": {"siti_web": site_url}}
+    )
+    return {"message": "Sito aggiunto"}
+
+
+@api_router.delete("/clients/{client_id}/sites")
+async def remove_site_from_client(client_id: str, request: dict, current_user: dict = Depends(require_admin)):
+    site_url = request.get("site_url", "").strip()
+    if not site_url:
+        raise HTTPException(status_code=400, detail="URL sito richiesto")
+    await db.clients.update_one(
+        {"id": client_id},
+        {"$pull": {"siti_web": site_url}}
+    )
+    return {"message": "Sito rimosso"}
+
 @api_router.get("/users", response_model=List[UserResponse])
 async def get_users(current_user: dict = Depends(require_admin)):
     users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(100)
