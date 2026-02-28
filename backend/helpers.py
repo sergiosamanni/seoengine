@@ -403,24 +403,30 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
     search_urls = []
 
     try:
+        from urllib.parse import unquote, urlparse, parse_qs
         async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }) as http:
             resp = await http.get("https://lite.duckduckgo.com/lite/",
                 params={"q": keyword, "kl": f"{country}-{country}"})
             soup = BeautifulSoup(resp.text, "lxml")
-            current = {}
+            snippets = [td.get_text(strip=True) for td in soup.find_all("td", class_="result-snippet")]
+            idx = 0
             for a in soup.find_all("a", class_="result-link"):
                 if len(search_urls) >= num_results:
                     break
-                href = a.get("href", "")
+                raw_href = a.get("href", "")
                 title = a.get_text(strip=True)
-                if href and title:
-                    search_urls.append({"url": href, "title": title, "description": ""})
-            # Get snippets
-            for i, td in enumerate(soup.find_all("td", class_="result-snippet")):
-                if i < len(search_urls):
-                    search_urls[i]["description"] = td.get_text(strip=True)
+                # Extract real URL from DuckDuckGo redirect
+                if "uddg=" in raw_href:
+                    parsed = parse_qs(urlparse(raw_href).query)
+                    real_url = unquote(parsed.get("uddg", [raw_href])[0])
+                else:
+                    real_url = raw_href
+                if real_url and title and not real_url.startswith("//duckduckgo"):
+                    desc = snippets[idx] if idx < len(snippets) else ""
+                    search_urls.append({"url": real_url, "title": title, "description": desc})
+                    idx += 1
     except Exception as e:
         logger.warning(f"DuckDuckGo search failed: {e}")
         return []
