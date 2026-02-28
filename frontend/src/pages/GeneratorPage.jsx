@@ -134,11 +134,18 @@ export const GeneratorPage = () => {
 
     try {
       if (publishToWp) {
+        // Build brief override from per-generation settings
+        const briefOverride = {};
+        if (briefCta) briefOverride.cta_finale = briefCta;
+        if (briefNotes) briefOverride.note_speciali = briefNotes;
+
         // Async job: generate and publish
         const response = await axios.post(`${API}/articles/generate-and-publish`, {
           client_id: effectiveClientId,
           combinations: selectedCombinations,
-          publish_to_wordpress: true
+          publish_to_wordpress: true,
+          content_type: contentType,
+          brief_override: Object.keys(briefOverride).length > 0 ? briefOverride : null
         }, { headers: getAuthHeaders() });
 
         const jobId = response.data.job_id;
