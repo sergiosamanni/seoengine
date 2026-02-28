@@ -398,7 +398,13 @@ async def get_activity_logs(client_id: str, limit: int = 50, current_user: dict 
     if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     logs = await db.activity_logs.find({"client_id": client_id}, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
-    return {"logs": logs}
+    return logs
+
+
+@router.get("/activity-logs")
+async def get_all_activity_logs(limit: int = 100, current_user: dict = Depends(require_admin)):
+    logs = await db.activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
+    return logs
 
 
 # ============== LLM PROVIDERS ==============
