@@ -851,7 +851,7 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('seo_token');
     setUploading(true);
     const newImages = [];
     for (const file of files) {
