@@ -296,6 +296,31 @@ async def simple_generate_article(request: SimpleGenerateRequest, current_user: 
     kb = config.get("knowledge_base", {})
     system_prompt = build_system_prompt(kb, config.get("tono_e_stile", {}), config.get("seo", {}),
         client_doc["nome"], config.get("advanced_prompt", {}), config.get("content_strategy", {}), "articolo_blog", brief_override)
+
+    # Append GSC and SERP context to the system prompt
+    extra_context = []
+    if request.gsc_context:
+        gsc_kws = request.gsc_context.get("top_keywords", [])
+        if gsc_kws:
+            extra_context.append("\n\n## DATI GOOGLE SEARCH CONSOLE (usa come contesto SEO):")
+            for kw in gsc_kws[:10]:
+                extra_context.append(f"- \"{kw.get('keyword','')}\" (posizione: {kw.get('position','N/A')}, click: {kw.get('clicks',0)}, impressioni: {kw.get('impressions',0)})")
+            extra_context.append("Integra queste keyword naturalmente nel testo per rafforzare il posizionamento.")
+    if request.serp_context:
+        competitors = request.serp_context.get("competitors", [])
+        extracted = request.serp_context.get("extracted", {})
+        if competitors:
+            extra_context.append("\n\n## ANALISI COMPETITOR SERP:")
+            for c in competitors[:4]:
+                extra_context.append(f"- #{c.get('position','')} {c.get('title','')} ({c.get('url','')[:60]})")
+                if c.get("headings"):
+                    extra_context.append(f"  Headings: {', '.join(c['headings'][:4])}")
+            extra_context.append("Crea un articolo che copra gli stessi argomenti ma con valore aggiunto e angolo unico.")
+        if extracted and extracted.get("headings"):
+            extra_context.append(f"\nStruttura H2 suggerita dai competitor: {', '.join(extracted['headings'][:8])}")
+    if extra_context:
+        system_prompt += "\n".join(extra_context)
+
     job_id = str(uuid.uuid4())
     combo = {"servizio": request.keyword, "citta": kb.get("citta_principale", ""), "tipo": request.objective}
     await db.jobs.insert_one({"id": job_id, "client_id": client_id, "status": "running",
