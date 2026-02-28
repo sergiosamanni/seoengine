@@ -770,6 +770,8 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [clientNotes, setClientNotes] = useState('');
   const [result, setResult] = useState(null);
+  const [uploadedImages, setUploadedImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   const config = client?.configuration || {};
   const hasApiKey = config.llm?.api_key || config.openai?.api_key;
