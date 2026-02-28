@@ -216,3 +216,5 @@ class SimpleGenerateRequest(BaseModel):
     publish_to_wordpress: bool = False
     gsc_context: Optional[Dict] = None
     serp_context: Optional[Dict] = None
+    content_type: str = "articolo"  # articolo, landing_page, pillar_page
+    image_ids: Optional[List[str]] = None
