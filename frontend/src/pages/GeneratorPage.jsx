@@ -208,6 +208,7 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
         topic: singleObjective || undefined,
         publish_to_wordpress: publishToWp,
         content_type: contentType,
+        image_ids: adminUploadedImages.length > 0 ? adminUploadedImages.map(img => img.id) : undefined,
         gsc_context: gscData ? { top_keywords: gscData.keywords?.slice(0, 10), totals: gscData.totals } : undefined,
         serp_context: serpData ? { competitors: serpData.competitors, extracted: serpData.extracted } : undefined
       }, { headers: getAuthHeaders() });
