@@ -255,7 +255,7 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
         last_error = None
         for attempt in range(max_retries):
             try:
-                response = await http_client.post(url, auth=(username, password), json=post_data, timeout=60.0)
+                response = await http_client.post(endpoint, auth=(username, password), json=post_data, timeout=60.0)
                 if response.status_code in [200, 201]:
                     data = response.json()
                     return {"post_id": data.get("id"), "link": data.get("link"), "slug": data.get("slug"), "status": "success"}
