@@ -199,7 +199,9 @@ async def _generate_and_publish_batch(job_id, client_id, combinations, publish_t
     advanced_prompt = config.get("advanced_prompt", {})
     strategy = config.get("content_strategy", {})
     wp_config = config.get("wordpress", {})
-    system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, content_type, brief)
+    ct_map = {"articolo": "articolo_blog", "landing_page": "landing_page", "pillar_page": "pillar_page"}
+    content_type_prompt = ct_map.get(content_type, "articolo_blog")
+    system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, content_type_prompt, brief)
     results = []
     for idx, combo in enumerate(combinations):
         titolo_formatted = f"{combo['servizio']} {combo['tipo']} a {combo['citta']}".title()
