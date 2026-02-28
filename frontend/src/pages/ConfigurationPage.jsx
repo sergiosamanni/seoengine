@@ -116,6 +116,7 @@ export const ConfigurationPage = () => {
         if (config.keyword_combinations) setKeywords(config.keyword_combinations);
         if (config.apify) setApify(config.apify);
         if (config.advanced_prompt) setAdvancedPrompt(config.advanced_prompt);
+        if (config.content_strategy) setContentStrategy(prev => ({ ...prev, ...config.content_strategy }));
       } catch (error) {
         toast.error('Errore nel caricamento della configurazione');
       } finally {
