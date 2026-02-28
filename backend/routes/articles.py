@@ -294,8 +294,10 @@ async def simple_generate_article(request: SimpleGenerateRequest, current_user: 
     brief_override = {"note_speciali": request.topic or f"Scrivi un articolo sulla keyword: {request.keyword}",
                       "search_intent": {"informazionale": "informazionale", "commerciale": "commerciale", "conversione": "transazionale"}.get(request.objective, "informazionale")}
     kb = config.get("knowledge_base", {})
+    ct_map = {"articolo": "articolo_blog", "landing_page": "landing_page", "pillar_page": "pillar_page"}
+    content_type_prompt = ct_map.get(request.content_type, "articolo_blog")
     system_prompt = build_system_prompt(kb, config.get("tono_e_stile", {}), config.get("seo", {}),
-        client_doc["nome"], config.get("advanced_prompt", {}), config.get("content_strategy", {}), "articolo_blog", brief_override)
+        client_doc["nome"], config.get("advanced_prompt", {}), config.get("content_strategy", {}), content_type_prompt, brief_override)
 
     # Append GSC and SERP context to the system prompt
     extra_context = []
