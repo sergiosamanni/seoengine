@@ -16,16 +16,15 @@ logger = logging.getLogger("server")
 async def log_activity(client_id: str, action: str, status: str, details: dict = None):
     from uuid import uuid4
     if status in ("success", "failed"):
-        # Try to update the last "running" log for this action
         match_filter = {"client_id": client_id, "action": action, "status": "running"}
         if details and details.get("titolo"):
             match_filter["details.titolo"] = details["titolo"]
-        result = await db.activity_logs.update_one(
+        updated = await db.activity_logs.find_one_and_update(
             match_filter,
             {"$set": {"status": status, "details": details or {}, "completed_at": datetime.now(timezone.utc).isoformat()}},
             sort=[("timestamp", -1)]
         )
-        if result.modified_count > 0:
+        if updated:
             return
     await db.activity_logs.insert_one({
         "id": str(uuid4()),
