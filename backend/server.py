@@ -127,6 +127,22 @@ class AdvancedPromptConfig(BaseModel):
     secondo_livello_prompt: str = ""  # Second level prompt for article generation
     keyword_injection_template: str = ""  # Template for keyword injection
 
+class ContentStrategy(BaseModel):
+    funnel_stage: str = "TOFU"  # TOFU / MOFU / BOFU
+    obiettivo_primario: str = "traffico"  # traffico / lead / conversione / autorità
+    modello_copywriting: str = "PAS"  # AIDA / PAS / FAB / PASTOR / Libero
+    buyer_persona_nome: str = ""
+    buyer_persona_descrizione: str = ""
+    buyer_persona_obiezioni: str = ""
+    cta_finale: str = ""
+    search_intent: str = "informazionale"  # informazionale / commerciale / transazionale / navigazionale
+    leve_psicologiche: List[str] = []  # riprova_sociale, autorita, scarsita, urgenza, reciprocita, simpatia, impegno
+    keyword_secondarie: List[str] = []
+    keyword_lsi: List[str] = []
+    competitor_urls: List[str] = []
+    lunghezza_target: int = 1500
+    note_speciali: str = ""
+
 class ClientConfiguration(BaseModel):
     wordpress: Optional[WordPressConfig] = None
     llm: Optional[LLMConfig] = None  # New unified LLM config
@@ -137,6 +153,7 @@ class ClientConfiguration(BaseModel):
     tono_e_stile: Optional[ToneStyle] = None
     knowledge_base: Optional[KnowledgeBase] = None
     keyword_combinations: Optional[KeywordCombinations] = None
+    content_strategy: Optional[ContentStrategy] = None
 
 class ClientResponse(BaseModel):
     id: str
