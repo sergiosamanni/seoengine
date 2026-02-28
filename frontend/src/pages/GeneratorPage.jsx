@@ -828,7 +828,7 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
       const res = await axios.post(`${API}/articles/simple-generate`, {
         client_id: effectiveClientId,
         keyword: keyword,
-        topic: generatedPrompt,
+        topic: clientNotes ? `${generatedPrompt}\n\n## Note del cliente:\n${clientNotes}` : generatedPrompt,
         gsc_context: gscData ? { top_keywords: gscData.keywords?.slice(0, 10), totals: gscData.totals } : undefined,
         serp_context: serpData ? { competitors: serpData.competitors, extracted: serpData.extracted } : undefined,
         publish_to_wordpress: true
