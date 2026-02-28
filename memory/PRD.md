@@ -1,52 +1,49 @@
-# SEO Content Hub — PRD
+# Programmatic SEO Engine - PRD
 
-## Problema Originale
-Trasformare script Python per la SEO programmatica in un'applicazione web completa con architettura multi-tenant (Admin/Cliente), generazione contenuti AI, integrazione WordPress e Google Search Console.
+## Problem Statement
+Applicazione web full-stack per la SEO programmatica. Genera articoli SEO ottimizzati tramite LLM e li pubblica su WordPress.
 
-## Architettura
+## Architecture
 - **Frontend**: React + Shadcn UI + Tailwind CSS
-- **Backend**: FastAPI (modulare con APIRouter) + MongoDB (Motor)
-- **Auth**: JWT
-- **LLM**: Multi-provider (OpenAI, Claude, DeepSeek, Perplexity) via API key del cliente
+- **Backend**: FastAPI (modulare con APIRouter)
+- **Database**: MongoDB
+- **LLM**: Multi-provider (OpenAI, Claude, DeepSeek, Perplexity) tramite API dirette
+- **SERP**: DuckDuckGo Lite con retry logic
+- **WordPress**: Pubblicazione via REST API + Application Password
+- **GSC**: OAuth 2.0 per dati Google Search Console
 
-## Navigazione App
-### Admin
-- **Dashboard** (/) → Stats + Tabella Clienti unificata
-- **Utenti** → Gestione assegnazioni utenti-clienti
-- **Activity Log** → Log operazioni
-- Click cliente → **Genera Articoli** (5 step wizard) + Storico Articoli
-  - Sub-pagine: Configurazione (3 tab), GSC
+## Core Features (Implemented)
+1. **Multi-Tenant**: Ruoli Admin e Cliente
+2. **Wizard 5 Step** (Admin): Strategia → Analisi SERP → GSC → Prompt → Genera
+3. **Generazione Articoli**: Singolo e Programmatica (batch)
+4. **Pubblicazione WordPress**: Automatica come bozza con SEO metadata
+5. **Dashboard Unificata**: Lista clienti con stats
+6. **Storico Articoli**: Per-client con preview e eliminazione
+7. **Activity Log**: Tracciamento operazioni con stato running/success/failed
+8. **GSC Integration**: OAuth 2.0, dati keyword ultimi 28 giorni
 
-### Client
-- **Genera** → Flusso semplificato (keyword → analisi auto → genera) + Storico
-- **Activity Log** → Log proprie operazioni
+## Key Fixes Applied (28/02/2026)
+- **CRITICAL**: `helpers.py` `log_activity` usava `update_one(sort=...)` che non è supportato da pymongo. Sostituito con `find_one_and_update` che supporta `sort`. Questo causava log bloccati in "running".
+- **Frontend**: Aggiunto flag `publish_to_wordpress` nel payload di generazione singola (mancava)
+- **Frontend**: Aggiunto toggle "Pubblica su WordPress" nella modalità Articolo Singolo
+- **Frontend**: Aggiunto job polling per la generazione singola (mostra progresso e risultato in tempo reale)
+- **Frontend**: Aggiunto job polling anche per il ClientGenerator
 
-## Flusso Genera Articoli (Admin) - 5 Step
-1. **Strategia**: Funnel, obiettivo, copywriting model, buyer persona
-2. **Analisi SERP**: Top 4 competitor → titoli + headings
-3. **Dati GSC**: Auto-load keyword + metriche (se connesso, badge sky-blue)
-4. **Prompt Avanzato**: Auto-generato da SERP+GSC, editabile
-5. **Genera**: Singolo (titolo+kw+obiettivo) o Programmatica (combinazioni)
-   - Contesto GSC e SERP iniettato nel system prompt
+## Verified Working (28/02/2026)
+- Login admin/client
+- Generazione articolo singolo con DeepSeek (deepseek-reasoner)
+- Pubblicazione automatica su WordPress (testato con noleggioautoasalerno.it, post 1528 e 1529)
+- Activity logs con stato corretto (0 log bloccati in "running")
+- Storico articoli con badge stato e link WordPress
+- Wizard 5 step con contesto GSC
 
-## Funzionalità Implementate
-- [x] Auth JWT + Dashboard Admin unificata
-- [x] CRUD Clienti multi-sito + Storico Articoli in-page
-- [x] Generazione AI multi-provider con contesto GSC+SERP
-- [x] Pubblicazione WordPress
-- [x] Activity Log dedicato
-- [x] Gestione Utenti admin
-- [x] Config: API Keys, Knowledge Base, Tono & Stile
-- [x] GSC OAuth 2.0 (PKCE) con persistenza sessione
-- [x] SERP DuckDuckGo Lite (retry 3x + User-Agent rotation)
-- [x] GSC step auto-load + badge connessione nel wizard
+## Pending / Backlog
+- **P1**: Verifica flusso semplificato ruolo "Cliente" (test end-to-end)
+- **P2**: Finalizzare UI gestione multi-sito
+- **P2**: Migliorare gestione errori UI
+- **Refactoring**: Scomporre GeneratorPage.jsx (1000+ righe) in componenti
 
-## GSC Setup
-- Redirect URI: `https://serp-wizard.preview.emergentagent.com/api/gsc/callback`
-
-## Credenziali Test
+## Credentials
 - Admin: admin@seoengine.it / admin123
-
-## Backlog
-- [ ] Verificare umanizzazione prompt AI
-- [ ] UI multi-sito migliorata nel modale clienti
+- Client: mario.rossi / password
+- WordPress: sergio / d33X EFRx 2zdB wESU NKRb TS5V
