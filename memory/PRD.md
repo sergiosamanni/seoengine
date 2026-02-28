@@ -18,45 +18,58 @@ Trasformare script Python per la SEO programmatica in un'applicazione web comple
 - [x] Dashboard Cliente dedicata
 - [x] Gestione Clienti (CRUD)
 
-### Configurazione Cliente (6 Tab - Refactored)
+### Configurazione Cliente (7 Tab - Refactored)
 - [x] API Keys (LLM multi-provider + WordPress + Apify)
 - [x] Knowledge Base (info azienda, territorio, target)
 - [x] Tono & Stile (registro, persona narrativa, parole vietate)
 - [x] Keywords (servizi, citta, tipi + upload XLSX)
+- [x] **Strategia Contenuti** (funnel stage, modello copywriting, buyer persona, leve psicologiche, CTA, keyword LSI)
 - [x] Analisi SERP (integrazione Apify)
 - [x] Prompt Avanzato (protetto da password)
 
+### Content Strategy Framework
+- [x] Funnel Stage (TOFU / MOFU / BOFU)
+- [x] Modelli Copywriting: AIDA, PAS, FAB, PASTOR, Libero
+- [x] Buyer Persona configurabile (nome, descrizione, obiezioni)
+- [x] 7 Leve Psicologiche selezionabili (riprova sociale, autorita, scarsita, urgenza, reciprocita, simpatia, impegno)
+- [x] Keyword secondarie e LSI (semantiche)
+- [x] CTA personalizzabile
+- [x] Lunghezza target configurabile
+- [x] Tipo contenuto per-generazione (Articolo Blog / Pillar Page / Landing Page)
+- [x] Brief editabile pre-generazione (CTA override, note aggiuntive)
+
+### System Prompt SEO Copywriter
+- [x] Prompt esperto: SEO on-page, title tag, meta description, H1-H3, keyword density
+- [x] Integrazione modelli copywriting nel prompt
+- [x] Leve psicologiche iniettate nel contesto
+- [x] Regole formattazione SEO (paragrafi brevi, frasi brevi, grassetto, elenchi)
+- [x] CTA ripetuta 2-3 volte (inizio, meta, fine)
+- [x] Supporto featured snippet tramite elenchi puntati
+
 ### Generazione e Pubblicazione
 - [x] Supporto multi-LLM (OpenAI, Claude, DeepSeek, Perplexity)
-- [x] Generazione articoli SEO con metadati
-- [x] **Genera e Pubblica su WordPress** in un unico step (async con polling)
+- [x] Genera e Pubblica su WordPress in un unico step (async con polling)
 - [x] Metadati SEO: meta description, tags, slug, focus keyword
-- [x] Anteprima articoli con tutti i metadati SEO
-- [x] Admin puo generare per qualsiasi cliente
-- [x] Cliente puo generare e pubblicare autonomamente
-- [x] Toggle WordPress on/off nella pagina generatore
+- [x] Admin e Cliente possono generare e pubblicare
+- [x] Toggle WordPress on/off nel generatore
 
 ### Activity Log
 - [x] Tracciamento completo: batch, generazione, pubblicazione WP
-- [x] Pagina Activity Log con statistiche (totali, successi, errori, WP pubblicati)
-- [x] Filtri per cliente e tipo azione
+- [x] Pagina Activity Log con statistiche e filtri
 - [x] Log in tempo reale nella pagina generatore
-- [x] Link diretto ai post WordPress pubblicati
 
 ### Job System
 - [x] Endpoint asincrono POST /api/articles/generate-and-publish
 - [x] Background task con asyncio.create_task
 - [x] Polling stato job GET /api/jobs/{job_id}
-- [x] Progress tracking (completed/total)
 
 ### Storico
 - [x] Storico sessioni SEO con snapshot configurazione
-- [x] Storico articoli con filtri
+- [x] Storico articoli con filtri e anteprima SEO
 
-## Test WordPress Reali Verificati
-- WP Post #1525: Noleggio Auto Economico a Salerno
-- WP Post #1526: Noleggio Auto Lungo Termine Senza Anticipo A Avellino
-- WP Post #1527: Noleggio Auto Breve Termine Senza Anticipo A Avellino
+### Bug Fix
+- [x] Config merge: PUT /configuration ora fa merge invece di sovrascrivere
+- [x] Anteprima articoli: carica metadati SEO dal /full endpoint
 
 ## Credenziali Test
 - Admin: admin@seoengine.it / admin123
@@ -66,21 +79,22 @@ Trasformare script Python per la SEO programmatica in un'applicazione web comple
 ## Struttura File
 ```
 backend/
-  server.py              # API FastAPI completa con job system
+  server.py
 frontend/src/
   pages/
-    ArticlesPage.jsx       # Lista articoli con anteprima SEO
-    ClientsPage.jsx        # Gestione clienti con azione "Genera Articoli"
-    ConfigurationPage.jsx  # Orchestratore tab (refactored)
-    configuration/         # Sub-componenti per ogni tab
+    ArticlesPage.jsx
+    ClientsPage.jsx
+    ConfigurationPage.jsx
+    configuration/
       ApiKeysTab.jsx
       KnowledgeBaseTab.jsx
       ToneStyleTab.jsx
       KeywordsTab.jsx
+      ContentStrategyTab.jsx    # NEW
       SerpAnalysisTab.jsx
       AdvancedPromptTab.jsx
-    GeneratorPage.jsx      # Generatore con 3 colonne + polling + activity log
-    ActivityLogPage.jsx    # Log attivita globale con filtri
+    GeneratorPage.jsx
+    ActivityLogPage.jsx
     DashboardPage.jsx
     LoginPage.jsx
     SessionHistoryPage.jsx
@@ -90,3 +104,4 @@ frontend/src/
 - Analytics posizionamento keyword post-pubblicazione
 - A/B testing contenuti SEO
 - Integrazione Google Search Console
+- Coda di pubblicazione programmata
