@@ -88,6 +88,13 @@ class ContentStrategy(BaseModel):
     note_speciali: Optional[str] = None
 
 
+class GSCConfig(BaseModel):
+    site_url: Optional[str] = None
+    enabled: Optional[bool] = False
+    connected: Optional[bool] = False
+    tokens: Optional[Dict] = None
+
+
 class ClientConfiguration(BaseModel):
     knowledge_base: Optional[KnowledgeBase] = None
     tono_e_stile: Optional[ToneStyle] = None
