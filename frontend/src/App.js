@@ -82,6 +82,12 @@ const AppRoutes = () => {
 
       <Route path="/clients/:clientId" element={
         <ProtectedRoute adminOnly>
+          <GeneratorPage />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/clients/:clientId/config" element={
+        <ProtectedRoute adminOnly>
           <ConfigurationPage />
         </ProtectedRoute>
       } />
