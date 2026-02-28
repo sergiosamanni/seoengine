@@ -34,7 +34,7 @@ async def upload_image(file: UploadFile = File(...), token: str = Query(None)):
         raise HTTPException(status_code=400, detail="File troppo grande. Max 5MB.")
 
     file_id = str(uuid.uuid4())
-    path = f"{APP_NAME}/uploads/{user['id']}/{file_id}.{ext}"
+    path = f"{APP_NAME}/uploads/{user['user_id']}/{file_id}.{ext}"
     content_type = file.content_type or f"image/{ext}"
 
     result = put_object(path, data, content_type)
