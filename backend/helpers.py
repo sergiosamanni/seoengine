@@ -11,6 +11,56 @@ from database import db
 logger = logging.getLogger("server")
 
 
+# ============== HTML SANITIZATION & GUTENBERG ==============
+
+def sanitize_single_h1(html_content: str) -> str:
+    """Ensure only one H1 tag exists. Remove extras, keeping the first."""
+    h1_pattern = re.compile(r'<h1[^>]*>.*?</h1>', re.DOTALL | re.IGNORECASE)
+    matches = list(h1_pattern.finditer(html_content))
+    if len(matches) <= 1:
+        return html_content
+    # Keep first H1, remove the rest
+    for match in reversed(matches[1:]):
+        html_content = html_content[:match.start()] + html_content[match.end():]
+    return html_content
+
+
+def convert_to_gutenberg_blocks(html_content: str) -> str:
+    """Convert plain HTML to WordPress Gutenberg block format."""
+    html_content = sanitize_single_h1(html_content)
+    soup = BeautifulSoup(html_content, 'html.parser')
+    blocks = []
+    for el in soup.children:
+        if isinstance(el, str):
+            text = el.strip()
+            if text:
+                blocks.append(f'<!-- wp:paragraph -->\n<p>{text}</p>\n<!-- /wp:paragraph -->')
+            continue
+        tag = el.name
+        if not tag:
+            continue
+        if tag in ('h1', 'h2', 'h3', 'h4', 'h5', 'h6'):
+            level = int(tag[1])
+            blocks.append(f'<!-- wp:heading {{"level":{level}}} -->\n{str(el)}\n<!-- /wp:heading -->')
+        elif tag == 'p':
+            blocks.append(f'<!-- wp:paragraph -->\n{str(el)}\n<!-- /wp:paragraph -->')
+        elif tag == 'ul':
+            blocks.append(f'<!-- wp:list -->\n{str(el)}\n<!-- /wp:list -->')
+        elif tag == 'ol':
+            blocks.append(f'<!-- wp:list {{"ordered":true}} -->\n{str(el)}\n<!-- /wp:list -->')
+        elif tag == 'blockquote':
+            blocks.append(f'<!-- wp:quote -->\n{str(el)}\n<!-- /wp:quote -->')
+        elif tag == 'figure':
+            blocks.append(f'<!-- wp:image -->\n{str(el)}\n<!-- /wp:image -->')
+        elif tag == 'table':
+            blocks.append(f'<!-- wp:table -->\n<figure class="wp-block-table">{str(el)}</figure>\n<!-- /wp:table -->')
+        elif tag == 'hr':
+            blocks.append('<!-- wp:separator -->\n<hr class="wp-block-separator"/>\n<!-- /wp:separator -->')
+        else:
+            blocks.append(f'<!-- wp:html -->\n{str(el)}\n<!-- /wp:html -->')
+    return '\n\n'.join(blocks)
+
+
 # ============== ACTIVITY LOG ==============
 
 async def log_activity(client_id: str, action: str, status: str, details: dict = None):
