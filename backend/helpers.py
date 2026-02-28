@@ -165,12 +165,55 @@ def generate_seo_metadata(title: str, content: str, kb: dict, combination: dict)
 
 async def publish_to_wordpress(url: str, username: str, password: str, title: str, content: str,
                                 wp_status: str = "draft", seo_metadata: dict = None,
-                                categories: List[int] = None, tags: List[str] = None) -> dict:
+                                categories: List[int] = None, tags: List[str] = None,
+                                wp_type: str = "post", image_ids: List[str] = None) -> dict:
+    from storage import get_object
     async with httpx.AsyncClient() as http_client:
+        base_url = url.replace("/posts", "")
+        endpoint = f"{base_url}/pages" if wp_type == "page" else url
+
+        # Upload images to WordPress media library
+        wp_media_ids = []
+        if image_ids:
+            for img_id in image_ids:
+                try:
+                    record = await db.files.find_one({"id": img_id, "is_deleted": False}, {"_id": 0})
+                    if not record:
+                        continue
+                    img_data, _ = get_object(record["storage_path"])
+                    ct = record.get("content_type", "image/jpeg")
+                    fname = record.get("original_filename", f"{img_id}.jpg")
+                    media_resp = await http_client.post(
+                        f"{base_url}/media",
+                        auth=(username, password),
+                        headers={"Content-Type": ct, "Content-Disposition": f'attachment; filename="{fname}"'},
+                        content=img_data, timeout=60.0
+                    )
+                    if media_resp.status_code in [200, 201]:
+                        wp_media_ids.append(media_resp.json()["id"])
+                except Exception as e:
+                    logger.warning(f"Error uploading image {img_id} to WP: {e}")
+
+        # Insert non-featured images into content
+        if len(wp_media_ids) > 1:
+            img_tags = []
+            for mid in wp_media_ids[1:]:
+                img_tags.append(f'<figure class="wp-block-image"><img src="{base_url.replace("/wp/v2","")}/wp-content/uploads/" data-media-id="{mid}" /></figure>')
+            # Insert images after first H2
+            import re as re_mod
+            h2_match = re_mod.search(r'(</h2>)', content)
+            if h2_match:
+                insert_pos = h2_match.end()
+                content = content[:insert_pos] + "\n".join(img_tags) + content[insert_pos:]
+            else:
+                content += "\n".join(img_tags)
+
         post_data = {"title": title, "content": content, "status": wp_status}
+        if wp_media_ids:
+            post_data["featured_media"] = wp_media_ids[0]
         if seo_metadata and seo_metadata.get("slug"):
             post_data["slug"] = seo_metadata["slug"]
-        if categories:
+        if categories and wp_type == "post":
             post_data["categories"] = categories
 
         tag_ids = []
