@@ -654,6 +654,36 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
                   {!hasWpConfig && publishToWp && (
                     <p className="text-xs text-amber-600">Credenziali WordPress non configurate. La pubblicazione potrebbe fallire.</p>
                   )}
+                  {/* Admin Image Upload */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Immagini <span className="text-slate-400 font-normal">(facoltativo)</span></Label>
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors" data-testid="admin-image-upload-label">
+                        <ImagePlus className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm text-slate-600">{adminUploading ? 'Caricamento...' : 'Carica immagini'}</span>
+                        <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden"
+                          onChange={handleAdminImageUpload} disabled={adminUploading} data-testid="admin-image-upload-input" />
+                      </label>
+                      <p className="text-xs text-slate-400">Orizzontale, max 5MB</p>
+                    </div>
+                    {adminUploadedImages.length > 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-xs text-slate-500">1a = evidenza WP, le altre nell'articolo.</p>
+                        <div className="flex flex-wrap gap-2">
+                          {adminUploadedImages.map((img, idx) => (
+                            <div key={img.id} className="relative group" data-testid={`admin-uploaded-image-${idx}`}>
+                              <img src={img.preview} alt={img.name} className="w-20 h-14 object-cover rounded border border-slate-200" />
+                              {idx === 0 && <span className="absolute -top-1.5 -left-1.5 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">Evidenza</span>}
+                              <button onClick={() => removeAdminImage(idx)}
+                                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`admin-remove-image-${idx}`}>
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <Button onClick={handleSingleGenerate} disabled={singleGenerating || !hasApiKey || (!singleTitle && !singleKeywords)}
                     className="w-full bg-orange-500 hover:bg-orange-600 h-12 text-base font-semibold" data-testid="single-generate-btn">
                     {singleGenerating ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generazione...</> : <><Zap className="w-5 h-5 mr-2" />Genera Articolo</>}
