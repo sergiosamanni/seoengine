@@ -823,6 +823,34 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
     } finally { setAnalyzing(false); }
   };
 
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const token = localStorage.getItem('token');
+    setUploading(true);
+    const newImages = [];
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name}: troppo grande (max 5MB)`); continue; }
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { toast.error(`${file.name}: formato non supportato`); continue; }
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await axios.post(`${API}/uploads?token=${token}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        newImages.push({ id: res.data.id, name: file.name, preview: URL.createObjectURL(file) });
+      } catch (err) { toast.error(`Errore upload ${file.name}`); }
+    }
+    setUploadedImages(prev => [...prev, ...newImages]);
+    setUploading(false);
+    if (newImages.length > 0) toast.success(`${newImages.length} immagine/i caricata/e`);
+    e.target.value = '';
+  };
+
+  const removeImage = (idx) => {
+    setUploadedImages(prev => { const copy = [...prev]; URL.revokeObjectURL(copy[idx].preview); copy.splice(idx, 1); return copy; });
+  };
+
   const handleGenerate = async () => {
     setGenerating(true);
     setResult(null);
