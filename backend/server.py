@@ -528,9 +528,10 @@ async def generate_articles(request: ArticleGenerate, current_user: dict = Depen
     tone = config.get("tono_e_stile", {})
     seo = config.get("seo", {})
     advanced_prompt = config.get("advanced_prompt", {})
+    strategy = config.get("content_strategy", {})
     
     # Build comprehensive system prompt
-    system_prompt = build_system_prompt(kb, tone, seo, client["nome"], advanced_prompt)
+    system_prompt = build_system_prompt(kb, tone, seo, client["nome"], advanced_prompt, strategy)
     
     generated_articles = []
     
