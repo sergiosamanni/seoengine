@@ -32,7 +32,7 @@ Trasformare script Python per la SEO programmatica in un'applicazione web comple
 8. **Interfaccia Cliente Semplificata** (`/simple-generator`) con keyword + topic + obiettivo
 9. **Scraping Sito Web** per pre-popolare Knowledge Base (admin only)
 10. **Analisi SERP Custom** senza Apify (usa `googlesearch-python` + `BeautifulSoup`)
-11. **Google Search Console** integrazione via OAuth (config, authorize, disconnect, fetch data)
+11. **Google Search Console** integrazione via OAuth — credenziali OAuth a livello sistema (env vars), UX semplificata: URL sito + "Connetti Google Search Console"
 12. **Prompt Umanizzato** per output AI più naturale
 13. **Storico Sessioni** per salvare snapshot delle configurazioni
 
@@ -42,8 +42,8 @@ Trasformare script Python per la SEO programmatica in un'applicazione web comple
 ### Backlog
 - Refactoring `server.py` in moduli APIRouter separati
 - Test di generazione con LLM reale per verificare umanizzazione
-- Test GSC OAuth con credenziali reali Google
-- Miglioramenti UX per feedback SERP (gestire 0 risultati in modo più esplicito)
+- Test completo flusso OAuth GSC con account Google reale
+- Miglioramenti UX per feedback SERP (gestire 0 risultati)
 
 ## Credenziali Test
 - **Admin**: admin@seoengine.it / admin123
@@ -60,11 +60,21 @@ Trasformare script Python per la SEO programmatica in un'applicazione web comple
 - `POST /api/clients/{id}/scrape-website` - Scraping sito per KB
 - `GET /api/gsc/authorize/{id}` - Avvia OAuth GSC
 - `GET /api/gsc/callback` - Callback OAuth GSC
+- `GET /api/gsc/status` - Verifica se GSC configurato a livello sistema
 - `GET /api/clients/{id}/gsc-data` - Dati GSC
+- `POST /api/clients/{id}/gsc-config` - Salva URL sito GSC
+- `POST /api/clients/{id}/gsc-disconnect` - Disconnetti GSC
 - `GET /api/activity-logs/{id}` - Log attività
-- `GET /api/jobs/{id}` - Stato job asincrono
+
+## Variabili d'Ambiente Backend
+- `MONGO_URL` - Connessione MongoDB
+- `DB_NAME` - Nome database
+- `CORS_ORIGINS` - CORS
+- `FRONTEND_URL` - URL frontend (per redirect OAuth callback)
+- `GSC_OAUTH_CLIENT_ID` - Google OAuth Client ID (livello sistema)
+- `GSC_OAUTH_CLIENT_SECRET` - Google OAuth Client Secret (livello sistema)
 
 ## Note Tecniche
 - SERP: `googlesearch-python` può essere bloccato in ambienti container
-- GSC: Richiede credenziali OAuth reali da Google Cloud Console
+- GSC: Credenziali OAuth configurate una volta come env vars, l'utente clicca solo "Connetti"
 - LLM: Supporta OpenAI, Anthropic (Claude), DeepSeek, Perplexity via API key cliente
