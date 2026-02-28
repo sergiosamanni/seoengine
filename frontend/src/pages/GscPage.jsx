@@ -48,6 +48,7 @@ export const GscPage = () => {
   const [client, setClient] = useState(null);
   const [gscConnected, setGscConnected] = useState(false);
   const [integrationConfigured, setIntegrationConfigured] = useState(true);
+  const [redirectUri, setRedirectUri] = useState('');
 
   useEffect(() => {
     fetchClient();
@@ -64,6 +65,7 @@ export const GscPage = () => {
     try {
       const res = await axios.get(`${API}/gsc/status`, { headers: getAuthHeaders() });
       setIntegrationConfigured(res.data.configured);
+      if (res.data.redirect_uri) setRedirectUri(res.data.redirect_uri);
     } catch (e) { /* ignore */ }
   };
 
