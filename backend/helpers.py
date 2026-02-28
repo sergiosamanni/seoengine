@@ -423,7 +423,7 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
                     real_url = unquote(parsed.get("uddg", [raw_href])[0])
                 else:
                     real_url = raw_href
-                if real_url and title and not real_url.startswith("//duckduckgo"):
+                if real_url and title and "duckduckgo.com" not in real_url:
                     desc = snippets[idx] if idx < len(snippets) else ""
                     search_urls.append({"url": real_url, "title": title, "description": desc})
                     idx += 1
