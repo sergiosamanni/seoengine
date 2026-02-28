@@ -56,7 +56,7 @@ async def upload_image(file: UploadFile = File(...), token: str = Query(None)):
 
 @router.get("/files/{file_id}")
 async def get_file(file_id: str, auth: str = Query(None)):
-    user = await get_current_user_from_token(auth)
+    user = _decode_token(auth) if auth else None
     if not user:
         raise HTTPException(status_code=401, detail="Non autorizzato")
 
