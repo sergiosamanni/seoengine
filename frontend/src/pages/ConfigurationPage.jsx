@@ -131,7 +131,8 @@ export const ConfigurationPage = () => {
     try {
       await axios.put(`${API}/clients/${effectiveClientId}/configuration`, {
         wordpress, llm, openai: llm, apify, seo,
-        tono_e_stile: tono, knowledge_base: knowledge, keyword_combinations: keywords
+        tono_e_stile: tono, knowledge_base: knowledge, keyword_combinations: keywords,
+        content_strategy: contentStrategy
       }, { headers: getAuthHeaders() });
       toast.success('Configurazione salvata');
     } catch (error) {
@@ -146,7 +147,8 @@ export const ConfigurationPage = () => {
     try {
       await axios.put(`${API}/clients/${effectiveClientId}/configuration`, {
         wordpress, llm, openai: llm, apify, seo,
-        tono_e_stile: tono, knowledge_base: knowledge, keyword_combinations: keywords
+        tono_e_stile: tono, knowledge_base: knowledge, keyword_combinations: keywords,
+        content_strategy: contentStrategy
       }, { headers: getAuthHeaders() });
 
       const response = await axios.post(
