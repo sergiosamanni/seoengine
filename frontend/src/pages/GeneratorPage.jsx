@@ -1043,7 +1043,7 @@ const ArticleHistory = ({ effectiveClientId, getAuthHeaders }) => {
                         <div className="flex-1 min-w-0 mr-4">
                           <p className="font-medium text-sm text-slate-900 truncate">{a.titolo}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="text-xs">{a.keyword_principale}</Badge>
+                            <Badge variant="outline" className="text-xs">{a.keyword_principale || a.titolo?.split(' ').slice(0, 3).join(' ')}</Badge>
                             <Badge variant={a.stato === 'published' ? 'default' : 'secondary'}
                               className={`text-xs ${a.stato === 'published' ? 'bg-emerald-100 text-emerald-700' : a.stato === 'generated' ? 'bg-blue-100 text-blue-700' : ''}`}>
                               {a.stato === 'published' ? 'Pubblicato' : a.stato === 'generated' ? 'Generato' : a.stato}
