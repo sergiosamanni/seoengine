@@ -794,16 +794,16 @@ async def get_overview_stats(current_user: dict = Depends(get_current_user)):
 
 # ============== HELPER FUNCTIONS ==============
 
-def build_system_prompt(kb: dict, tone: dict, seo: dict, client_name: str, advanced_prompt: dict = None) -> str:
+def build_system_prompt(kb: dict, tone: dict, seo: dict, client_name: str, advanced_prompt: dict = None, strategy: dict = None, content_type: str = "articolo_blog", brief_override: dict = None) -> str:
     """
-    Costruisce un prompt di sistema completo per la generazione di articoli SEO.
-    Basato sulla logica del notebook SEO_Batch_MultiCliente.
+    Costruisce il prompt di sistema per un SEO Copywriter esperto.
+    Integra: identità brand, strategia contenuti, modello copywriting, leve psicologiche, regole SEO.
     """
     lingua = seo.get("lingua", "italiano")
     lunghezza = seo.get("lunghezza_minima_parole", 1500)
     include_faq = seo.get("include_faq_in_fondo", False)
     
-    # Tone and style parameters
+    # Tone and style
     registro = tone.get("registro", "professionale_accessibile")
     persona = tone.get("persona_narrativa", "seconda_singolare")
     tono_desc = tone.get("descrizione_tono_libera", "")
@@ -811,7 +811,7 @@ def build_system_prompt(kb: dict, tone: dict, seo: dict, client_name: str, advan
     parole_vietate = tone.get("parole_vietate", [])
     frasi_vietate = tone.get("frasi_vietate", [])
     
-    # Knowledge base parameters
+    # Knowledge base
     descrizione = kb.get("descrizione_attivita", "")
     storia = kb.get("storia_brand", "")
     citta = kb.get("citta_principale", "")
@@ -821,17 +821,44 @@ def build_system_prompt(kb: dict, tone: dict, seo: dict, client_name: str, advan
     punti_forza = kb.get("punti_di_forza", [])
     target_primario = kb.get("pubblico_target_primario", "")
     target_secondario = kb.get("pubblico_target_secondario", "")
-    cta = kb.get("call_to_action_principale", "")
+    cta_base = kb.get("call_to_action_principale", "")
     
-    # Build persona instruction
+    # Content Strategy (per-client)
+    strat = strategy or {}
+    funnel_stage = strat.get("funnel_stage", "TOFU")
+    obiettivo = strat.get("obiettivo_primario", "traffico")
+    modello_copy = strat.get("modello_copywriting", "PAS")
+    buyer_nome = strat.get("buyer_persona_nome", "")
+    buyer_desc = strat.get("buyer_persona_descrizione", "")
+    buyer_obiezioni = strat.get("buyer_persona_obiezioni", "")
+    cta_finale = strat.get("cta_finale", "") or cta_base
+    search_intent = strat.get("search_intent", "informazionale")
+    leve = strat.get("leve_psicologiche", [])
+    kw_secondarie = strat.get("keyword_secondarie", [])
+    kw_lsi = strat.get("keyword_lsi", [])
+    lunghezza_target = strat.get("lunghezza_target", 0) or lunghezza
+    note_speciali = strat.get("note_speciali", "")
+    
+    # Brief override (per-generation)
+    if brief_override:
+        if brief_override.get("cta_finale"):
+            cta_finale = brief_override["cta_finale"]
+        if brief_override.get("note_speciali"):
+            note_speciali = brief_override["note_speciali"]
+        if brief_override.get("funnel_stage"):
+            funnel_stage = brief_override["funnel_stage"]
+        if brief_override.get("modello_copywriting"):
+            modello_copy = brief_override["modello_copywriting"]
+    
+    # Persona mapping
     persona_map = {
         "seconda_singolare": "Usa sempre la seconda persona singolare (tu, il tuo, ti)",
         "prima_plurale": "Usa sempre la prima persona plurale (noi, il nostro, ci)",
-        "terza_neutrale": "Usa uno stile impersonale e neutro (si consiglia, è possibile)"
+        "terza_neutrale": "Usa uno stile impersonale e neutro (si consiglia, e possibile)"
     }
     persona_instruction = persona_map.get(persona, persona_map["seconda_singolare"])
     
-    # Build registro description
+    # Registro mapping
     registro_map = {
         "formale": "Mantieni un tono formale e istituzionale, adatto a un contesto professionale",
         "professionale_accessibile": "Sii professionale ma accessibile, evita tecnicismi eccessivi",
@@ -841,10 +868,72 @@ def build_system_prompt(kb: dict, tone: dict, seo: dict, client_name: str, advan
     }
     registro_desc = registro_map.get(registro, registro_map["professionale_accessibile"])
     
-    # Build the comprehensive system prompt
-    prompt = f"""RUOLO: Sei un esperto copywriter SEO italiano specializzato in contenuti ottimizzati per i motori di ricerca. Scrivi ESCLUSIVAMENTE in {lingua}.
+    # Content type mapping
+    content_type_map = {
+        "pillar_page": "Pillar Page — contenuto lungo ed esaustivo (2000-3000+ parole), copre l'argomento in modo completo, con indice e sezioni logiche.",
+        "articolo_blog": "Articolo Blog — contenuto informativo o commerciale (1200-2000 parole), focalizzato su una keyword specifica.",
+        "landing_page": "Landing Page — contenuto persuasivo orientato alla conversione, struttura verticale con una sola CTA."
+    }
+    content_type_desc = content_type_map.get(content_type, content_type_map["articolo_blog"])
+    
+    # Funnel stage instructions
+    funnel_map = {
+        "TOFU": "TOFU (Top of Funnel) — Il lettore sta esplorando il problema. Educa, informa, crea consapevolezza. Non vendere direttamente. L'obiettivo e catturare attenzione e traffico organico.",
+        "MOFU": "MOFU (Middle of Funnel) — Il lettore conosce il problema e sta valutando soluzioni. Mostra competenza, confronta opzioni, fornisci casi studio. L'obiettivo e generare fiducia e lead.",
+        "BOFU": "BOFU (Bottom of Funnel) — Il lettore e pronto a decidere. Sii diretto, presenta l'offerta chiaramente, rimuovi le obiezioni. L'obiettivo e la conversione."
+    }
+    funnel_desc = funnel_map.get(funnel_stage, funnel_map["TOFU"])
+    
+    # Copywriting model instructions
+    model_instructions = {
+        "AIDA": """MODELLO: AIDA (Attenzione - Interesse - Desiderio - Azione)
+Struttura l'articolo seguendo questo flusso:
+1. ATTENZIONE — Apri con headline/intro che colpisce il pain point o il desiderio principale. Usa domanda provocatoria, statistica o affermazione contro-intuitiva.
+2. INTERESSE — Mantieni il lettore con informazioni rilevanti sul problema. Usa storytelling, analogie, dati di settore.
+3. DESIDERIO — Crea desiderio verso la soluzione mostrando il risultato trasformativo. Usa before/after, benefici concreti, visualizzazione del risultato.
+4. AZIONE — Spingi all'azione con CTA chiara, specifica e orientata al beneficio. Usa urgenza etica, garanzia, microcopy rassicurante.""",
 
-=== IDENTITÀ DEL BRAND ===
+        "PAS": """MODELLO: PAS (Problema - Agitazione - Soluzione)
+Struttura l'articolo seguendo questo flusso:
+1. PROBLEMA — Nomina il problema con le parole esatte del cliente. Usa il linguaggio del lettore, non quello aziendale.
+2. AGITAZIONE — Amplifica le conseguenze negative del problema non risolto. Entra nell'emozione, mostra il costo dell'inazione.
+3. SOLUZIONE — Presenta la soluzione come la naturale via d'uscita dal dolore descritto. Mostra come risolve concretamente il problema.""",
+
+        "FAB": """MODELLO: FAB (Feature - Advantage - Benefit)
+Per ogni servizio/prodotto descritto segui questa struttura:
+1. FEATURE — Descrivi cosa fa o cos'e il prodotto/servizio in modo oggettivo.
+2. ADVANTAGE — Spiega perche quella caratteristica e superiore all'alternativa.
+3. BENEFIT — Traduci il vantaggio nel risultato concreto per il lettore.""",
+
+        "PASTOR": """MODELLO: PASTOR (Problem - Amplify - Story - Testimony - Offer - Response)
+Struttura l'articolo seguendo questo flusso completo:
+1. PROBLEM — Identifica il problema specifico dell'audience
+2. AMPLIFY — Amplifica le conseguenze e il costo dell'inazione
+3. STORY — Racconta una storia di trasformazione credibile
+4. TESTIMONY — Integra testimonianze o prove sociali nel testo
+5. OFFER — Presenta l'offerta come soluzione naturale al problema
+6. RESPONSE — CTA finale chiara con riduzione del rischio (garanzia, trial, consulenza)""",
+
+        "Libero": "MODELLO: Struttura Libera — Organizza il contenuto nella struttura piu efficace per l'argomento, mantenendo le regole SEO e di formattazione."
+    }
+    model_desc = model_instructions.get(modello_copy, model_instructions["PAS"])
+    
+    # Psychological levers
+    leve_map = {
+        "riprova_sociale": "RIPROVA SOCIALE — Inserisci riferimenti a numeri di clienti, testimonianze, rating, casi di successo. Es: 'Scelto da oltre X aziende', '4.8/5 su Y recensioni'.",
+        "autorita": "AUTORITA — Mostra expertise con certificazioni, anni di esperienza, menzioni su media noti, dati proprietari.",
+        "scarsita": "SCARSITA — Se appropriato, indica disponibilita limitata o esclusivita del servizio. Solo se la scarsita e reale.",
+        "urgenza": "URGENZA — Evidenzia il costo dell'inazione e i benefici dell'agire subito. Es: 'Ogni settimana senza X costa Y'.",
+        "reciprocita": "RECIPROCITA — Offri valore gratuito nel contenuto: consigli pratici, checklist, template. Crea il desiderio di ricambiare.",
+        "simpatia": "SIMPATIA — Usa storytelling autentico, linguaggio del target, valori condivisi. Crea identificazione.",
+        "impegno": "IMPEGNO E COERENZA — Usa micro-CTA progressive: prima un'azione piccola, poi quella principale."
+    }
+    leve_desc = "\n".join([leve_map[l] for l in leve if l in leve_map])
+    
+    # Build the system prompt
+    prompt = f"""RUOLO: Sei un esperto SEO Copywriter specializzato nella produzione di testi ad alta conversione, ottimizzati per i motori di ricerca e costruiti su modelli di copywriting persuasivo internazionalmente riconosciuti (AIDA, PAS, FAB, PASTOR). Procedi come esperto di copywriting, SEO on-page, title tag, meta description, H1 H2 H3, keyword density, tono di voce, leve psicologiche, engagement, microcopy, contenuti evergreen. Scrivi ESCLUSIVAMENTE in {lingua}.
+
+=== IDENTITA DEL BRAND ===
 AZIENDA: {client_name}
 {descrizione}
 
@@ -854,7 +943,7 @@ TARGET PRIMARIO: {target_primario}
 TARGET SECONDARIO: {target_secondario}
 
 === TERRITORIO E LOCALIZZAZIONE ===
-- Città principale: {citta}
+- Citta principale: {citta}
 - Regione: {regione}
 - Descrizione territorio: {territorio}
 - Punti di interesse locali: {', '.join(punti_interesse) if punti_interesse else 'N/A'}
@@ -862,12 +951,12 @@ TARGET SECONDARIO: {target_secondario}
 Quando scrivi, menziona dettagli locali specifici per rafforzare la rilevanza geografica.
 
 === PUNTI DI FORZA DA EVIDENZIARE ===
-{chr(10).join(['• ' + p for p in punti_forza]) if punti_forza else '• Qualità del servizio'}
+{chr(10).join(['- ' + p for p in punti_forza]) if punti_forza else '- Qualita del servizio'}
 
 === TONO E STILE ===
 REGISTRO: {registro_desc}
 PERSONA NARRATIVA: {persona_instruction}
-{f'ISTRUZIONI AGGIUNTIVE: {tono_desc}' if tono_desc else ''}
+{f'ISTRUZIONI AGGIUNTIVE SUL TONO: {tono_desc}' if tono_desc else ''}
 AGGETTIVI DEL BRAND: {', '.join(aggettivi) if aggettivi else 'professionale, affidabile, esperto'}
 
 === DIVIETI ASSOLUTI ===
@@ -879,48 +968,73 @@ NON usare MAI:
 - Linguaggio troppo promozionale o superlativo senza sostanza
 - Riferimenti diretti ai competitor
 
+=== STRATEGIA CONTENUTO ===
+TIPO CONTENUTO: {content_type_desc}
+FUNNEL STAGE: {funnel_desc}
+OBIETTIVO PRIMARIO: {obiettivo}
+INTENTO DI RICERCA: {search_intent}
+
+{f'BUYER PERSONA: {buyer_nome}' if buyer_nome else ''}
+{f'Descrizione: {buyer_desc}' if buyer_desc else ''}
+{f'Obiezioni tipiche da superare: {buyer_obiezioni}' if buyer_obiezioni else ''}
+
+=== {model_desc} ===
+
+{f'=== LEVE PSICOLOGICHE DA INTEGRARE ===' if leve_desc else ''}
+{leve_desc}
+
+{f'=== KEYWORD SECONDARIE ==={chr(10)}Integra naturalmente: {", ".join(kw_secondarie)}' if kw_secondarie else ''}
+{f'=== KEYWORD LSI (SEMANTICHE) ==={chr(10)}Usa varianti e sinonimi: {", ".join(kw_lsi)}' if kw_lsi else ''}
+
 === STRUTTURA HTML RICHIESTA ===
 Output SOLO in formato HTML valido. Inizia SEMPRE con <h1>.
 
+Tag Title: 50-60 caratteri, keyword primaria all'inizio se possibile.
+Meta Description: 140-160 caratteri, keyword primaria + beneficio + CTA implicita.
+H1: uno solo per pagina, contiene la keyword primaria, 40-70 caratteri.
+
 Struttura obbligatoria:
 1. <h1> - Titolo principale SEO ottimizzato con la keyword target
-2. <p> - Paragrafo introduttivo accattivante (150-200 parole)
-3. <h2> - Sezioni principali (almeno 3-4)
-4. <h3> - Sottosezioni per approfondimenti
-5. <ul><li> - Elenchi puntati per caratteristiche e vantaggi
-6. <strong> - Evidenzia 2-3 parole chiave per paragrafo
+2. <p> - Paragrafo introduttivo accattivante (150-200 parole) con keyword nei primi 100 caratteri
+3. <h2> - Sezioni principali (almeno 3-4) con keyword secondarie e semantiche
+4. <h3> - Sottosezioni per approfondimenti, long-tail, domande correlate
+5. <ul><li> - Elenchi puntati per caratteristiche e vantaggi (favoriscono featured snippet)
+6. <strong> - Evidenzia 2-3 concetti chiave per paragrafo (non tutto)
 7. <p> finale con call to action
 
 {'8. <h2>Domande Frequenti</h2> con 3-5 FAQ rilevanti in formato <h3>Domanda</h3><p>Risposta</p>' if include_faq else ''}
 
 === REGOLE SEO TECNICHE ===
-1. LUNGHEZZA: Minimo {lunghezza} parole
-2. PARAGRAFI: 200-250 parole ciascuno, mai blocchi troppo lunghi
-3. KEYWORD: Inserisci la keyword principale nel titolo H1, nei primi 100 caratteri, in almeno un H2
-4. KEYWORD DENSITY: Usa la keyword 1-2 volte per paragrafo, in modo naturale
-5. LOCALIZZAZIONE: Menziona la città/zona target almeno 3-4 volte
-6. SEMANTICA: Usa sinonimi e termini correlati per ampliare la copertura semantica
-7. LEGGIBILITÀ: Frasi brevi (max 20-25 parole), forma attiva, linguaggio diretto
-8. TECNICISMI: Spiega sempre i termini tecnici in modo semplice tra parentesi
+1. LUNGHEZZA: Minimo {lunghezza_target} parole
+2. PARAGRAFI: Max 3-4 righe per paragrafo, mai blocchi troppo lunghi
+3. FRASI: Max 20-25 parole per frase, forma attiva, linguaggio diretto
+4. KEYWORD PRIMARIA: nel titolo H1, nei primi 100 caratteri, in almeno un H2, nell'ultimo paragrafo, 1-2 volte per paragrafo
+5. KEYWORD DENSITY: naturale, evita keyword stuffing
+6. LOCALIZZAZIONE: Menziona la citta/zona target almeno 3-4 volte
+7. SEMANTICA: Usa sinonimi e termini correlati per ampliare la copertura semantica
+8. LINK INTERNI: suggerisci 3-5 anchor text per link interni (in commenti HTML)
+9. TECNICISMI: Spiega sempre i termini tecnici in modo semplice
+10. GRASSETTO: solo per concetti chiave, max 1-2 per paragrafo
+11. CTA: una primaria per pagina, ripetuta 2-3 volte (inizio, meta, fine)
 
 === CALL TO ACTION ===
-{cta if cta else 'Contattaci per maggiori informazioni'}
+{cta_finale if cta_finale else 'Contattaci per maggiori informazioni'}
 
-Inserisci la CTA in modo naturale nel paragrafo conclusivo.
+Inserisci la CTA in modo naturale nel paragrafo conclusivo e in almeno altri 2 punti strategici del testo.
+
+{f'=== NOTE SPECIALI ==={chr(10)}{note_speciali}' if note_speciali else ''}
 """
 
-    # Add advanced prompt if provided (secondo livello)
+    # Advanced prompt (secondo livello)
     if advanced_prompt:
         secondo_livello = advanced_prompt.get("secondo_livello_prompt", "")
         keyword_template = advanced_prompt.get("keyword_injection_template", "")
-        
         if secondo_livello:
             prompt += f"\n=== ISTRUZIONI AVANZATE ===\n{secondo_livello}\n"
-        
         if keyword_template:
             prompt += f"\n=== TEMPLATE KEYWORD ===\n{keyword_template}\n"
 
-    prompt += "\n=== ISTRUZIONE FINALE ===\nGenera un articolo SEO completo, dettagliato e ottimizzato basato sul titolo fornito. L'articolo deve essere pronto per la pubblicazione su WordPress."
+    prompt += "\n=== ISTRUZIONE FINALE ===\nGenera un articolo SEO completo, dettagliato e ottimizzato basato sul titolo fornito. Applica il modello di copywriting indicato, integra le leve psicologiche richieste e rispetta tutte le regole SEO on-page. L'articolo deve essere pronto per la pubblicazione su WordPress."
 
     return prompt
 
