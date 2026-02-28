@@ -497,6 +497,46 @@ async def serp_search(request: dict, current_user: dict = Depends(get_current_us
     return {"keyword": keyword, "country": country, "results": results, "count": len(results)}
 
 
+@router.post("/serp/analyze-full")
+async def serp_full_analysis(request: dict, current_user: dict = Depends(get_current_user)):
+    """Full SERP analysis: search + extract titles/headings from top results."""
+    from helpers import scrape_google_serp
+    keyword = request.get("keyword", "").strip()
+    if not keyword:
+        raise HTTPException(status_code=400, detail="Keyword obbligatoria")
+    country = request.get("country", "it")
+    num_results = min(request.get("num_results", 4), 10)
+    results = await scrape_google_serp(keyword, country, num_results)
+    # Build structured competitor analysis
+    competitors = []
+    for r in results:
+        competitors.append({
+            "position": r["position"],
+            "url": r["url"],
+            "title": r["title"],
+            "headings": r.get("headings", []),
+            "description": r.get("description", ""),
+            "text_preview": r.get("text_preview", "")
+        })
+    # Build suggested prompt context from SERP data
+    serp_titles = [c["title"] for c in competitors if c["title"]]
+    serp_headings = []
+    for c in competitors:
+        for h in c.get("headings", []):
+            if h and h not in serp_headings:
+                serp_headings.append(h)
+    return {
+        "keyword": keyword,
+        "competitors": competitors,
+        "count": len(competitors),
+        "extracted": {
+            "titles": serp_titles,
+            "headings": serp_headings[:20]
+        }
+    }
+
+
+
 @router.post("/clients/{client_id}/serp-analysis")
 async def analyze_serp(client_id: str, request: SerpScrapingRequest, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
