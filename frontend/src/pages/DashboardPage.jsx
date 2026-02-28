@@ -218,35 +218,19 @@ export const DashboardPage = () => {
 
       {/* Quick Actions for Client */}
       {!isAdmin && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card 
             className="border-slate-200 card-hover cursor-pointer tracing-beam"
-            onClick={() => navigate('/configuration')}
-            data-testid="quick-action-config"
-          >
-            <CardContent className="p-6 flex flex-col items-start">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-4">
-                <FileText className="w-6 h-6 text-blue-600" />
-              </div>
-              <h3 className="font-semibold text-slate-900 mb-1">Configurazione</h3>
-              <p className="text-sm text-slate-500">
-                Modifica knowledge base, tono e keyword combinations
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card 
-            className="border-slate-200 card-hover cursor-pointer tracing-beam"
-            onClick={() => navigate('/generator')}
+            onClick={() => navigate('/simple-generator')}
             data-testid="quick-action-generator"
           >
             <CardContent className="p-6 flex flex-col items-start">
               <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center mb-4">
                 <TrendingUp className="w-6 h-6 text-orange-600" />
               </div>
-              <h3 className="font-semibold text-slate-900 mb-1">Genera Articoli</h3>
+              <h3 className="font-semibold text-slate-900 mb-1">Crea Articolo</h3>
               <p className="text-sm text-slate-500">
-                Crea nuovi articoli SEO dalle combinazioni
+                Genera un nuovo articolo SEO partendo da una keyword
               </p>
             </CardContent>
           </Card>
