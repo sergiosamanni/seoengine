@@ -39,7 +39,8 @@ import {
   Trash2, 
   ExternalLink,
   Settings,
-  PenTool
+  PenTool,
+  BarChart3
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -346,6 +347,10 @@ export const ClientsPage = () => {
                           <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}/generate`)}>
                             <PenTool className="w-4 h-4 mr-2" />
                             Genera Articoli
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}/gsc`)}>
+                            <BarChart3 className="w-4 h-4 mr-2" />
+                            Google Search Console
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEditDialog(client)}>
                             <Edit className="w-4 h-4 mr-2" />
