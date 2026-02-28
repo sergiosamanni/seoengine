@@ -410,12 +410,12 @@ export const ClientsPage = () => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}`)}>
-                            <Settings className="w-4 h-4 mr-2" />
-                            Configura
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}/generate`)}>
                             <PenTool className="w-4 h-4 mr-2" />
                             Genera Articoli
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}/config`)}>
+                            <Settings className="w-4 h-4 mr-2" />
+                            Configurazione
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}/gsc`)}>
                             <BarChart3 className="w-4 h-4 mr-2" />
