@@ -12,7 +12,8 @@ import {
   PenTool,
   History,
   ChevronRight,
-  Activity
+  Activity,
+  UserCog
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { ScrollArea } from '../components/ui/scroll-area';
@@ -22,6 +23,7 @@ import { Toaster } from 'sonner';
 const adminNavItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/clients', icon: Users, label: 'Clienti' },
+  { path: '/users', icon: UserCog, label: 'Utenti' },
   { path: '/articles', icon: FileText, label: 'Articoli' },
   { path: '/activity', icon: Activity, label: 'Activity Log' },
 ];
