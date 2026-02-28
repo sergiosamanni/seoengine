@@ -1031,7 +1031,31 @@ Inserisci la CTA in modo naturale nel paragrafo conclusivo e in almeno altri 2 p
 {f'=== NOTE SPECIALI ==={chr(10)}{note_speciali}' if note_speciali else ''}
 """
 
-    # Advanced prompt (secondo livello)
+    prompt += """
+=== UMANIZZAZIONE DEL TESTO (CRITICO) ===
+Il testo DEVE sembrare scritto da un essere umano esperto, NON da un'intelligenza artificiale.
+
+DIVIETI ASSOLUTI - Pattern AI da eliminare:
+1. NO Title Case (maiuscola a ogni parola): scrivi "noleggio auto a salerno" NON "Noleggio Auto a Salerno" nei testi
+2. NO frasi introduttive vuote: mai "In questo articolo vedremo...", "Scopriamo insieme...", "Andiamo a vedere..."
+3. NO elenchi troppo simmetrici: varia la lunghezza dei punti elenco
+4. NO ripetizione dello stesso pattern di frase: se usi "Inoltre, ...", non ripeterlo nel paragrafo dopo
+5. NO aggettivi superlativi ripetuti: non usare "eccellente", "straordinario", "incredibile" piu di una volta
+6. NO conclusioni banali: mai "In conclusione", "Per riassumere", "In definitiva"
+7. NO frasi troppo perfette e bilanciate: le persone vere scrivono frasi di lunghezza diversa
+8. NO transizioni artificiali ripetitive: evita "Inoltre", "Infine", "D'altra parte" in sequenza
+
+REGOLE DI UMANIZZAZIONE:
+- Varia la lunghezza delle frasi: alcune brevi (5-8 parole), altre lunghe (20-30). Come parla una persona vera.
+- Usa espressioni colloquiali quando appropriato: "il punto e che", "a dirla tutta", "la verita e che"
+- Inserisci domande retoriche per coinvolgere il lettore
+- Usa qualche frase incompleta o interruzione naturale con trattini — come questa
+- I titoli H2 e H3 devono essere in minuscolo normale (solo prima lettera maiuscola), mai Title Case
+- Evita la struttura "problema - soluzione - beneficio" identica per ogni sezione
+- Scrivi come un professionista che spiega qualcosa a voce a un collega, non come un robot
+
+"""
+
     if advanced_prompt:
         secondo_livello = advanced_prompt.get("secondo_livello_prompt", "")
         keyword_template = advanced_prompt.get("keyword_injection_template", "")
@@ -1040,7 +1064,7 @@ Inserisci la CTA in modo naturale nel paragrafo conclusivo e in almeno altri 2 p
         if keyword_template:
             prompt += f"\n=== TEMPLATE KEYWORD ===\n{keyword_template}\n"
 
-    prompt += "\n=== ISTRUZIONE FINALE ===\nGenera un articolo SEO completo, dettagliato e ottimizzato basato sul titolo fornito. Applica il modello di copywriting indicato, integra le leve psicologiche richieste e rispetta tutte le regole SEO on-page. L'articolo deve essere pronto per la pubblicazione su WordPress."
+    prompt += "\n=== ISTRUZIONE FINALE ===\nGenera un articolo SEO completo, dettagliato e ottimizzato basato sul titolo fornito. Applica il modello di copywriting indicato, integra le leve psicologiche richieste e rispetta tutte le regole SEO on-page. Il testo deve essere naturale, umano e pronto per la pubblicazione su WordPress."
 
     return prompt
 
