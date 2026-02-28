@@ -152,8 +152,10 @@ export const ClientsPage = () => {
       nome: client.nome,
       settore: client.settore,
       sito_web: client.sito_web,
+      siti_web: client.siti_web || [client.sito_web].filter(Boolean),
       attivo: client.attivo
     });
+    setNewSiteInput('');
     setIsDialogOpen(true);
   };
 
