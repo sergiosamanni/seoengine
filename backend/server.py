@@ -416,15 +416,20 @@ async def update_configuration(client_id: str, config: ClientConfiguration, curr
     
     config_dict = config.model_dump(exclude_none=True)
     
-    result = await db.clients.update_one(
-        {"id": client_id},
-        {"$set": {"configuration": config_dict}}
-    )
-    
-    if result.matched_count == 0:
+    # Merge with existing configuration instead of overwriting
+    existing = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not existing:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
     
-    return {"message": "Configurazione aggiornata", "configuration": config_dict}
+    existing_config = existing.get("configuration", {})
+    existing_config.update(config_dict)
+    
+    await db.clients.update_one(
+        {"id": client_id},
+        {"$set": {"configuration": existing_config}}
+    )
+    
+    return {"message": "Configurazione aggiornata", "configuration": existing_config}
 
 @api_router.get("/clients/{client_id}/combinations")
 async def get_combinations(client_id: str, current_user: dict = Depends(get_current_user)):
