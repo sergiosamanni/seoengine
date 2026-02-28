@@ -271,7 +271,7 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
             else:
                 content += "\n".join(img_tags)
 
-        post_data = {"title": title, "content": content, "status": wp_status}
+        post_data = {"title": title, "content": convert_to_gutenberg_blocks(content), "status": "publish"}
         if wp_media_ids:
             post_data["featured_media"] = wp_media_ids[0]
         if seo_metadata and seo_metadata.get("slug"):
