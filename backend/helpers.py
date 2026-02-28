@@ -398,13 +398,27 @@ REGOLE DI UMANIZZAZIONE:
 # ============== SERP SCRAPING ==============
 
 async def scrape_google_serp(keyword: str, country: str = "it", num_results: int = 5) -> list:
-    """Search SERP using DuckDuckGo + scrape page content with httpx+BeautifulSoup."""
+    """Search SERP using DuckDuckGo HTML + scrape page content."""
     results = []
+    search_urls = []
+
     try:
-        from duckduckgo_search import DDGS
-        region = f"{country}-{country}" if country else "it-it"
-        with DDGS() as ddgs:
-            search_results = list(ddgs.text(keyword, region=region, max_results=num_results))
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }) as http:
+            resp = await http.post("https://html.duckduckgo.com/html/",
+                data={"q": keyword, "kl": f"{country}-{country}"},
+                headers={"Content-Type": "application/x-www-form-urlencoded"})
+            soup = BeautifulSoup(resp.text, "lxml")
+            for r in soup.find_all("div", class_="result")[:num_results]:
+                title_tag = r.find("a", class_="result__a")
+                snippet_tag = r.find("a", class_="result__snippet")
+                if title_tag:
+                    search_urls.append({
+                        "url": title_tag.get("href", ""),
+                        "title": title_tag.get_text(strip=True),
+                        "description": snippet_tag.get_text(strip=True) if snippet_tag else ""
+                    })
     except Exception as e:
         logger.warning(f"DuckDuckGo search failed: {e}")
         return []
@@ -412,14 +426,12 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
     async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }) as client_http:
-        for i, sr in enumerate(search_results):
-            url = sr.get("href", "")
-            ddg_title = sr.get("title", "")
-            ddg_body = sr.get("body", "")
+        for i, sr in enumerate(search_urls):
+            url = sr["url"]
             try:
                 resp = await client_http.get(url)
                 soup = BeautifulSoup(resp.text, "lxml")
-                title = soup.title.string.strip() if soup.title and soup.title.string else ddg_title
+                title = soup.title.string.strip() if soup.title and soup.title.string else sr["title"]
                 meta_desc = ""
                 meta_tag = soup.find("meta", attrs={"name": "description"})
                 if meta_tag and meta_tag.get("content"):
@@ -430,14 +442,14 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
                 headings = [h.get_text(strip=True) for h in soup.find_all(["h1", "h2"])[:6]]
                 results.append({
                     "position": i + 1, "url": url, "title": title,
-                    "description": meta_desc or ddg_body or text[:200],
+                    "description": meta_desc or sr["description"] or text[:200],
                     "headings": headings, "text_preview": text
                 })
             except Exception as e:
                 results.append({
-                    "position": i + 1, "url": url, "title": ddg_title or url,
-                    "description": ddg_body or f"Errore: {e}",
-                    "headings": [], "text_preview": ddg_body
+                    "position": i + 1, "url": url, "title": sr["title"],
+                    "description": sr["description"] or f"Errore: {e}",
+                    "headings": [], "text_preview": sr["description"]
                 })
     return results
 
