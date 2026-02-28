@@ -105,6 +105,7 @@ class ClientConfiguration(BaseModel):
     openai: Optional[LLMConfig] = None
     advanced_prompt: Optional[AdvancedPrompt] = None
     content_strategy: Optional[ContentStrategy] = None
+    gsc: Optional[GSCConfig] = None
 
 
 class ClientResponse(BaseModel):
