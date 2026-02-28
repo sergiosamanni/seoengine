@@ -176,7 +176,7 @@ async def generate_and_publish(request: dict, current_user: dict = Depends(get_c
         raise HTTPException(status_code=400, detail="API Key LLM non configurata.")
     combinations = request.get("combinations", [])
     publish_to_wp = request.get("publish_to_wordpress", False)
-    content_type = request.get("content_type", "articolo_blog")
+    content_type = request.get("content_type", "articolo")
     brief = request.get("brief")
     if not combinations:
         raise HTTPException(status_code=400, detail="Nessuna combinazione da generare")
