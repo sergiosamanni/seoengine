@@ -2423,15 +2423,31 @@ async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp,
 # ============== GOOGLE SEARCH CONSOLE (OAuth) ==============
 
 GSC_SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
+GSC_OAUTH_CLIENT_ID = os.environ.get("GSC_OAUTH_CLIENT_ID", "")
+GSC_OAUTH_CLIENT_SECRET = os.environ.get("GSC_OAUTH_CLIENT_SECRET", "")
+
+
+def _get_gsc_redirect_uri():
+    frontend_url = os.environ.get("FRONTEND_URL", "")
+    if not frontend_url:
+        raise HTTPException(status_code=500, detail="FRONTEND_URL non configurato")
+    return f"{frontend_url}/api/gsc/callback"
+
+
+def _require_gsc_credentials():
+    if not GSC_OAUTH_CLIENT_ID or not GSC_OAUTH_CLIENT_SECRET:
+        raise HTTPException(
+            status_code=400,
+            detail="Integrazione GSC non configurata. Contatta l'amministratore di sistema."
+        )
+
 
 @api_router.post("/clients/{client_id}/gsc-config")
 async def save_gsc_config(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
-    """Save Google OAuth Client ID and Secret for GSC."""
+    """Save GSC site URL for a client."""
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
     gsc_config = {
-        "oauth_client_id": request.get("oauth_client_id", ""),
-        "oauth_client_secret": request.get("oauth_client_secret", ""),
         "site_url": request.get("site_url", ""),
         "enabled": request.get("enabled", True),
         "connected": False,
@@ -2441,7 +2457,7 @@ async def save_gsc_config(client_id: str, request: dict, current_user: dict = De
         {"id": client_id},
         {"$set": {"configuration.gsc": gsc_config}}
     )
-    return {"message": "Configurazione GSC salvata"}
+    return {"message": "URL sito GSC salvato"}
 
 
 @api_router.get("/gsc/authorize/{client_id}")
@@ -2449,30 +2465,20 @@ async def gsc_authorize(client_id: str, current_user: dict = Depends(get_current
     """Generate Google OAuth authorization URL for GSC."""
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
+    _require_gsc_credentials()
 
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client_doc:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
 
-    gsc = client_doc.get("configuration", {}).get("gsc", {})
-    oauth_client_id = gsc.get("oauth_client_id", "")
-    oauth_client_secret = gsc.get("oauth_client_secret", "")
-    if not oauth_client_id or not oauth_client_secret:
-        raise HTTPException(status_code=400, detail="Configura prima il Client ID e il Client Secret OAuth")
-
-    # Build redirect URI from environment
-    frontend_url = os.environ.get("FRONTEND_URL", "")
-    if not frontend_url:
-        raise HTTPException(status_code=500, detail="FRONTEND_URL non configurato nel backend")
-
-    redirect_uri = f"{frontend_url}/api/gsc/callback"
+    redirect_uri = _get_gsc_redirect_uri()
 
     from google_auth_oauthlib.flow import Flow
 
     client_config = {
         "web": {
-            "client_id": oauth_client_id,
-            "client_secret": oauth_client_secret,
+            "client_id": GSC_OAUTH_CLIENT_ID,
+            "client_secret": GSC_OAUTH_CLIENT_SECRET,
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
             "redirect_uris": [redirect_uri]
@@ -2486,7 +2492,6 @@ async def gsc_authorize(client_id: str, current_user: dict = Depends(get_current
         prompt='consent'
     )
 
-    # Store state in DB for verification
     await db.gsc_states.insert_one({
         "state": state,
         "client_id": client_id,
@@ -2499,30 +2504,22 @@ async def gsc_authorize(client_id: str, current_user: dict = Depends(get_current
 @api_router.get("/gsc/callback")
 async def gsc_callback(code: str, state: str):
     """Handle Google OAuth callback, exchange code for tokens."""
-    # Find the state to get client_id
+    _require_gsc_credentials()
+
     state_doc = await db.gsc_states.find_one({"state": state})
     if not state_doc:
         raise HTTPException(status_code=400, detail="State non valido o scaduto")
     client_id = state_doc["client_id"]
     await db.gsc_states.delete_one({"state": state})
 
-    client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
-    if not client_doc:
-        raise HTTPException(status_code=404, detail="Cliente non trovato")
-
-    gsc = client_doc.get("configuration", {}).get("gsc", {})
-    oauth_client_id = gsc.get("oauth_client_id", "")
-    oauth_client_secret = gsc.get("oauth_client_secret", "")
-
-    frontend_url = os.environ.get("FRONTEND_URL", "")
-    redirect_uri = f"{frontend_url}/api/gsc/callback"
+    redirect_uri = _get_gsc_redirect_uri()
 
     from google_auth_oauthlib.flow import Flow
 
     client_config = {
         "web": {
-            "client_id": oauth_client_id,
-            "client_secret": oauth_client_secret,
+            "client_id": GSC_OAUTH_CLIENT_ID,
+            "client_secret": GSC_OAUTH_CLIENT_SECRET,
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
             "redirect_uris": [redirect_uri]
@@ -2548,9 +2545,11 @@ async def gsc_callback(code: str, state: str):
         )
     except Exception as e:
         logger.error(f"GSC OAuth error: {e}")
+        frontend_url = os.environ.get("FRONTEND_URL", "")
         from starlette.responses import RedirectResponse
         return RedirectResponse(url=f"{frontend_url}/clients/{client_id}/gsc?error=auth_failed")
 
+    frontend_url = os.environ.get("FRONTEND_URL", "")
     from starlette.responses import RedirectResponse
     return RedirectResponse(url=f"{frontend_url}/clients/{client_id}/gsc?gsc_connected=true")
 
@@ -2567,6 +2566,12 @@ async def gsc_disconnect(client_id: str, current_user: dict = Depends(get_curren
     return {"message": "GSC disconnesso"}
 
 
+@api_router.get("/gsc/status")
+async def gsc_integration_status(current_user: dict = Depends(get_current_user)):
+    """Check if GSC integration is configured at the system level."""
+    return {"configured": bool(GSC_OAUTH_CLIENT_ID and GSC_OAUTH_CLIENT_SECRET)}
+
+
 @api_router.get("/clients/{client_id}/gsc-data")
 async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depends(get_current_user)):
     """Fetch Google Search Console data using stored OAuth tokens."""
@@ -2580,7 +2585,7 @@ async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depe
     gsc_config = client_doc.get("configuration", {}).get("gsc", {})
     tokens = gsc_config.get("tokens")
     if not tokens or not gsc_config.get("connected"):
-        raise HTTPException(status_code=400, detail="Google Search Console non connesso. Clicca 'Connetti con Google' per autorizzare.")
+        raise HTTPException(status_code=400, detail="Google Search Console non connesso. Clicca 'Connetti Google Search Console' per autorizzare.")
 
     site_url = gsc_config.get("site_url", "")
     if not site_url:
@@ -2599,10 +2604,8 @@ async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depe
             client_secret=tokens.get("client_secret")
         )
 
-        # Refresh if expired
         if creds.expired and creds.refresh_token:
             creds.refresh(Request())
-            # Update stored tokens
             new_tokens = {
                 "token": creds.token,
                 "refresh_token": creds.refresh_token,
