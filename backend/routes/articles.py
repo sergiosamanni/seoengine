@@ -238,11 +238,12 @@ async def _generate_and_publish_batch(job_id, client_id, combinations, publish_t
             await log_activity(client_id, "article_generate", "success", {"titolo": titolo_formatted, "article_id": article_id})
             if publish_to_wp and wp_config.get("url_api") and wp_config.get("utente"):
                 try:
+                    wp_type = "page" if content_type in ("landing_page", "pillar_page") else "post"
                     wp_result = await publish_to_wordpress(
                         url=wp_config["url_api"], username=wp_config["utente"],
                         password=wp_config["password_applicazione"], title=titolo_formatted,
                         content=content, wp_status=wp_config.get("stato_pubblicazione", "draft"),
-                        seo_metadata=seo_metadata, tags=seo_metadata.get("tags", []))
+                        seo_metadata=seo_metadata, tags=seo_metadata.get("tags", []), wp_type=wp_type)
                     await db.articles.update_one({"id": article_id}, {"$set": {
                         "stato": "published", "wordpress_post_id": str(wp_result["post_id"]),
                         "wordpress_link": wp_result.get("link"), "wordpress_slug": wp_result.get("slug"),
