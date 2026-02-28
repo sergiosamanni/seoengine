@@ -95,6 +95,31 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
   const serpDone = serpData && serpData.competitors?.length > 0;
   const promptDone = advancedPrompt.trim().length > 20;
 
+
+  const handleAdminImageUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const token = localStorage.getItem('seo_token');
+    setAdminUploading(true);
+    const newImgs = [];
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name}: max 5MB`); continue; }
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { toast.error(`${file.name}: formato non supportato`); continue; }
+      try {
+        const fd = new FormData(); fd.append('file', file);
+        const res = await axios.post(`${API}/uploads?token=${token}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        newImgs.push({ id: res.data.id, name: file.name, preview: URL.createObjectURL(file) });
+      } catch (err) { toast.error(`Errore upload ${file.name}`); }
+    }
+    setAdminUploadedImages(prev => [...prev, ...newImgs]);
+    setAdminUploading(false);
+    if (newImgs.length) toast.success(`${newImgs.length} immagine/i caricata/e`);
+    e.target.value = '';
+  };
+  const removeAdminImage = (idx) => {
+    setAdminUploadedImages(prev => { const c = [...prev]; URL.revokeObjectURL(c[idx].preview); c.splice(idx, 1); return c; });
+  };
+
   const runSerpAnalysis = async () => {
     if (!serpKeyword.trim()) { toast.error('Inserisci una keyword'); return; }
     setSerpLoading(true);
