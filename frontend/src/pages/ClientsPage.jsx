@@ -234,7 +234,7 @@ export const ClientsPage = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="sito_web">Sito Web</Label>
+                  <Label htmlFor="sito_web">Sito Web Principale</Label>
                   <Input
                     id="sito_web"
                     value={formData.sito_web}
@@ -243,6 +243,56 @@ export const ClientsPage = () => {
                     required
                     data-testid="client-website-input"
                   />
+                </div>
+
+                {/* Multi-site management */}
+                <div className="space-y-2">
+                  <Label>Siti Aggiuntivi</Label>
+                  <div className="space-y-2">
+                    {formData.siti_web.filter(s => s !== formData.sito_web).map((site, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <div className="flex-1 flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-md border border-slate-200 text-sm">
+                          <Globe className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                          <span className="truncate text-slate-700">{site}</span>
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-600"
+                          onClick={() => setFormData({ ...formData, siti_web: formData.siti_web.filter((_, j) => formData.siti_web.indexOf(site) !== formData.siti_web.indexOf(formData.siti_web[j]) || site !== formData.siti_web[j]) .filter(s => s !== site) })}
+                          data-testid={`remove-site-${i}`}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="flex gap-2">
+                      <Input
+                        value={newSiteInput}
+                        onChange={(e) => setNewSiteInput(e.target.value)}
+                        placeholder="https://altrosito.it"
+                        className="flex-1"
+                        data-testid="add-site-input"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (newSiteInput.trim() && !formData.siti_web.includes(newSiteInput.trim())) {
+                              setFormData({ ...formData, siti_web: [...formData.siti_web, newSiteInput.trim()] });
+                              setNewSiteInput('');
+                            }
+                          }
+                        }}
+                      />
+                      <Button type="button" variant="outline" size="sm"
+                        onClick={() => {
+                          if (newSiteInput.trim() && !formData.siti_web.includes(newSiteInput.trim())) {
+                            setFormData({ ...formData, siti_web: [...formData.siti_web, newSiteInput.trim()] });
+                            setNewSiteInput('');
+                          }
+                        }}
+                        data-testid="add-site-btn"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
