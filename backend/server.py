@@ -929,7 +929,7 @@ Struttura l'articolo seguendo questo flusso completo:
         "simpatia": "SIMPATIA — Usa storytelling autentico, linguaggio del target, valori condivisi. Crea identificazione.",
         "impegno": "IMPEGNO E COERENZA — Usa micro-CTA progressive: prima un'azione piccola, poi quella principale."
     }
-    leve_desc = "\n".join([leve_map[l] for l in leve if l in leve_map])
+    leve_desc = "\n".join([leve_map[leva] for leva in leve if leva in leve_map])
     
     # Build the system prompt
     prompt = f"""RUOLO: Sei un esperto SEO Copywriter specializzato nella produzione di testi ad alta conversione, ottimizzati per i motori di ricerca e costruiti su modelli di copywriting persuasivo internazionalmente riconosciuti (AIDA, PAS, FAB, PASTOR). Procedi come esperto di copywriting, SEO on-page, title tag, meta description, H1 H2 H3, keyword density, tono di voce, leve psicologiche, engagement, microcopy, contenuti evergreen. Scrivi ESCLUSIVAMENTE in {lingua}.
