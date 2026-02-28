@@ -95,21 +95,55 @@ async def generate_with_openai(api_key: str, model: str, temperature: float, sys
 # ============== SEO METADATA ==============
 
 def generate_seo_metadata(title: str, content: str, kb: dict, combination: dict) -> dict:
-    cta = kb.get("call_to_action_principale", "")
     citta = kb.get("citta_principale", "")
-    meta_desc = f"{title}. {cta}"[:155] + "..." if len(f"{title}. {cta}") > 155 else f"{title}. {cta}"
+    servizio = combination.get("servizio", "")
+    tipo = combination.get("tipo", "")
+    focus_kw = f"{servizio} {combination.get('citta', '')}".strip()
+
+    # Build optimized meta description (150-160 chars) with keyword + semantic context + CTA
+    parts = []
+    if servizio:
+        parts.append(servizio.capitalize())
+    if combination.get("citta"):
+        parts.append(f"a {combination['citta'].capitalize()}")
+    if tipo and tipo not in ("informazionale", "commerciale", "transazionale"):
+        parts.append(tipo)
+
+    cta = kb.get("call_to_action_principale", "")
+    punti_forza = kb.get("punti_di_forza", [])
+    vantaggio = punti_forza[0] if punti_forza else ""
+
+    if parts:
+        intro = " ".join(parts)
+        if vantaggio:
+            meta_desc = f"{intro}: {vantaggio.rstrip('.')}."
+        else:
+            meta_desc = f"{intro}: scopri tutto quello che devi sapere."
+        if cta and len(meta_desc) + len(cta) + 2 <= 160:
+            meta_desc = f"{meta_desc} {cta.rstrip('.')}."
+    else:
+        meta_desc = f"{title}."
+        if cta:
+            meta_desc = f"{meta_desc} {cta.rstrip('.')}."
+
+    # Trim to 155-160 range
+    if len(meta_desc) > 160:
+        meta_desc = meta_desc[:157].rsplit(' ', 1)[0] + "..."
+    elif len(meta_desc) < 120 and citta:
+        meta_desc = meta_desc.rstrip('.') + f" a {citta}."
+
     tags = []
-    if combination.get("servizio"):
-        tags.append(combination["servizio"])
+    if servizio:
+        tags.append(servizio)
     if combination.get("citta"):
         tags.append(combination["citta"])
-    if combination.get("tipo"):
-        tags.append(combination["tipo"])
+    if tipo and tipo not in ("informazionale", "commerciale", "transazionale"):
+        tags.append(tipo)
     if citta:
         tags.append(citta)
-    punti_forza = kb.get("punti_di_forza", [])
     if punti_forza:
         tags.extend(punti_forza[:2])
+
     slug = title.lower()
     slug = re.sub(r'[àáâãäå]', 'a', slug)
     slug = re.sub(r'[èéêë]', 'e', slug)
@@ -123,7 +157,7 @@ def generate_seo_metadata(title: str, content: str, kb: dict, combination: dict)
         "meta_description": meta_desc,
         "tags": list(set(tags)),
         "slug": slug,
-        "focus_keyword": f"{combination.get('servizio', '')} {combination.get('citta', '')}".strip()
+        "focus_keyword": focus_kw
     }
 
 
@@ -352,10 +386,12 @@ INTENTO DI RICERCA: {search_intent}
 {f'=== KEYWORD LSI (SEMANTICHE) ==={chr(10)}Usa varianti e sinonimi: {", ".join(kw_lsi)}' if kw_lsi else ''}
 
 === STRUTTURA HTML RICHIESTA ===
-Output SOLO in formato HTML valido. Inizia SEMPRE con <h1>.
+Output SOLO in formato HTML valido.
+
+REGOLA CRITICA: Usa UN SOLO tag <h1> in tutto il documento. Non usare MAI piu di un <h1>.
 
 Struttura obbligatoria:
-1. <h1> - Titolo principale SEO ottimizzato
+1. <h1> - Titolo principale SEO ottimizzato (UNICO in tutto il testo)
 2. <p> - Paragrafo introduttivo (150-200 parole)
 3. <h2> - Sezioni principali (almeno 3-4)
 4. <h3> - Sottosezioni per approfondimenti
