@@ -53,6 +53,10 @@ export const GeneratorPage = () => {
   const [publishToWp, setPublishToWp] = useState(true);
   const [progressPercent, setProgressPercent] = useState(0);
   const [activityLogs, setActivityLogs] = useState([]);
+  const [contentType, setContentType] = useState('articolo_blog');
+  const [briefNotes, setBriefNotes] = useState('');
+  const [briefCta, setBriefCta] = useState('');
+  const [showBrief, setShowBrief] = useState(false);
   const logsEndRef = useRef(null);
   const pollRef = useRef(null);
 
