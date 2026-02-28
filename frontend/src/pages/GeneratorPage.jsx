@@ -590,6 +590,27 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
                     <Input value={singleKeywords} onChange={(e) => setSingleKeywords(e.target.value)} placeholder="Es: noleggio auto salerno" data-testid="single-keywords-input" />
                   </div>
                   <div className="space-y-2">
+                    <Label>Tipo contenuto</Label>
+                    <div className="grid grid-cols-3 gap-2" data-testid="content-type-selector">
+                      {[
+                        { value: 'articolo', label: 'Articolo', desc: 'Blog post SEO' },
+                        { value: 'landing_page', label: 'Landing Page', desc: 'Pagina di conversione' },
+                        { value: 'pillar_page', label: 'Pillar Page', desc: 'Guida completa' }
+                      ].map(ct => (
+                        <button key={ct.value} onClick={() => setContentType(ct.value)}
+                          className={`p-3 rounded-lg border text-left transition-all ${contentType === ct.value ? 'border-orange-400 bg-orange-50 ring-1 ring-orange-400' : 'border-slate-200 hover:border-slate-300'}`}
+                          data-testid={`content-type-${ct.value}`}>
+                          <span className="block text-sm font-medium text-slate-900">{ct.label}</span>
+                          <span className="block text-xs text-slate-500">{ct.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      {contentType === 'articolo' ? 'Verra pubblicato come Post su WordPress' :
+                       'Verra pubblicato come Pagina su WordPress'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
                     <Label>Obiettivo specifico (opzionale)</Label>
                     <Textarea value={singleObjective} onChange={(e) => setSingleObjective(e.target.value)} rows={3}
                       placeholder="Es: Posizionarsi per ricerche locali..." data-testid="single-objective-input" />
