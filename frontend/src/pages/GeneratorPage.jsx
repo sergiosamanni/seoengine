@@ -768,6 +768,7 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
   const [serpData, setSerpData] = useState(null);
   const [gscData, setGscData] = useState(null);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
+  const [clientNotes, setClientNotes] = useState('');
   const [result, setResult] = useState(null);
 
   const config = client?.configuration || {};
