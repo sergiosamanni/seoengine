@@ -2091,6 +2091,442 @@ async def seed_data():
     
     return {"message": "Seed completato"}
 
+# ============== SERP SCRAPING (NO APIFY) ==============
+
+async def scrape_google_serp(keyword: str, country: str = "it", num_results: int = 5) -> list:
+    """Scrape Google SERP using googlesearch-python + extract content with BeautifulSoup."""
+    results = []
+    try:
+        tld = "it" if country == "it" else "com"
+        urls = list(google_search(keyword, num_results=num_results, lang=country, tld=tld))
+    except Exception as e:
+        logger.warning(f"Google search failed: {e}")
+        return []
+
+    async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }) as client_http:
+        for i, url in enumerate(urls):
+            try:
+                resp = await client_http.get(url)
+                soup = BeautifulSoup(resp.text, "lxml")
+                title = soup.title.string.strip() if soup.title and soup.title.string else url
+                # Extract meta description
+                meta_desc = ""
+                meta_tag = soup.find("meta", attrs={"name": "description"})
+                if meta_tag and meta_tag.get("content"):
+                    meta_desc = meta_tag["content"][:300]
+                # Extract main text (first 500 chars)
+                for tag in soup(["script", "style", "nav", "header", "footer"]):
+                    tag.decompose()
+                text = soup.get_text(separator=" ", strip=True)[:500]
+                # Extract h1, h2
+                headings = [h.get_text(strip=True) for h in soup.find_all(["h1", "h2"])[:6]]
+                results.append({
+                    "position": i + 1,
+                    "url": url,
+                    "title": title,
+                    "description": meta_desc or text[:200],
+                    "headings": headings,
+                    "text_preview": text
+                })
+            except Exception as e:
+                results.append({"position": i + 1, "url": url, "title": url, "description": f"Errore: {e}", "headings": [], "text_preview": ""})
+    return results
+
+
+@api_router.post("/serp/search")
+async def serp_search(request: dict, current_user: dict = Depends(get_current_user)):
+    """Search Google SERP without Apify. Available to admin and client."""
+    keyword = request.get("keyword", "").strip()
+    if not keyword:
+        raise HTTPException(status_code=400, detail="Keyword obbligatoria")
+    country = request.get("country", "it")
+    num_results = min(request.get("num_results", 5), 10)
+    results = await scrape_google_serp(keyword, country, num_results)
+    return {"keyword": keyword, "country": country, "results": results, "count": len(results)}
+
+
+# ============== WEBSITE SCRAPING FOR KB ==============
+
+async def scrape_website_info(url: str, max_pages: int = 6) -> dict:
+    """Scrape a website to extract business information for Knowledge Base."""
+    info = {
+        "descrizione_attivita": "",
+        "servizi": [],
+        "citta_principale": "",
+        "regione": "",
+        "punti_di_forza": [],
+        "contatti": {},
+        "pagine_analizzate": [],
+        "raw_titles": [],
+        "raw_headings": [],
+        "raw_meta_descriptions": []
+    }
+
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    base_url = url.rstrip("/")
+    if not base_url.startswith("http"):
+        base_url = "https://" + base_url
+
+    pages_to_visit = [base_url]
+    visited = set()
+
+    async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers=headers) as client_http:
+        while pages_to_visit and len(visited) < max_pages:
+            page_url = pages_to_visit.pop(0)
+            if page_url in visited:
+                continue
+            visited.add(page_url)
+
+            try:
+                resp = await client_http.get(page_url)
+                soup = BeautifulSoup(resp.text, "lxml")
+                title = soup.title.string.strip() if soup.title and soup.title.string else ""
+                info["raw_titles"].append(title)
+                info["pagine_analizzate"].append(page_url)
+
+                # Meta description
+                meta = soup.find("meta", attrs={"name": "description"})
+                if meta and meta.get("content"):
+                    info["raw_meta_descriptions"].append(meta["content"])
+
+                # Headings
+                for h in soup.find_all(["h1", "h2", "h3"])[:15]:
+                    text = h.get_text(strip=True)
+                    if text and len(text) > 3:
+                        info["raw_headings"].append(text)
+
+                # Extract body text
+                for tag in soup(["script", "style", "nav", "header", "footer", "aside"]):
+                    tag.decompose()
+                body_text = soup.get_text(separator=" ", strip=True)
+
+                # First page = homepage → extract description
+                if page_url == base_url:
+                    info["descrizione_attivita"] = body_text[:800]
+
+                # Find internal links to visit
+                from urllib.parse import urljoin, urlparse
+                base_domain = urlparse(base_url).netloc
+                for a in soup.find_all("a", href=True):
+                    href = a["href"]
+                    full_url = urljoin(page_url, href)
+                    parsed = urlparse(full_url)
+                    if parsed.netloc == base_domain and full_url not in visited:
+                        link_text = a.get_text(strip=True).lower()
+                        # Prioritize important pages
+                        important = ["chi siamo", "about", "servizi", "services", "contatti", "contact", "cosa facciamo", "azienda", "company"]
+                        if any(kw in link_text or kw in full_url.lower() for kw in important):
+                            pages_to_visit.insert(0, full_url.split("#")[0].split("?")[0])
+                        elif len(pages_to_visit) < 20:
+                            pages_to_visit.append(full_url.split("#")[0].split("?")[0])
+
+                # Extract phone/email
+                phones = re.findall(r'[\+]?[0-9]{2,4}[\s\-]?[0-9]{3,4}[\s\-]?[0-9]{3,4}', body_text)
+                emails = re.findall(r'[\w.+-]+@[\w-]+\.[\w.]+', body_text)
+                if phones:
+                    info["contatti"]["telefono"] = phones[0]
+                if emails:
+                    info["contatti"]["email"] = emails[0]
+
+                # Extract address/city hints
+                italian_cities = ["roma", "milano", "napoli", "torino", "palermo", "genova", "bologna",
+                                  "firenze", "bari", "catania", "venezia", "verona", "salerno", "avellino",
+                                  "caserta", "benevento", "padova", "trieste", "brescia", "parma", "modena",
+                                  "reggio calabria", "perugia", "cagliari", "sassari", "latina", "taranto"]
+                body_lower = body_text.lower()
+                for city in italian_cities:
+                    if city in body_lower:
+                        info["citta_principale"] = city.title()
+                        break
+
+            except Exception as e:
+                logger.warning(f"Error scraping {page_url}: {e}")
+
+    # Deduplicate headings and extract services
+    info["raw_headings"] = list(dict.fromkeys(info["raw_headings"]))
+    # Try to extract services from headings
+    service_keywords = ["servizi", "cosa", "offriamo", "proponiamo", "soluzioni", "noleggio", "vendita", "consulenza"]
+    for h in info["raw_headings"]:
+        h_lower = h.lower()
+        if any(kw in h_lower for kw in service_keywords) or (3 < len(h) < 60):
+            info["servizi"].append(h)
+    info["servizi"] = info["servizi"][:10]
+
+    return info
+
+
+@api_router.post("/clients/{client_id}/scrape-website")
+async def scrape_website_for_kb(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
+    """Scrape a website and extract business info to pre-fill Knowledge Base."""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    url = request.get("url", "").strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="URL obbligatorio")
+    info = await scrape_website_info(url, max_pages=6)
+    return info
+
+
+# ============== CLIENT SIMPLIFIED GENERATION ==============
+
+class SimpleGenerateRequest(BaseModel):
+    keyword: str
+    topic: str = ""
+    objective: str = "informazionale"  # informazionale / commerciale / conversione
+    publish_to_wordpress: bool = False
+
+@api_router.post("/articles/simple-generate")
+async def simple_generate_article(request: SimpleGenerateRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Simplified article generation for clients.
+    Takes a keyword, auto-builds brief with client config, generates and optionally publishes.
+    """
+    client_id = current_user.get("client_id")
+    if current_user["role"] == "admin":
+        raise HTTPException(status_code=400, detail="Usa l'endpoint standard per admin")
+    if not client_id:
+        raise HTTPException(status_code=400, detail="Nessun cliente associato")
+
+    client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+
+    config = client_doc.get("configuration", {})
+    llm_config = config.get("llm", {}) or config.get("openai", {})
+    if not llm_config.get("api_key"):
+        raise HTTPException(status_code=400, detail="API Key LLM non configurata. Contatta l'amministratore.")
+
+    wp_config = config.get("wordpress", {})
+    if request.publish_to_wordpress:
+        if not wp_config.get("url_api") or not wp_config.get("utente"):
+            raise HTTPException(status_code=400, detail="Credenziali WordPress non configurate.")
+
+    # Auto-build brief from keyword + client config
+    intent_map = {"informazionale": "informazionale", "commerciale": "commerciale", "conversione": "transazionale"}
+    brief_override = {
+        "note_speciali": request.topic if request.topic else f"Scrivi un articolo approfondito sulla keyword: {request.keyword}",
+        "search_intent": intent_map.get(request.objective, "informazionale")
+    }
+
+    # Build system prompt using client's full configuration
+    kb = config.get("knowledge_base", {})
+    tone = config.get("tono_e_stile", {})
+    seo = config.get("seo", {})
+    advanced_prompt = config.get("advanced_prompt", {})
+    strategy = config.get("content_strategy", {})
+    system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, "articolo_blog", brief_override)
+
+    # Create job
+    job_id = str(uuid.uuid4())
+    combo = {"servizio": request.keyword, "citta": kb.get("citta_principale", ""), "tipo": request.objective}
+    job_doc = {
+        "id": job_id, "client_id": client_id, "status": "running",
+        "total": 1, "completed": 0, "results": [],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.jobs.insert_one(job_doc)
+
+    # Launch background
+    asyncio.create_task(_run_simple_generate(
+        job_id, client_id, request.keyword, request.topic, request.publish_to_wordpress,
+        system_prompt, llm_config, wp_config, kb, combo
+    ))
+
+    return {"job_id": job_id, "status": "running", "keyword": request.keyword}
+
+
+async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp, system_prompt, llm_config, wp_config, kb, combo):
+    """Background task for simplified client generation."""
+    provider = llm_config.get("provider", "openai")
+    titolo = keyword.strip()
+
+    await log_activity(client_id, "article_generate", "running", {"titolo": titolo, "step": "1/1"})
+
+    content = None
+    gen_error = None
+    for attempt in range(3):
+        try:
+            user_prompt = titolo
+            if topic:
+                user_prompt = f"{titolo}\n\nArgomento specifico: {topic}"
+            content = await generate_with_llm(
+                provider=provider, api_key=llm_config["api_key"],
+                model=llm_config.get("modello", "gpt-4-turbo-preview"),
+                temperature=llm_config.get("temperatura", 0.7),
+                system_prompt=system_prompt, user_prompt=user_prompt
+            )
+            break
+        except Exception as e:
+            gen_error = str(e)
+            if attempt < 2:
+                await asyncio.sleep(2 ** attempt)
+
+    article_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    result = {"titolo": titolo, "generation_status": "pending", "publish_status": "pending"}
+
+    if not content:
+        await db.articles.insert_one({
+            "id": article_id, "client_id": client_id, "titolo": titolo,
+            "contenuto": f"Errore: {gen_error}", "stato": "failed",
+            "wordpress_post_id": None, "created_at": now, "published_at": None, "combination": combo
+        })
+        result["id"] = article_id
+        result["generation_status"] = "failed"
+        result["generation_error"] = gen_error
+        await log_activity(client_id, "article_generate", "failed", {"titolo": titolo, "error": gen_error})
+    else:
+        seo_metadata = generate_seo_metadata(titolo, content, kb, combo)
+        await db.articles.insert_one({
+            "id": article_id, "client_id": client_id, "titolo": titolo,
+            "contenuto": content, "stato": "generated", "wordpress_post_id": None,
+            "created_at": now, "published_at": None, "combination": combo, "seo_metadata": seo_metadata
+        })
+        result["id"] = article_id
+        result["generation_status"] = "success"
+        result["seo_metadata"] = seo_metadata
+        await log_activity(client_id, "article_generate", "success", {"titolo": titolo, "article_id": article_id, "word_count": len(content.split())})
+
+        if publish_to_wp:
+            try:
+                wp_result = await publish_to_wordpress(
+                    url=wp_config["url_api"], username=wp_config["utente"],
+                    password=wp_config["password_applicazione"], title=titolo,
+                    content=content, wp_status=wp_config.get("stato_pubblicazione", "draft"),
+                    seo_metadata=seo_metadata, tags=seo_metadata.get("tags", [])
+                )
+                await db.articles.update_one({"id": article_id}, {"$set": {
+                    "stato": "published", "wordpress_post_id": str(wp_result["post_id"]),
+                    "wordpress_link": wp_result.get("link"), "published_at": datetime.now(timezone.utc).isoformat()
+                }})
+                result["publish_status"] = "success"
+                result["wordpress_link"] = wp_result.get("link")
+                await log_activity(client_id, "wordpress_publish", "success", {"titolo": titolo, "post_id": wp_result["post_id"], "link": wp_result.get("link")})
+            except Exception as e:
+                await db.articles.update_one({"id": article_id}, {"$set": {"stato": "publish_failed", "publish_error": str(e)}})
+                result["publish_status"] = "failed"
+                result["publish_error"] = str(e)
+                await log_activity(client_id, "wordpress_publish", "failed", {"titolo": titolo, "error": str(e)})
+        else:
+            result["publish_status"] = "skipped"
+
+    await db.jobs.update_one({"id": job_id}, {"$set": {
+        "status": "completed", "completed": 1, "results": [result],
+        "summary": {"total": 1, "generated_ok": 1 if result["generation_status"] == "success" else 0,
+                     "published_ok": 1 if result["publish_status"] == "success" else 0},
+        "finished_at": datetime.now(timezone.utc).isoformat()
+    }})
+
+
+# ============== GOOGLE SEARCH CONSOLE ==============
+
+@api_router.post("/clients/{client_id}/gsc-config")
+async def save_gsc_config(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
+    """Save Google Search Console credentials for a client."""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    gsc_config = {
+        "service_account_json": request.get("service_account_json", ""),
+        "site_url": request.get("site_url", ""),
+        "enabled": request.get("enabled", True)
+    }
+    await db.clients.update_one(
+        {"id": client_id},
+        {"$set": {"configuration.gsc": gsc_config}}
+    )
+    return {"message": "Configurazione GSC salvata"}
+
+
+@api_router.get("/clients/{client_id}/gsc-data")
+async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depends(get_current_user)):
+    """Fetch Google Search Console data for a client."""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+
+    client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+
+    gsc_config = client_doc.get("configuration", {}).get("gsc", {})
+    if not gsc_config or not gsc_config.get("service_account_json") or not gsc_config.get("site_url"):
+        raise HTTPException(status_code=400, detail="Google Search Console non configurato. Inserisci il JSON del Service Account e l'URL del sito.")
+
+    try:
+        import json
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build
+
+        sa_json = json.loads(gsc_config["service_account_json"])
+        credentials = service_account.Credentials.from_service_account_info(
+            sa_json, scopes=["https://www.googleapis.com/auth/webmasters.readonly"]
+        )
+        service = build("searchconsole", "v1", credentials=credentials)
+
+        end_date = datetime.now(timezone.utc).date()
+        start_date = end_date - timedelta(days=days)
+
+        # Query: top keywords
+        kw_response = service.searchanalytics().query(
+            siteUrl=gsc_config["site_url"],
+            body={
+                "startDate": start_date.isoformat(),
+                "endDate": end_date.isoformat(),
+                "dimensions": ["query"],
+                "rowLimit": 50
+            }
+        ).execute()
+
+        # Query: top pages
+        pages_response = service.searchanalytics().query(
+            siteUrl=gsc_config["site_url"],
+            body={
+                "startDate": start_date.isoformat(),
+                "endDate": end_date.isoformat(),
+                "dimensions": ["page"],
+                "rowLimit": 30
+            }
+        ).execute()
+
+        keywords = []
+        for row in kw_response.get("rows", []):
+            keywords.append({
+                "keyword": row["keys"][0],
+                "clicks": row.get("clicks", 0),
+                "impressions": row.get("impressions", 0),
+                "ctr": round(row.get("ctr", 0) * 100, 2),
+                "position": round(row.get("position", 0), 1)
+            })
+
+        pages = []
+        for row in pages_response.get("rows", []):
+            pages.append({
+                "page": row["keys"][0],
+                "clicks": row.get("clicks", 0),
+                "impressions": row.get("impressions", 0),
+                "ctr": round(row.get("ctr", 0) * 100, 2),
+                "position": round(row.get("position", 0), 1)
+            })
+
+        return {
+            "period": {"start": start_date.isoformat(), "end": end_date.isoformat()},
+            "keywords": keywords,
+            "pages": pages,
+            "totals": {
+                "total_clicks": sum(k["clicks"] for k in keywords),
+                "total_impressions": sum(k["impressions"] for k in keywords),
+                "avg_ctr": round(sum(k["ctr"] for k in keywords) / max(len(keywords), 1), 2),
+                "avg_position": round(sum(k["position"] for k in keywords) / max(len(keywords), 1), 1)
+            }
+        }
+
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="JSON del Service Account non valido")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore GSC: {str(e)}")
+
+
 # ============== ACTIVITY LOG ==============
 
 async def log_activity(client_id: str, action: str, log_status: str, details: dict = None):
