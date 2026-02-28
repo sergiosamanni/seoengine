@@ -272,9 +272,13 @@ async def _generate_and_publish_batch(job_id, client_id, combinations, publish_t
 
 @router.post("/articles/simple-generate")
 async def simple_generate_article(request: SimpleGenerateRequest, current_user: dict = Depends(get_current_user)):
-    client_id = current_user.get("client_id")
+    # Admin can specify client_id, client uses their own
     if current_user["role"] == "admin":
-        raise HTTPException(status_code=400, detail="Usa l'endpoint standard per admin")
+        client_id = request.client_id
+        if not client_id:
+            raise HTTPException(status_code=400, detail="client_id richiesto per admin")
+    else:
+        client_id = current_user.get("client_id")
     if not client_id:
         raise HTTPException(status_code=400, detail="Nessun cliente associato")
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
