@@ -256,7 +256,7 @@ export const ClientsPage = () => {
                           <span className="truncate text-slate-700">{site}</span>
                         </div>
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-600"
-                          onClick={() => setFormData({ ...formData, siti_web: formData.siti_web.filter((_, j) => formData.siti_web.indexOf(site) !== formData.siti_web.indexOf(formData.siti_web[j]) || site !== formData.siti_web[j]) .filter(s => s !== site) })}
+                          onClick={() => setFormData({ ...formData, siti_web: formData.siti_web.filter(s => s !== site) })}
                           data-testid={`remove-site-${i}`}
                         >
                           <X className="w-4 h-4" />
