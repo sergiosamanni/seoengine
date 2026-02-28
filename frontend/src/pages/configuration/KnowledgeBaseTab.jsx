@@ -34,7 +34,111 @@ export const KnowledgeBaseTab = ({ knowledge, setKnowledge, isAdmin, effectiveCl
     setKnowledge({ ...knowledge, [field]: currentArray.filter(v => v !== value) });
   };
 
+  const handleScrapeWebsite = async () => {
+    if (!scrapeUrl.trim()) { toast.error('Inserisci un URL'); return; }
+    setScraping(true);
+    setScrapeResult(null);
+    try {
+      const res = await axios.post(`${API}/clients/${effectiveClientId}/scrape-website`, {
+        url: scrapeUrl
+      }, { headers: getAuthHeaders() });
+      setScrapeResult(res.data);
+      toast.success(`Sito analizzato: ${res.data.pagine_analizzate?.length || 0} pagine`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Errore durante lo scraping');
+    } finally {
+      setScraping(false);
+    }
+  };
+
+  const applyScrapeData = () => {
+    if (!scrapeResult) return;
+    const updated = { ...knowledge };
+    if (scrapeResult.descrizione_attivita && !updated.descrizione_attivita) {
+      updated.descrizione_attivita = scrapeResult.descrizione_attivita.slice(0, 500);
+    }
+    if (scrapeResult.citta_principale && !updated.citta_principale) {
+      updated.citta_principale = scrapeResult.citta_principale;
+    }
+    // Add headings as potential punti di forza
+    const existingForza = updated.punti_di_forza || [];
+    const newForza = (scrapeResult.raw_headings || [])
+      .filter(h => h.length > 5 && h.length < 80 && !existingForza.includes(h))
+      .slice(0, 5);
+    updated.punti_di_forza = [...existingForza, ...newForza];
+    setKnowledge(updated);
+    toast.success('Dati applicati alla Knowledge Base');
+    setScrapeResult(null);
+  };
+
   return (
+    <div className="space-y-6">
+      {/* Website Scraper (Admin only) */}
+      {isAdmin && (
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="w-5 h-5 text-blue-600" />
+              Estrai dati dal sito web
+            </CardTitle>
+            <CardDescription>Inserisci l'URL del sito del cliente per estrarre automaticamente le informazioni</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={scrapeUrl}
+                onChange={(e) => setScrapeUrl(e.target.value)}
+                placeholder="https://www.example.com"
+                disabled={scraping}
+                data-testid="scrape-url-input"
+              />
+              <Button onClick={handleScrapeWebsite} disabled={scraping} className="bg-blue-600 hover:bg-blue-700 whitespace-nowrap" data-testid="scrape-btn">
+                {scraping ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                {scraping ? 'Analisi...' : 'Analizza sito'}
+              </Button>
+            </div>
+            {scrapeResult && (
+              <div className="p-4 bg-white rounded-lg border border-blue-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium text-sm text-slate-900">
+                    {scrapeResult.pagine_analizzate?.length || 0} pagine analizzate
+                  </p>
+                  <Button size="sm" onClick={applyScrapeData} className="bg-blue-600" data-testid="apply-scrape-btn">
+                    <Sparkles className="w-4 h-4 mr-1" /> Applica dati
+                  </Button>
+                </div>
+                {scrapeResult.citta_principale && (
+                  <p className="text-sm text-slate-600">Citta rilevata: <strong>{scrapeResult.citta_principale}</strong></p>
+                )}
+                {scrapeResult.raw_meta_descriptions?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 mb-1">Meta descriptions trovate:</p>
+                    {scrapeResult.raw_meta_descriptions.slice(0, 2).map((md, i) => (
+                      <p key={i} className="text-xs text-slate-600 bg-slate-50 p-2 rounded mb-1 line-clamp-2">{md}</p>
+                    ))}
+                  </div>
+                )}
+                {scrapeResult.raw_headings?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 mb-1">Headings trovati ({scrapeResult.raw_headings.length}):</p>
+                    <div className="flex flex-wrap gap-1">
+                      {scrapeResult.raw_headings.slice(0, 8).map((h, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">{h}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {scrapeResult.contatti && Object.keys(scrapeResult.contatti).length > 0 && (
+                  <p className="text-xs text-slate-600">
+                    Contatti: {scrapeResult.contatti.email && `Email: ${scrapeResult.contatti.email}`} {scrapeResult.contatti.telefono && `Tel: ${scrapeResult.contatti.telefono}`}
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card className="border-slate-200">
         <CardHeader><CardTitle>Informazioni Azienda</CardTitle></CardHeader>
