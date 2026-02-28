@@ -398,23 +398,28 @@ REGOLE DI UMANIZZAZIONE:
 # ============== SERP SCRAPING ==============
 
 async def scrape_google_serp(keyword: str, country: str = "it", num_results: int = 5) -> list:
+    """Search SERP using DuckDuckGo + scrape page content with httpx+BeautifulSoup."""
     results = []
     try:
-        from googlesearch import search as google_search
-        tld = "it" if country == "it" else "com"
-        urls = list(google_search(keyword, num_results=num_results, lang=country, tld=tld))
+        from duckduckgo_search import DDGS
+        region = f"{country}-{country}" if country else "it-it"
+        with DDGS() as ddgs:
+            search_results = list(ddgs.text(keyword, region=region, max_results=num_results))
     except Exception as e:
-        logger.warning(f"Google search failed: {e}")
+        logger.warning(f"DuckDuckGo search failed: {e}")
         return []
 
     async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }) as client_http:
-        for i, url in enumerate(urls):
+        for i, sr in enumerate(search_results):
+            url = sr.get("href", "")
+            ddg_title = sr.get("title", "")
+            ddg_body = sr.get("body", "")
             try:
                 resp = await client_http.get(url)
                 soup = BeautifulSoup(resp.text, "lxml")
-                title = soup.title.string.strip() if soup.title and soup.title.string else url
+                title = soup.title.string.strip() if soup.title and soup.title.string else ddg_title
                 meta_desc = ""
                 meta_tag = soup.find("meta", attrs={"name": "description"})
                 if meta_tag and meta_tag.get("content"):
@@ -425,10 +430,15 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
                 headings = [h.get_text(strip=True) for h in soup.find_all(["h1", "h2"])[:6]]
                 results.append({
                     "position": i + 1, "url": url, "title": title,
-                    "description": meta_desc or text[:200], "headings": headings, "text_preview": text
+                    "description": meta_desc or ddg_body or text[:200],
+                    "headings": headings, "text_preview": text
                 })
             except Exception as e:
-                results.append({"position": i + 1, "url": url, "title": url, "description": f"Errore: {e}", "headings": [], "text_preview": ""})
+                results.append({
+                    "position": i + 1, "url": url, "title": ddg_title or url,
+                    "description": ddg_body or f"Errore: {e}",
+                    "headings": [], "text_preview": ddg_body
+                })
     return results
 
 
