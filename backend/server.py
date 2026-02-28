@@ -187,6 +187,8 @@ class ArticleGenerateAndPublish(BaseModel):
     client_id: str
     combinations: List[Dict[str, str]]
     publish_to_wordpress: bool = True
+    content_type: str = "articolo_blog"  # pillar_page / articolo_blog / landing_page
+    brief_override: Optional[Dict[str, str]] = None  # Manual brief edits per generation
 
 # ============== SEO SESSION HISTORY MODELS ==============
 
