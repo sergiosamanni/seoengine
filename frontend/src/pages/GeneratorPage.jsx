@@ -180,6 +180,7 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
         titolo_suggerito: singleTitle || undefined,
         topic: singleObjective || undefined,
         publish_to_wordpress: publishToWp,
+        content_type: contentType,
         gsc_context: gscData ? { top_keywords: gscData.keywords?.slice(0, 10), totals: gscData.totals } : undefined,
         serp_context: serpData ? { competitors: serpData.competitors, extracted: serpData.extracted } : undefined
       }, { headers: getAuthHeaders() });
