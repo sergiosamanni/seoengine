@@ -398,41 +398,60 @@ REGOLE DI UMANIZZAZIONE:
 # ============== SERP SCRAPING ==============
 
 async def scrape_google_serp(keyword: str, country: str = "it", num_results: int = 5) -> list:
-    """Search SERP using DuckDuckGo Lite + scrape page content."""
+    """Search SERP using DuckDuckGo Lite with retry + scrape page content."""
+    import asyncio
+    from urllib.parse import unquote, urlparse, parse_qs
+
     results = []
     search_urls = []
 
-    try:
-        from urllib.parse import unquote, urlparse, parse_qs
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }) as http:
-            resp = await http.get("https://lite.duckduckgo.com/lite/",
-                params={"q": keyword, "kl": f"{country}-{country}"})
-            soup = BeautifulSoup(resp.text, "lxml")
-            snippets = [td.get_text(strip=True) for td in soup.find_all("td", class_="result-snippet")]
-            idx = 0
-            for a in soup.find_all("a", class_="result-link"):
-                if len(search_urls) >= num_results:
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    ]
+
+    for attempt in range(3):
+        try:
+            ua = user_agents[attempt % len(user_agents)]
+            async with httpx.AsyncClient(timeout=20, follow_redirects=True, headers={"User-Agent": ua}) as http:
+                resp = await http.get("https://lite.duckduckgo.com/lite/",
+                    params={"q": keyword, "kl": f"{country}-{country}"})
+                if resp.status_code != 200:
+                    logger.warning(f"DDG attempt {attempt+1}: status {resp.status_code}")
+                    await asyncio.sleep(2 * (attempt + 1))
+                    continue
+                soup = BeautifulSoup(resp.text, "lxml")
+                snippets = [td.get_text(strip=True) for td in soup.find_all("td", class_="result-snippet")]
+                idx = 0
+                for a in soup.find_all("a", class_="result-link"):
+                    if len(search_urls) >= num_results:
+                        break
+                    raw_href = a.get("href", "")
+                    title = a.get_text(strip=True)
+                    if "uddg=" in raw_href:
+                        parsed = parse_qs(urlparse(raw_href).query)
+                        real_url = unquote(parsed.get("uddg", [raw_href])[0])
+                    else:
+                        real_url = raw_href
+                    if real_url and title and "duckduckgo.com" not in real_url:
+                        desc = snippets[idx] if idx < len(snippets) else ""
+                        search_urls.append({"url": real_url, "title": title, "description": desc})
+                        idx += 1
+                if search_urls:
                     break
-                raw_href = a.get("href", "")
-                title = a.get_text(strip=True)
-                # Extract real URL from DuckDuckGo redirect
-                if "uddg=" in raw_href:
-                    parsed = parse_qs(urlparse(raw_href).query)
-                    real_url = unquote(parsed.get("uddg", [raw_href])[0])
-                else:
-                    real_url = raw_href
-                if real_url and title and "duckduckgo.com" not in real_url:
-                    desc = snippets[idx] if idx < len(snippets) else ""
-                    search_urls.append({"url": real_url, "title": title, "description": desc})
-                    idx += 1
-    except Exception as e:
-        logger.warning(f"DuckDuckGo search failed: {e}")
+                logger.warning(f"DDG attempt {attempt+1}: 0 results, retrying...")
+                await asyncio.sleep(2 * (attempt + 1))
+        except Exception as e:
+            logger.warning(f"DDG attempt {attempt+1} error: {e}")
+            await asyncio.sleep(2 * (attempt + 1))
+
+    if not search_urls:
+        logger.warning(f"SERP search failed after 3 attempts for '{keyword}'")
         return []
 
     async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": user_agents[0]
     }) as client_http:
         for i, sr in enumerate(search_urls):
             url = sr["url"]
