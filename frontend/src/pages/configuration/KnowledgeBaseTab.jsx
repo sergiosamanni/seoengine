@@ -290,5 +290,6 @@ export const KnowledgeBaseTab = ({ knowledge, setKnowledge, isAdmin, effectiveCl
         </CardContent>
       </Card>
     </div>
+    </div>
   );
 };
