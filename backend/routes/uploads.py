@@ -45,7 +45,7 @@ async def upload_image(file: UploadFile = File(...), token: str = Query(None)):
         "original_filename": file.filename,
         "content_type": content_type,
         "size": result.get("size", len(data)),
-        "user_id": user["id"],
+        "user_id": user["user_id"],
         "is_deleted": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
