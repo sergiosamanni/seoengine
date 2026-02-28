@@ -251,10 +251,17 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
   const steps = [
     { num: 1, label: 'Strategia', icon: Target, done: strategyDone },
     { num: 2, label: 'Analisi SERP', icon: Search, done: serpDone },
-    { num: 3, label: 'Dati GSC', icon: BarChart3, done: !!gscData, optional: !gscConnected },
+    { num: 3, label: gscConnected ? 'GSC' : 'GSC (N/C)', icon: BarChart3, done: !!gscData, optional: !gscConnected, connected: gscConnected },
     { num: 4, label: 'Prompt', icon: Lock, done: promptDone },
     { num: 5, label: 'Genera', icon: Zap, done: false },
   ];
+
+  // Auto-load GSC data when entering step 3
+  useEffect(() => {
+    if (step === 3 && gscConnected && !gscData && !gscLoading) {
+      loadGscData();
+    }
+  }, [step]);
 
   return (
     <div className="space-y-6">
