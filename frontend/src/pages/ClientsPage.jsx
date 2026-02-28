@@ -181,7 +181,8 @@ export const ClientsPage = () => {
           setIsDialogOpen(open);
           if (!open) {
             setEditingClient(null);
-            setFormData({ nome: '', settore: 'altro', sito_web: '', attivo: true });
+            setFormData({ nome: '', settore: 'altro', sito_web: '', siti_web: [], attivo: true });
+            setNewSiteInput('');
           }
         }}>
           <DialogTrigger asChild>
