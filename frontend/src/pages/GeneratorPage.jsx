@@ -951,6 +951,18 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
                 </div>
               )}
 
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-slate-700">Note aggiuntive <span className="text-slate-400 font-normal">(facoltativo)</span></Label>
+                <Textarea
+                  value={clientNotes}
+                  onChange={(e) => setClientNotes(e.target.value)}
+                  placeholder="Aggiungi dettagli, commenti o istruzioni specifiche per l'articolo..."
+                  rows={3}
+                  className="text-sm"
+                  data-testid="client-notes-input"
+                />
+              </div>
+
               <Button onClick={handleGenerate} disabled={generating || !hasApiKey}
                 className="w-full bg-orange-500 hover:bg-orange-600 h-14 text-lg font-semibold" data-testid="client-generate-btn">
                 {generating ? <><Loader2 className="w-6 h-6 mr-2 animate-spin" />Generazione in corso...</> : <><Zap className="w-6 h-6 mr-2" />Genera Articolo Ottimizzato</>}
