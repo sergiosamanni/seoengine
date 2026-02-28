@@ -1,80 +1,75 @@
-# SEO Content Hub - PRD
+# SEO Content Hub — PRD
 
 ## Problema Originale
-Trasformare script Python per la SEO programmatica in un'applicazione web completa multi-tenant.
-
-## Utenti e Ruoli
-- **Admin**: Gestisce clienti, configurazioni avanzate, generazione articoli per tutti i clienti
-- **Cliente**: Interfaccia semplificata per generare articoli con una singola keyword
+Trasformare script Python per la SEO programmatica in un'applicazione web completa con architettura multi-tenant (Admin/Cliente), generazione contenuti AI, integrazione WordPress e Google Search Console.
 
 ## Architettura
-- **Frontend**: React + TailwindCSS + Shadcn/UI
-- **Backend**: FastAPI + MongoDB (Motor)
-- **Auth**: JWT con ruoli admin/client
+- **Frontend**: React + Shadcn UI + Tailwind CSS
+- **Backend**: FastAPI (modulare con APIRouter) + MongoDB (Motor)
+- **Auth**: JWT
+- **LLM**: Multi-provider (OpenAI, Claude, DeepSeek, Perplexity) via API key del cliente
 
-## Funzionalità Core
+## Struttura Backend (Refactorizzato)
+```
+/app/backend/
+├── server.py          # Entry point (~48 righe), importa routers
+├── database.py        # Connessione MongoDB
+├── auth.py            # Auth helpers (JWT, password hash/verify)
+├── helpers.py         # Funzioni utilità (build_prompt, generate_with_llm, scrape_serp, publish_wp)
+├── models.py          # Modelli Pydantic
+└── routes/
+    ├── auth_users.py  # Auth + gestione utenti
+    ├── clients.py     # CRUD clienti + config + siti + XLSX + sessioni
+    ├── articles.py    # Articoli + generazione + pubblicazione + jobs + stats + logs + SERP
+    └── gsc.py         # Google Search Console OAuth
+```
 
-### Completate
-1. **Autenticazione JWT** con ruoli admin/client
-2. **Gestione Clienti (CRUD)** per admin
-3. **Configurazione Cliente Avanzata** con 7 tab:
-   - API Keys (LLM multi-provider + WordPress)
-   - Knowledge Base (con scraping sito web)
-   - Tono & Stile
-   - Keywords (con upload XLSX)
-   - Strategia Contenuti (AIDA, PAS, FAB, PASTOR)
-   - Analisi SERP (senza Apify, usa googlesearch-python)
-   - Prompt Avanzato (protetto da password)
-4. **Generazione Articoli SEO** via multi-LLM (OpenAI, Claude, DeepSeek, Perplexity)
-5. **Pubblicazione WordPress** diretta con tag e metadati SEO
-6. **Processo Asincrono** con background task + polling dal frontend
-7. **Activity Log** per tracciare operazioni
-8. **Interfaccia Cliente Semplificata** (`/simple-generator`) con keyword + topic + obiettivo
-9. **Scraping Sito Web** per pre-popolare Knowledge Base (admin only)
-10. **Analisi SERP Custom** senza Apify (usa `googlesearch-python` + `BeautifulSoup`)
-11. **Google Search Console** integrazione via OAuth — credenziali OAuth a livello sistema (env vars), UX semplificata: URL sito + "Connetti Google Search Console"
-12. **Prompt Umanizzato** per output AI più naturale
-13. **Storico Sessioni** per salvare snapshot delle configurazioni
+## Funzionalità Implementate
 
-### In Progress
-- Nessuno
+### ✅ Core
+- [x] Auth JWT (login/register)
+- [x] Dashboard Admin con statistiche
+- [x] CRUD Clienti multi-sito
+- [x] CRUD Articoli con anteprima
+- [x] Generazione contenuti AI multi-provider
+- [x] Pubblicazione WordPress (bozza/pubblicato)
+- [x] Activity Log dedicato
 
-### Backlog
-- Refactoring `server.py` in moduli APIRouter separati
-- Test di generazione con LLM reale per verificare umanizzazione
-- Test completo flusso OAuth GSC con account Google reale
-- Miglioramenti UX per feedback SERP (gestire 0 risultati)
+### ✅ Configurazione (semplificata)
+- [x] API Keys (LLM + WordPress + Apify)
+- [x] Knowledge Base
+- [x] Tono & Stile
+
+### ✅ Genera Articoli (ristrutturato)
+- [x] **Articolo Singolo**: titolo + keywords + obiettivo
+- [x] **SEO Programmatica**: keywords combinate + strategia + SERP + prompt avanzato
+- [x] GSC data panel integrato (se connesso)
+
+### ✅ Integrazioni
+- [x] Google Search Console OAuth 2.0 (PKCE)
+- [x] SERP scraping via DuckDuckGo Lite (fix: era googlesearch-python, non funzionava)
+- [x] Upload XLSX per keyword
+- [x] Scraping sito per Knowledge Base
+
+### ✅ Gestione Utenti
+- [x] Pagina admin per associare utenti a clienti
+- [x] Supporto multi-sito per cliente
 
 ## Credenziali Test
-- **Admin**: admin@seoengine.it / admin123
-- **Cliente**: cliente@noleggiosalerno.it / password
-- **Client ID**: a8ab5383-b444-4f17-9465-41fa32c34bb9
+- Admin: admin@seoengine.it / admin123
+- Cliente: mario.rossi / password
 
-## Endpoint API Chiave
-- `POST /api/auth/login` - Login
-- `GET /api/clients` - Lista clienti
-- `PUT /api/clients/{id}/configuration` - Salva configurazione
-- `POST /api/articles/generate-and-publish` - Genera e pubblica (asincrono)
-- `POST /api/articles/simple-generate` - Generazione semplificata (client)
-- `POST /api/serp/search` - Analisi SERP
-- `POST /api/clients/{id}/scrape-website` - Scraping sito per KB
-- `GET /api/gsc/authorize/{id}` - Avvia OAuth GSC
-- `GET /api/gsc/callback` - Callback OAuth GSC
-- `GET /api/gsc/status` - Verifica se GSC configurato a livello sistema
-- `GET /api/clients/{id}/gsc-data` - Dati GSC
-- `POST /api/clients/{id}/gsc-config` - Salva URL sito GSC
-- `POST /api/clients/{id}/gsc-disconnect` - Disconnetti GSC
-- `GET /api/activity-logs/{id}` - Log attività
+## Task Completati (questa sessione)
+- Backend refactoring: monolitico → modulare (3028 → 48 righe server.py)
+- Fix SERP: googlesearch-python → DuckDuckGo Lite (funzionante)
+- Ristrutturazione UI: Config semplificata + Generator con 2 modalità
+- Rimossi tab da Config: Keywords, Strategia, SERP, Prompt → spostati nel Generator
+- Activity Log rimosso dal Generator, solo nella pagina dedicata
+- GSC panel integrato nella pagina Genera Articoli
 
-## Variabili d'Ambiente Backend
-- `MONGO_URL` - Connessione MongoDB
-- `DB_NAME` - Nome database
-- `CORS_ORIGINS` - CORS
-- `FRONTEND_URL` - URL frontend (per redirect OAuth callback)
-- `GSC_OAUTH_CLIENT_ID` - Google OAuth Client ID (livello sistema)
-- `GSC_OAUTH_CLIENT_SECRET` - Google OAuth Client Secret (livello sistema)
-
-## Note Tecniche
-- SERP: `googlesearch-python` può essere bloccato in ambienti container
-- GSC: Credenziali OAuth configurate una volta come env vars, l'utente clicca solo "Connetti"
-- LLM: Supporta OpenAI, Anthropic (Claude), DeepSeek, Perplexity via API key cliente
+## Backlog (P1-P2)
+- [ ] Finalizzare interfaccia cliente semplificata (SimpleGeneratorPage)
+- [ ] Verificare fix GSC OAuth 500 (code_verifier)
+- [ ] Verificare umanizzazione prompt AI
+- [ ] Implementare UI scraping per Knowledge Base
+- [ ] UI multi-sito nel modale clienti (aggiungere/rimuovere siti)
