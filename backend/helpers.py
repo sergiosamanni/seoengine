@@ -510,7 +510,7 @@ REGOLE DI UMANIZZAZIONE:
         if keyword_template:
             prompt += f"\n=== TEMPLATE KEYWORD ===\n{keyword_template}\n"
 
-    prompt += "\n=== ISTRUZIONE FINALE ===\nGenera un articolo SEO completo, dettagliato e ottimizzato. Applica il modello di copywriting indicato, integra le leve psicologiche e rispetta tutte le regole SEO on-page."
+    prompt += "\n=== ISTRUZIONE FINALE ===\nGenera un contenuto SEO completo, dettagliato e ottimizzato. Applica il modello di copywriting indicato, integra le leve psicologiche e rispetta tutte le regole SEO on-page.\n\n=== META DESCRIPTION ===\nAlla FINE del contenuto HTML, aggiungi un blocco separato:\n<!-- META_DESCRIPTION: [scrivi qui una meta description di 150-160 caratteri, con keyword principale, intento di ricerca e call to action implicita] -->"
     return prompt
 
 
