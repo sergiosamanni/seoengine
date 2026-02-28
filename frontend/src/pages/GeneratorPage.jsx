@@ -274,12 +274,15 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 step === s.num ? 'bg-slate-900 text-white shadow-md' :
                 s.done ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                s.connected && !s.done ? 'bg-sky-50 text-sky-700 border border-sky-200' :
                 s.optional && !s.done ? 'bg-slate-50 text-slate-400 border border-dashed border-slate-300' :
                 'bg-slate-50 text-slate-500 hover:bg-slate-100'
               }`}
               data-testid={`step-${s.num}-btn`}
             >
-              {s.done && step !== s.num ? <CheckCircle2 className="w-4 h-4" /> : <s.icon className="w-4 h-4" />}
+              {s.done && step !== s.num ? <CheckCircle2 className="w-4 h-4" /> :
+               s.connected && !s.done && step !== s.num ? <BarChart3 className="w-4 h-4 text-sky-600" /> :
+               <s.icon className="w-4 h-4" />}
               <span className="hidden sm:inline">{s.label}</span>
               <span className="sm:hidden">{s.num}</span>
             </button>
