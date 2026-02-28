@@ -33,8 +33,8 @@ export const DashboardLayout = ({ children }) => {
         <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-60 bg-slate-900 text-white flex flex-col flex-shrink-0 transform transition-transform duration-200 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      {/* Sidebar - hidden on mobile by default */}
+      <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 z-50' : 'hidden'} lg:flex lg:static lg:z-auto w-60 bg-slate-900 text-white flex-col flex-shrink-0`}>
         <div className="p-5 border-b border-slate-800 flex items-center justify-between">
           <div>
             <h1 className="text-lg font-bold font-['Manrope'] tracking-tight">SEO Engine</h1>
