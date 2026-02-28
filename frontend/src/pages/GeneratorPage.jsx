@@ -20,7 +20,7 @@ import {
 import {
   Zap, AlertCircle, Loader2, FileText, Globe, ArrowLeft, CheckCircle2,
   XCircle, Clock, Send, ExternalLink, Search, Lock, Target, BarChart3,
-  PenTool, ChevronRight, Eye, Sparkles, History, ChevronDown, Trash2
+  PenTool, ChevronRight, Eye, Sparkles, History, ChevronDown, Trash2, ImagePlus, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
