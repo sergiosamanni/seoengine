@@ -917,30 +917,31 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold text-slate-900 font-['Manrope']">Genera Articolo SEO</h1>
-        <p className="text-slate-500">Inserisci la keyword target. Il sistema analizzera la SERP e ottimizzera il contenuto automaticamente.</p>
+    <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6 px-1">
+      <div className="text-center space-y-1 sm:space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 font-['Manrope']">Genera Articolo SEO</h1>
+        <p className="text-sm sm:text-base text-slate-500">Inserisci la keyword target e il sistema analizzera la SERP automaticamente.</p>
       </div>
 
       {!hasApiKey && (
         <Alert className="bg-amber-50 border-amber-200">
           <AlertCircle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-700">API Key LLM non configurata. Contatta l'amministratore.</AlertDescription>
+          <AlertDescription className="text-amber-700 text-sm">API Key LLM non configurata. Contatta l'amministratore.</AlertDescription>
         </Alert>
       )}
 
       <Card className="border-slate-200">
-        <CardContent className="p-6 space-y-4">
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          {/* Keyword Input */}
           <div className="space-y-2">
-            <Label className="text-base font-semibold">Keyword Target</Label>
-            <div className="flex gap-3">
+            <Label className="text-sm sm:text-base font-semibold">Keyword Target</Label>
+            <div className="flex gap-2 sm:gap-3">
               <Input value={keyword} onChange={(e) => setKeyword(e.target.value)}
-                placeholder="Es: noleggio auto salerno" className="text-lg h-12"
+                placeholder="Es: noleggio auto salerno" className="text-base h-11 sm:h-12"
                 data-testid="client-keyword-input"
                 onKeyDown={(e) => e.key === 'Enter' && !analyzing && runAutoAnalysis()} />
               <Button onClick={runAutoAnalysis} disabled={analyzing || !keyword.trim()}
-                className="bg-blue-600 hover:bg-blue-700 h-12 px-6" data-testid="client-analyze-btn">
+                className="bg-blue-600 hover:bg-blue-700 h-11 sm:h-12 px-4 sm:px-6 flex-shrink-0" data-testid="client-analyze-btn">
                 {analyzing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
               </Button>
             </div>
@@ -948,8 +949,8 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
 
           {/* Analysis Progress */}
           {analyzing && (
-            <div className="space-y-3 py-4">
-              <div className="flex items-center gap-3"><Loader2 className="w-5 h-5 text-blue-600 animate-spin" /><span className="text-sm text-slate-600">Analisi SERP e competitor in corso...</span></div>
+            <div className="space-y-3 py-3">
+              <div className="flex items-center gap-3"><Loader2 className="w-5 h-5 text-blue-600 animate-spin" /><span className="text-sm text-slate-600">Analisi SERP e competitor...</span></div>
               <Progress value={33} className="h-1.5" />
             </div>
           )}
@@ -960,35 +961,37 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
               <Separator />
               <div className="flex items-center gap-2 text-emerald-700">
                 <CheckCircle2 className="w-5 h-5" />
-                <span className="font-semibold">Analisi completata</span>
+                <span className="font-semibold text-sm sm:text-base">Analisi completata</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Stats - mobile 2 cols */}
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <Card className="border-slate-200">
-                  <CardContent className="p-3 text-center">
-                    <p className="text-2xl font-bold text-slate-900">{serpData.count}</p>
-                    <p className="text-xs text-slate-500">Competitor analizzati</p>
+                  <CardContent className="p-2.5 sm:p-3 text-center">
+                    <p className="text-xl sm:text-2xl font-bold text-slate-900">{serpData.count}</p>
+                    <p className="text-[11px] sm:text-xs text-slate-500">Competitor</p>
                   </CardContent>
                 </Card>
                 <Card className="border-slate-200">
-                  <CardContent className="p-3 text-center">
-                    <p className="text-2xl font-bold text-slate-900">{serpData.extracted?.headings?.length || 0}</p>
-                    <p className="text-xs text-slate-500">Headings estratti</p>
+                  <CardContent className="p-2.5 sm:p-3 text-center">
+                    <p className="text-xl sm:text-2xl font-bold text-slate-900">{serpData.extracted?.headings?.length || 0}</p>
+                    <p className="text-[11px] sm:text-xs text-slate-500">Headings</p>
                   </CardContent>
                 </Card>
               </div>
 
+              {/* Collapsible details */}
               <details className="text-sm">
-                <summary className="cursor-pointer text-slate-600 hover:text-slate-800 font-medium">
-                  <Eye className="w-4 h-4 inline mr-1" />Vedi dettagli analisi
+                <summary className="cursor-pointer text-slate-600 hover:text-slate-800 font-medium text-sm">
+                  <Eye className="w-4 h-4 inline mr-1" />Dettagli analisi
                 </summary>
-                <div className="mt-2 space-y-2 pl-2 border-l-2 border-slate-200">
+                <div className="mt-2 space-y-2 pl-2 border-l-2 border-slate-200 max-h-48 overflow-y-auto">
                   {serpData.competitors?.map((c, i) => (
                     <div key={i} className="py-1">
-                      <p className="font-medium text-xs text-slate-900">#{c.position} {c.title}</p>
+                      <p className="font-medium text-xs text-slate-900 break-words">#{c.position} {c.title}</p>
                       {c.headings?.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {c.headings.map((h, j) => <Badge key={j} variant="secondary" className="text-xs">{h}</Badge>)}
+                          {c.headings.slice(0, 5).map((h, j) => <Badge key={j} variant="secondary" className="text-[10px] sm:text-xs">{h}</Badge>)}
                         </div>
                       )}
                     </div>
@@ -996,51 +999,51 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
                 </div>
               </details>
 
+              {/* GSC Data */}
               {gscData && (
                 <div className="p-3 bg-sky-50 rounded-lg border border-sky-200">
-                  <p className="text-xs font-medium text-sky-700 mb-1">Dati GSC integrati: {gscData.keywords?.length} keyword dal sito</p>
+                  <p className="text-xs font-medium text-sky-700 mb-1">Dati GSC: {gscData.keywords?.length} keyword</p>
                   <div className="flex flex-wrap gap-1">
                     {gscData.keywords?.slice(0, 5).map((k, i) => (
-                      <Badge key={i} variant="outline" className="text-xs bg-white">{k.keyword}</Badge>
+                      <Badge key={i} variant="outline" className="text-[10px] sm:text-xs bg-white">{k.keyword}</Badge>
                     ))}
                   </div>
                 </div>
               )}
 
-              <div className="space-y-2">
+              {/* Notes */}
+              <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-slate-700">Note aggiuntive <span className="text-slate-400 font-normal">(facoltativo)</span></Label>
                 <Textarea
                   value={clientNotes}
                   onChange={(e) => setClientNotes(e.target.value)}
-                  placeholder="Aggiungi dettagli, commenti o istruzioni specifiche per l'articolo..."
+                  placeholder="Dettagli, commenti o istruzioni per l'articolo..."
                   rows={3}
                   className="text-sm"
                   data-testid="client-notes-input"
                 />
               </div>
 
-              {/* Image Upload Section */}
-              <div className="space-y-3">
+              {/* Image Upload - touch friendly */}
+              <div className="space-y-2">
                 <Label className="text-sm font-medium text-slate-700">Immagini <span className="text-slate-400 font-normal">(facoltativo)</span></Label>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <label className="flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors" data-testid="image-upload-label">
-                    <ImagePlus className="w-5 h-5 text-slate-500" />
-                    <span className="text-sm text-slate-600">{uploading ? 'Caricamento...' : 'Carica immagini'}</span>
-                    <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden"
-                      onChange={handleImageUpload} disabled={uploading} data-testid="image-upload-input" />
-                  </label>
-                  <p className="text-xs text-slate-400">Formato orizzontale consigliato. JPG, PNG o WebP, max 5MB.</p>
-                </div>
+                <label className="flex items-center justify-center gap-2 w-full px-4 py-3.5 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 active:bg-blue-50 transition-colors" data-testid="image-upload-label">
+                  <ImagePlus className="w-5 h-5 text-slate-400" />
+                  <span className="text-sm text-slate-500">{uploading ? 'Caricamento...' : 'Tocca per caricare immagini'}</span>
+                  <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden"
+                    onChange={handleImageUpload} disabled={uploading} data-testid="image-upload-input" />
+                </label>
+                <p className="text-[11px] text-slate-400 text-center">Usa formato orizzontale. JPG, PNG, WebP - max 5MB</p>
                 {uploadedImages.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-slate-500">La prima immagine sara l'immagine in evidenza. Le altre verranno inserite nell'articolo.</p>
+                  <div className="space-y-1.5">
+                    <p className="text-[11px] text-slate-500">1a = immagine in evidenza, le altre nell'articolo.</p>
                     <div className="flex flex-wrap gap-2">
                       {uploadedImages.map((img, idx) => (
-                        <div key={img.id} className="relative group" data-testid={`uploaded-image-${idx}`}>
-                          <img src={img.preview} alt={img.name} className="w-20 h-14 sm:w-24 sm:h-16 object-cover rounded-lg border border-slate-200" />
-                          {idx === 0 && <span className="absolute -top-1.5 -left-1.5 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">Evidenza</span>}
+                        <div key={img.id} className="relative" data-testid={`uploaded-image-${idx}`}>
+                          <img src={img.preview} alt={img.name} className="w-16 h-11 sm:w-24 sm:h-16 object-cover rounded-lg border border-slate-200" />
+                          {idx === 0 && <span className="absolute -top-1.5 -left-1.5 bg-blue-600 text-white text-[9px] px-1 py-0.5 rounded-full font-medium">Evidenza</span>}
                           <button onClick={() => removeImage(idx)}
-                            className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`remove-image-${idx}`}>
+                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center" data-testid={`remove-image-${idx}`}>
                             <X className="w-3 h-3" />
                           </button>
                         </div>
@@ -1050,25 +1053,26 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
                 )}
               </div>
 
+              {/* Generate Button - big touch target */}
               <Button onClick={handleGenerate} disabled={generating || !hasApiKey}
-                className="w-full bg-orange-500 hover:bg-orange-600 h-14 text-lg font-semibold" data-testid="client-generate-btn">
-                {generating ? <><Loader2 className="w-6 h-6 mr-2 animate-spin" />Generazione in corso...</> : <><Zap className="w-6 h-6 mr-2" />Genera Articolo Ottimizzato</>}
+                className="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 h-13 sm:h-14 text-base sm:text-lg font-semibold rounded-xl" data-testid="client-generate-btn">
+                {generating ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generazione in corso...</> : <><Zap className="w-5 h-5 mr-2" />Genera Articolo Ottimizzato</>}
               </Button>
             </div>
           )}
 
           {/* Result */}
           {result && (
-            <Card className={`border-${result.status === 'completed' ? 'emerald' : 'blue'}-200 bg-${result.status === 'completed' ? 'emerald' : 'blue'}-50/30 mt-4`} data-testid="client-result">
-              <CardContent className="p-4 space-y-2">
+            <Card className={`border-${result.status === 'completed' ? 'emerald' : 'blue'}-200 bg-${result.status === 'completed' ? 'emerald' : 'blue'}-50/30 mt-3`} data-testid="client-result">
+              <CardContent className="p-3 sm:p-4 space-y-2">
                 {generating ? (
-                  <div className="flex items-center gap-2"><Loader2 className="w-5 h-5 text-blue-600 animate-spin" /><span className="font-semibold text-blue-700">Generazione e pubblicazione in corso...</span></div>
+                  <div className="flex items-center gap-2"><Loader2 className="w-5 h-5 text-blue-600 animate-spin" /><span className="font-semibold text-sm sm:text-base text-blue-700">Generazione e pubblicazione...</span></div>
                 ) : result.generation_status === 'success' ? (
-                  <div className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-emerald-600" /><span className="font-semibold text-emerald-700">
+                  <div className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-emerald-600" /><span className="font-semibold text-sm sm:text-base text-emerald-700">
                     {result.publish_status === 'success' ? 'Articolo pubblicato!' : 'Articolo generato!'}
                   </span></div>
                 ) : (
-                  <div className="flex items-center gap-2"><XCircle className="w-5 h-5 text-red-500" /><span className="font-semibold text-red-700">Errore nella generazione</span></div>
+                  <div className="flex items-center gap-2"><XCircle className="w-5 h-5 text-red-500" /><span className="font-semibold text-sm text-red-700">Errore nella generazione</span></div>
                 )}
                 {result.wordpress_link && (
                   <a href={result.wordpress_link} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
