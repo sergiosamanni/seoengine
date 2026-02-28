@@ -2492,9 +2492,11 @@ async def gsc_authorize(client_id: str, current_user: dict = Depends(get_current
         prompt='consent'
     )
 
+    # Store state AND code_verifier (needed for PKCE token exchange)
     await db.gsc_states.insert_one({
         "state": state,
         "client_id": client_id,
+        "code_verifier": flow.code_verifier,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
 
@@ -2510,6 +2512,7 @@ async def gsc_callback(code: str, state: str):
     if not state_doc:
         raise HTTPException(status_code=400, detail="State non valido o scaduto")
     client_id = state_doc["client_id"]
+    code_verifier = state_doc.get("code_verifier")
     await db.gsc_states.delete_one({"state": state})
 
     redirect_uri = _get_gsc_redirect_uri()
@@ -2527,6 +2530,9 @@ async def gsc_callback(code: str, state: str):
     }
 
     flow = Flow.from_client_config(client_config, scopes=GSC_SCOPES, redirect_uri=redirect_uri)
+    # Restore code_verifier from the authorize step (PKCE)
+    if code_verifier:
+        flow.code_verifier = code_verifier
 
     try:
         flow.fetch_token(code=code)
