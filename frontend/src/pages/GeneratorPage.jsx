@@ -721,11 +721,14 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
                     <Select value={contentType} onValueChange={setContentType}>
                       <SelectTrigger data-testid="content-type-select"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="articolo_blog">Articolo Blog</SelectItem>
+                        <SelectItem value="articolo">Articolo Blog</SelectItem>
                         <SelectItem value="pillar_page">Pillar Page</SelectItem>
                         <SelectItem value="landing_page">Landing Page</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-slate-400">
+                      {contentType === 'articolo' ? 'Pubblicazione come Post WP' : 'Pubblicazione come Pagina WP'}
+                    </p>
                     <div className="flex items-center justify-between p-3 rounded-lg border">
                       <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-blue-600" /><span className="text-sm font-medium">Pubblica WP</span></div>
                       <button type="button" role="switch" onClick={() => setPublishToWp(!publishToWp)}
