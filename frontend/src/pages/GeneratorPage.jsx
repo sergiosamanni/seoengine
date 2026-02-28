@@ -612,11 +612,28 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
               </Card>
               <div className="space-y-4">
                 {singleResult && (
-                  <Card className="border-emerald-200 bg-emerald-50/30" data-testid="single-result">
+                  <Card className={`border-${singleResult.status === 'completed' ? 'emerald' : singleResult.status === 'failed' ? 'red' : 'blue'}-200 bg-${singleResult.status === 'completed' ? 'emerald' : singleResult.status === 'failed' ? 'red' : 'blue'}-50/30`} data-testid="single-result">
                     <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-emerald-600" /><span className="font-semibold">Generazione avviata</span></div>
-                      <p className="text-sm text-slate-600">Job ID: {singleResult.job_id}</p>
-                      <Button size="sm" variant="outline" onClick={() => navigate('/articles')}><FileText className="w-4 h-4 mr-1" />Vedi Articoli</Button>
+                      {singleGenerating ? (
+                        <div className="flex items-center gap-2"><Loader2 className="w-5 h-5 text-blue-600 animate-spin" /><span className="font-semibold text-blue-700">Generazione in corso...</span></div>
+                      ) : singleResult.generation_status === 'success' ? (
+                        <div className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-emerald-600" /><span className="font-semibold text-emerald-700">Articolo generato</span></div>
+                      ) : singleResult.status === 'failed' ? (
+                        <div className="flex items-center gap-2"><XCircle className="w-5 h-5 text-red-500" /><span className="font-semibold text-red-700">Generazione fallita</span></div>
+                      ) : (
+                        <div className="flex items-center gap-2"><Loader2 className="w-5 h-5 text-blue-600 animate-spin" /><span className="font-semibold">In elaborazione...</span></div>
+                      )}
+                      {singleResult.publish_status === 'success' && (
+                        <div className="flex items-center gap-2 text-sm text-emerald-600"><Globe className="w-4 h-4" /><span>Pubblicato su WordPress</span></div>
+                      )}
+                      {singleResult.publish_status === 'failed' && (
+                        <p className="text-xs text-red-600">Pubblicazione WP fallita: {singleResult.publish_error}</p>
+                      )}
+                      {singleResult.wordpress_link && (
+                        <a href={singleResult.wordpress_link} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                          <ExternalLink className="w-3 h-3" />Vedi su WordPress
+                        </a>
+                      )}
                     </CardContent>
                   </Card>
                 )}
