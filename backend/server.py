@@ -981,7 +981,7 @@ INTENTO DI RICERCA: {search_intent}
 
 === {model_desc} ===
 
-{f'=== LEVE PSICOLOGICHE DA INTEGRARE ===' if leve_desc else ''}
+{'=== LEVE PSICOLOGICHE DA INTEGRARE ===' if leve_desc else ''}
 {leve_desc}
 
 {f'=== KEYWORD SECONDARIE ==={chr(10)}Integra naturalmente: {", ".join(kw_secondarie)}' if kw_secondarie else ''}
