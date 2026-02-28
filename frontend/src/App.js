@@ -12,6 +12,7 @@ import { SessionHistoryPage } from './pages/SessionHistoryPage';
 import { ActivityLogPage } from './pages/ActivityLogPage';
 import { ClientSimpleGenerator } from './pages/ClientSimpleGenerator';
 import { GscPage } from './pages/GscPage';
+import { UsersPage } from './pages/UsersPage';
 import { DashboardLayout } from './components/DashboardLayout';
 
 // Protected Route Component
@@ -124,6 +125,12 @@ const AppRoutes = () => {
       <Route path="/activity" element={
         <ProtectedRoute adminOnly>
           <ActivityLogPage />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/users" element={
+        <ProtectedRoute adminOnly>
+          <UsersPage />
         </ProtectedRoute>
       } />
 
