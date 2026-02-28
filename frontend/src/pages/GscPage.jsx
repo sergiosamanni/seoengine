@@ -21,15 +21,14 @@ import {
   RefreshCw,
   ExternalLink,
   Save,
-  Settings2,
   TrendingUp,
   MousePointerClick,
   Eye,
   Target,
-  Link2,
   Unlink,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  LogIn
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -40,20 +39,19 @@ export const GscPage = () => {
   const { clientId } = useParams();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [savingSiteUrl, setSavingSiteUrl] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [data, setData] = useState(null);
   const [days, setDays] = useState('28');
-  const [showConfig, setShowConfig] = useState(false);
-  const [oauthClientId, setOauthClientId] = useState('');
-  const [oauthClientSecret, setOauthClientSecret] = useState('');
   const [siteUrl, setSiteUrl] = useState('');
+  const [siteUrlInput, setSiteUrlInput] = useState('');
   const [client, setClient] = useState(null);
   const [gscConnected, setGscConnected] = useState(false);
+  const [integrationConfigured, setIntegrationConfigured] = useState(true);
 
   useEffect(() => {
     fetchClient();
-    // Check if just returned from OAuth
+    checkIntegration();
     if (searchParams.get('gsc_connected') === 'true') {
       toast.success('Google Search Console connesso con successo!');
     }
@@ -62,53 +60,60 @@ export const GscPage = () => {
     }
   }, [clientId]);
 
+  const checkIntegration = async () => {
+    try {
+      const res = await axios.get(`${API}/gsc/status`, { headers: getAuthHeaders() });
+      setIntegrationConfigured(res.data.configured);
+    } catch (e) { /* ignore */ }
+  };
+
   const fetchClient = async () => {
     try {
       const res = await axios.get(`${API}/clients/${clientId}`, { headers: getAuthHeaders() });
       setClient(res.data);
       const gsc = res.data.configuration?.gsc || {};
-      if (gsc.oauth_client_id) setOauthClientId(gsc.oauth_client_id);
-      if (gsc.oauth_client_secret) setOauthClientSecret(gsc.oauth_client_secret);
-      if (gsc.site_url) setSiteUrl(gsc.site_url);
+      if (gsc.site_url) {
+        setSiteUrl(gsc.site_url);
+        setSiteUrlInput(gsc.site_url);
+      }
       setGscConnected(!!gsc.connected);
       if (gsc.connected && gsc.site_url) {
         fetchData();
-      } else if (!gsc.oauth_client_id) {
-        setShowConfig(true);
       }
     } catch (e) { /* ignore */ }
   };
 
-  const saveConfig = async () => {
-    if (!oauthClientId.trim() || !oauthClientSecret.trim() || !siteUrl.trim()) {
-      toast.error('Compila tutti i campi');
+  const saveSiteUrl = async () => {
+    if (!siteUrlInput.trim()) {
+      toast.error('Inserisci l\'URL del sito');
       return;
     }
-    setSaving(true);
+    setSavingSiteUrl(true);
     try {
       await axios.post(`${API}/clients/${clientId}/gsc-config`, {
-        oauth_client_id: oauthClientId,
-        oauth_client_secret: oauthClientSecret,
-        site_url: siteUrl,
+        site_url: siteUrlInput.trim(),
         enabled: true
       }, { headers: getAuthHeaders() });
-      toast.success('Configurazione OAuth GSC salvata');
-      setShowConfig(false);
+      setSiteUrl(siteUrlInput.trim());
+      toast.success('URL sito salvato');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Errore salvataggio');
     } finally {
-      setSaving(false);
+      setSavingSiteUrl(false);
     }
   };
 
   const connectGoogle = async () => {
+    if (!siteUrl) {
+      toast.error('Salva prima l\'URL del sito');
+      return;
+    }
     setConnecting(true);
     try {
       const res = await axios.get(`${API}/gsc/authorize/${clientId}`, { headers: getAuthHeaders() });
-      // Redirect to Google OAuth
       window.location.href = res.data.authorization_url;
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Errore avvio autorizzazione Google');
+      toast.error(error.response?.data?.detail || 'Errore avvio connessione Google');
       setConnecting(false);
     }
   };
@@ -118,7 +123,7 @@ export const GscPage = () => {
       await axios.post(`${API}/clients/${clientId}/gsc-disconnect`, {}, { headers: getAuthHeaders() });
       setGscConnected(false);
       setData(null);
-      toast.success('GSC disconnesso');
+      toast.success('Google Search Console disconnesso');
     } catch (error) {
       toast.error('Errore disconnessione');
     }
@@ -132,137 +137,164 @@ export const GscPage = () => {
       });
       setData(res.data);
     } catch (error) {
-      if (error.response?.status === 400 || error.response?.status === 401) {
-        if (error.response?.status === 401) {
-          setGscConnected(false);
-        }
-        if (!oauthClientId) setShowConfig(true);
+      if (error.response?.status === 401) {
+        setGscConnected(false);
+        toast.error('Sessione GSC scaduta. Riconnettiti.');
+      } else {
+        toast.error(error.response?.data?.detail || 'Errore caricamento dati GSC');
       }
-      toast.error(error.response?.data?.detail || 'Errore GSC');
     } finally {
       setLoading(false);
     }
   };
 
+  if (!integrationConfigured) {
+    return (
+      <div className="space-y-6 animate-fade-in" data-testid="gsc-page">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 font-['Manrope'] tracking-tight">Google Search Console</h1>
+          <p className="text-slate-500 mt-1">{client?.nome}</p>
+        </div>
+        <Card className="border-amber-200 bg-amber-50/70">
+          <CardContent className="py-12 text-center">
+            <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Integrazione GSC non configurata</h3>
+            <p className="text-slate-500 max-w-lg mx-auto">
+              L'integrazione con Google Search Console richiede la configurazione delle credenziali OAuth a livello di sistema.
+              Contatta l'amministratore di sistema per abilitarla.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in" data-testid="gsc-page">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 font-['Manrope'] tracking-tight">Google Search Console</h1>
           <p className="text-slate-500 mt-1">{client?.nome} — Dati di posizionamento e performance</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => setShowConfig(!showConfig)} data-testid="gsc-config-btn">
-            <Settings2 className="w-4 h-4 mr-2" />Configura
-          </Button>
-          {gscConnected ? (
-            <>
-              <Select value={days} onValueChange={(v) => setDays(v)}>
-                <SelectTrigger className="w-[140px]" data-testid="gsc-period-select">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">Ultimi 7 giorni</SelectItem>
-                  <SelectItem value="28">Ultimi 28 giorni</SelectItem>
-                  <SelectItem value="90">Ultimi 3 mesi</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={fetchData} disabled={loading} data-testid="gsc-refresh-btn">
-                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />Aggiorna
-              </Button>
-            </>
-          ) : null}
-        </div>
+        {gscConnected && (
+          <div className="flex items-center gap-3">
+            <Select value={days} onValueChange={(v) => setDays(v)}>
+              <SelectTrigger className="w-[140px]" data-testid="gsc-period-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Ultimi 7 giorni</SelectItem>
+                <SelectItem value="28">Ultimi 28 giorni</SelectItem>
+                <SelectItem value="90">Ultimi 3 mesi</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={fetchData} disabled={loading} data-testid="gsc-refresh-btn">
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />Aggiorna
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Config Panel */}
-      {showConfig && (
-        <Card className="border-amber-200 bg-amber-50/70">
+      {/* Connection Card */}
+      {!gscConnected ? (
+        <Card className="border-slate-200">
           <CardHeader>
-            <CardTitle className="text-lg">Configurazione Google Search Console</CardTitle>
-            <CardDescription>Inserisci le credenziali OAuth e l'URL del sito per connetterti</CardDescription>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <BarChart3 className="w-6 h-6 text-blue-600" />
+              Connetti Google Search Console
+            </CardTitle>
+            <CardDescription>
+              Accedi con il tuo account Google per visualizzare keyword, posizionamenti e performance del sito
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
+            {/* Step 1: Site URL */}
             <div className="space-y-2">
-              <Label>URL del sito (come appare in GSC)</Label>
-              <Input
-                value={siteUrl}
-                onChange={(e) => setSiteUrl(e.target.value)}
-                placeholder="https://www.example.com/ oppure sc-domain:example.com"
-                data-testid="gsc-site-url-input"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>OAuth Client ID</Label>
+              <Label className="text-sm font-medium">URL del sito (come appare in GSC)</Label>
+              <div className="flex gap-2">
                 <Input
-                  value={oauthClientId}
-                  onChange={(e) => setOauthClientId(e.target.value)}
-                  placeholder="xxxxx.apps.googleusercontent.com"
-                  data-testid="gsc-client-id-input"
+                  value={siteUrlInput}
+                  onChange={(e) => setSiteUrlInput(e.target.value)}
+                  placeholder="https://www.tuosito.com/"
+                  className="flex-1"
+                  data-testid="gsc-site-url-input"
                 />
+                <Button
+                  variant="outline"
+                  onClick={saveSiteUrl}
+                  disabled={savingSiteUrl || !siteUrlInput.trim()}
+                  data-testid="gsc-save-url-btn"
+                >
+                  {savingSiteUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label>OAuth Client Secret</Label>
-                <Input
-                  type="password"
-                  value={oauthClientSecret}
-                  onChange={(e) => setOauthClientSecret(e.target.value)}
-                  placeholder="GOCSPX-xxxx"
-                  data-testid="gsc-client-secret-input"
-                />
+              {siteUrl && (
+                <p className="text-xs text-emerald-600 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> URL salvato: {siteUrl}
+                </p>
+              )}
+            </div>
+
+            {/* Step 2: Connect */}
+            <Button
+              size="lg"
+              onClick={connectGoogle}
+              disabled={connecting || !siteUrl}
+              className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-base font-semibold"
+              data-testid="gsc-connect-btn"
+            >
+              {connecting ? (
+                <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Connessione in corso...</>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  Connetti Google Search Console
+                </>
+              )}
+            </Button>
+
+            {!siteUrl && (
+              <p className="text-xs text-slate-400 text-center">Inserisci e salva l'URL del sito prima di connetterti</p>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        /* Connected Status Bar */
+        <Card className="border-emerald-200 bg-emerald-50/50">
+          <CardContent className="py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              <div>
+                <p className="font-medium text-sm text-slate-900">Connesso a Google Search Console</p>
+                <p className="text-xs text-slate-500">{siteUrl}</p>
               </div>
             </div>
-            <p className="text-xs text-slate-500">
-              Crea un'app OAuth in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Google Cloud Console</a>, abilita la Search Console API,
-              e imposta come Redirect URI: <code className="bg-slate-200 px-1 rounded text-xs">{`${process.env.REACT_APP_BACKEND_URL}/api/gsc/callback`}</code>
-            </p>
-            <div className="flex gap-3">
-              <Button onClick={saveConfig} disabled={saving} className="bg-slate-900" data-testid="gsc-save-btn">
-                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Salva Credenziali
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={disconnectGoogle}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+              data-testid="gsc-disconnect-btn"
+            >
+              <Unlink className="w-4 h-4 mr-2" />Disconnetti
+            </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Connection Status */}
-      <Card className={`border ${gscConnected ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-200'}`}>
-        <CardContent className="py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {gscConnected ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            ) : (
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
-            )}
-            <div>
-              <p className="font-medium text-sm text-slate-900">
-                {gscConnected ? 'Connesso a Google Search Console' : 'Non connesso a Google Search Console'}
-              </p>
-              {siteUrl && <p className="text-xs text-slate-500">{siteUrl}</p>}
-            </div>
-          </div>
-          {gscConnected ? (
-            <Button variant="outline" size="sm" onClick={disconnectGoogle} className="text-red-600 border-red-200 hover:bg-red-50" data-testid="gsc-disconnect-btn">
-              <Unlink className="w-4 h-4 mr-2" />Disconnetti
-            </Button>
-          ) : (
-            <Button onClick={connectGoogle} disabled={connecting || !oauthClientId} className="bg-blue-600 hover:bg-blue-700" data-testid="gsc-connect-btn">
-              {connecting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Link2 className="w-4 h-4 mr-2" />}
-              Connetti con Google
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-
+      {/* Data Section */}
       {loading ? (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
         </div>
       ) : data ? (
         <>
-          {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card className="border-slate-200">
               <CardContent className="p-4">
@@ -303,7 +335,6 @@ export const GscPage = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Keywords Table */}
             <Card className="border-slate-200">
               <CardHeader>
                 <CardTitle>Top Keyword</CardTitle>
@@ -342,7 +373,6 @@ export const GscPage = () => {
               </CardContent>
             </Card>
 
-            {/* Pages Table */}
             <Card className="border-slate-200">
               <CardHeader>
                 <CardTitle>Top Pagine</CardTitle>
@@ -385,17 +415,6 @@ export const GscPage = () => {
             </Card>
           </div>
         </>
-      ) : !showConfig && !gscConnected ? (
-        <Card className="border-slate-200">
-          <CardContent className="py-16 text-center">
-            <BarChart3 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">Google Search Console non connesso</h3>
-            <p className="text-slate-500 max-w-md mx-auto mb-4">Configura le credenziali OAuth e connettiti per visualizzare dati di posizionamento e performance.</p>
-            <Button onClick={() => setShowConfig(true)} variant="outline" data-testid="gsc-show-config-btn">
-              <Settings2 className="w-4 h-4 mr-2" />Configura
-            </Button>
-          </CardContent>
-        </Card>
       ) : null}
     </div>
   );
