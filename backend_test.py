@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 
 class SEOEngineAPITester:
-    def __init__(self, base_url="https://seo-admin-suite-1.preview.emergentagent.com"):
+    def __init__(self, base_url="https://seo-content-hub-14.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.tests_run = 0
