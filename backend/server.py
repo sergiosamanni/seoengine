@@ -43,6 +43,15 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+async def startup():
+    try:
+        from storage import init_storage
+        init_storage()
+    except Exception as e:
+        logger.warning(f"Storage init failed (will retry on first upload): {e}")
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     from database import client
