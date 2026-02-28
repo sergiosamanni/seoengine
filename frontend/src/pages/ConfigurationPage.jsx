@@ -77,6 +77,12 @@ export const ConfigurationPage = () => {
   const [advancedPrompt, setAdvancedPrompt] = useState({
     prompt_password: '', secondo_livello_prompt: '', keyword_injection_template: ''
   });
+  const [contentStrategy, setContentStrategy] = useState({
+    funnel_stage: 'TOFU', obiettivo_primario: 'traffico', modello_copywriting: 'PAS',
+    buyer_persona_nome: '', buyer_persona_descrizione: '', buyer_persona_obiezioni: '',
+    cta_finale: '', search_intent: 'informazionale', leve_psicologiche: [],
+    keyword_secondarie: [], keyword_lsi: [], lunghezza_target: 1500, note_speciali: ''
+  });
 
   // Save and Generate state
   const [saveAndGenerating, setSaveAndGenerating] = useState(false);
