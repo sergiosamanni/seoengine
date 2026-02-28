@@ -126,9 +126,22 @@ def generate_seo_metadata(title: str, content: str, kb: dict, combination: dict)
         if cta:
             meta_desc = f"{meta_desc} {cta.rstrip('.')}."
 
-    # Trim to 155-160 range
-    if len(meta_desc) > 160:
-        meta_desc = meta_desc[:157].rsplit(' ', 1)[0] + "..."
+    # Trim to max 155 chars, ending with a complete word and sentence
+    if len(meta_desc) > 155:
+        # Cut at 152 to leave room for "."
+        cut = meta_desc[:152]
+        # Find last space to end on a complete word
+        last_space = cut.rfind(' ')
+        if last_space > 80:
+            cut = cut[:last_space]
+        # Find last sentence-ending punctuation
+        for end_char in ['.', '!', '?', ':']:
+            last_end = cut.rfind(end_char)
+            if last_end > 80:
+                meta_desc = cut[:last_end + 1]
+                break
+        else:
+            meta_desc = cut.rstrip(',;- ') + "."
     elif len(meta_desc) < 120 and citta:
         meta_desc = meta_desc.rstrip('.') + f" a {citta}."
 
