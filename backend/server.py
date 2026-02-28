@@ -2128,13 +2128,14 @@ async def generate_and_publish_articles(request: ArticleGenerateAndPublish, curr
     # Launch background task
     asyncio.create_task(_run_generate_and_publish(
         job_id, request.client_id, request.combinations,
-        request.publish_to_wordpress, client_doc
+        request.publish_to_wordpress, client_doc,
+        request.content_type, request.brief_override
     ))
     
     return {"job_id": job_id, "status": "running", "total": len(request.combinations)}
 
 
-async def _run_generate_and_publish(job_id: str, client_id: str, combinations: list, publish_to_wp: bool, client_doc: dict):
+async def _run_generate_and_publish(job_id: str, client_id: str, combinations: list, publish_to_wp: bool, client_doc: dict, content_type: str = "articolo_blog", brief_override: dict = None):
     """Background task that generates and publishes articles."""
     config = client_doc.get("configuration", {})
     llm_config = config.get("llm", {}) or config.get("openai", {})
@@ -2144,7 +2145,8 @@ async def _run_generate_and_publish(job_id: str, client_id: str, combinations: l
     tone = config.get("tono_e_stile", {})
     seo = config.get("seo", {})
     advanced_prompt = config.get("advanced_prompt", {})
-    system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt)
+    strategy = config.get("content_strategy", {})
+    system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, content_type, brief_override)
     
     results = []
     
