@@ -994,6 +994,37 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
                 />
               </div>
 
+              {/* Image Upload Section */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-slate-700">Immagini <span className="text-slate-400 font-normal">(facoltativo)</span></Label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <label className="flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors" data-testid="image-upload-label">
+                    <ImagePlus className="w-5 h-5 text-slate-500" />
+                    <span className="text-sm text-slate-600">{uploading ? 'Caricamento...' : 'Carica immagini'}</span>
+                    <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden"
+                      onChange={handleImageUpload} disabled={uploading} data-testid="image-upload-input" />
+                  </label>
+                  <p className="text-xs text-slate-400">Formato orizzontale consigliato. JPG, PNG o WebP, max 5MB.</p>
+                </div>
+                {uploadedImages.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-500">La prima immagine sara l'immagine in evidenza. Le altre verranno inserite nell'articolo.</p>
+                    <div className="flex flex-wrap gap-2">
+                      {uploadedImages.map((img, idx) => (
+                        <div key={img.id} className="relative group" data-testid={`uploaded-image-${idx}`}>
+                          <img src={img.preview} alt={img.name} className="w-20 h-14 sm:w-24 sm:h-16 object-cover rounded-lg border border-slate-200" />
+                          {idx === 0 && <span className="absolute -top-1.5 -left-1.5 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">Evidenza</span>}
+                          <button onClick={() => removeImage(idx)}
+                            className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`remove-image-${idx}`}>
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <Button onClick={handleGenerate} disabled={generating || !hasApiKey}
                 className="w-full bg-orange-500 hover:bg-orange-600 h-14 text-lg font-semibold" data-testid="client-generate-btn">
                 {generating ? <><Loader2 className="w-6 h-6 mr-2 animate-spin" />Generazione in corso...</> : <><Zap className="w-6 h-6 mr-2" />Genera Articolo Ottimizzato</>}
