@@ -104,15 +104,19 @@ export const ClientsPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    const payload = { ...formData };
+    // Ensure siti_web includes sito_web
+    if (payload.sito_web && !payload.siti_web.includes(payload.sito_web)) {
+      payload.siti_web = [payload.sito_web, ...payload.siti_web];
+    }
     try {
       if (editingClient) {
-        await axios.put(`${API}/clients/${editingClient.id}`, formData, {
+        await axios.put(`${API}/clients/${editingClient.id}`, payload, {
           headers: getAuthHeaders()
         });
         toast.success('Cliente aggiornato');
       } else {
-        await axios.post(`${API}/clients`, formData, {
+        await axios.post(`${API}/clients`, payload, {
           headers: getAuthHeaders()
         });
         toast.success('Cliente creato');
@@ -120,7 +124,8 @@ export const ClientsPage = () => {
       
       setIsDialogOpen(false);
       setEditingClient(null);
-      setFormData({ nome: '', settore: 'altro', sito_web: '', attivo: true });
+      setFormData({ nome: '', settore: 'altro', sito_web: '', siti_web: [], attivo: true });
+      setNewSiteInput('');
       fetchClients();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Errore durante il salvataggio');
