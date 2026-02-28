@@ -17,6 +17,9 @@ import itertools
 import io
 import asyncio
 import pandas as pd
+import re
+from bs4 import BeautifulSoup
+from googlesearch import search as google_search
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
