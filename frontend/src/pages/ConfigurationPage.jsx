@@ -288,6 +288,10 @@ export const ConfigurationPage = () => {
           <KeywordsTab keywords={keywords} setKeywords={setKeywords} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
         </TabsContent>
 
+        <TabsContent value="strategy" className="mt-6">
+          <ContentStrategyTab strategy={contentStrategy} setStrategy={setContentStrategy} />
+        </TabsContent>
+
         <TabsContent value="serp" className="mt-6">
           <SerpAnalysisTab apify={apify} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
         </TabsContent>
