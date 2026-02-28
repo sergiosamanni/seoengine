@@ -39,6 +39,7 @@ import { ToneStyleTab } from './configuration/ToneStyleTab';
 import { KeywordsTab } from './configuration/KeywordsTab';
 import { SerpAnalysisTab } from './configuration/SerpAnalysisTab';
 import { AdvancedPromptTab } from './configuration/AdvancedPromptTab';
+import { ContentStrategyTab } from './configuration/ContentStrategyTab';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
