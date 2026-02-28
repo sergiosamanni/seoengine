@@ -168,7 +168,7 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
     } catch (e) { /* silent */ }
   };
 
-  // Single article generation
+  // Single article generation with job polling
   const handleSingleGenerate = async () => {
     if (!singleKeywords.trim() && !singleTitle.trim()) { toast.error('Inserisci almeno keywords o titolo'); return; }
     setSingleGenerating(true);
@@ -183,11 +183,32 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
         gsc_context: gscData ? { top_keywords: gscData.keywords?.slice(0, 10), totals: gscData.totals } : undefined,
         serp_context: serpData ? { competitors: serpData.competitors, extracted: serpData.extracted } : undefined
       }, { headers: getAuthHeaders() });
-      setSingleResult(res.data);
+      setSingleResult({ ...res.data, status: 'running' });
       toast.success('Generazione avviata!');
+      // Poll for job completion
+      const jobId = res.data.job_id;
+      const poll = async () => {
+        try {
+          const jr = await axios.get(`${API}/jobs/${jobId}`, { headers: getAuthHeaders() });
+          if (jr.data.status === 'completed' || jr.data.status === 'failed') {
+            const r = jr.data.results?.[0] || {};
+            setSingleResult({ ...res.data, ...r, status: jr.data.status });
+            setSingleGenerating(false);
+            if (jr.data.status === 'completed' && r.generation_status === 'success') {
+              toast.success(r.publish_status === 'success' ? 'Articolo generato e pubblicato su WordPress!' : 'Articolo generato con successo!');
+            } else {
+              toast.error('Generazione fallita: ' + (r.generation_error || jr.data.error || 'errore sconosciuto'));
+            }
+            return;
+          }
+          setTimeout(poll, 5000);
+        } catch (e) { setTimeout(poll, 6000); }
+      };
+      setTimeout(poll, 5000);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Errore nella generazione');
-    } finally { setSingleGenerating(false); }
+      setSingleGenerating(false);
+    }
   };
 
   // Programmatic generation
