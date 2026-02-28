@@ -249,7 +249,7 @@ async def _generate_and_publish_batch(job_id, client_id, combinations, publish_t
                 content = content[:meta_match.start()].rstrip() + content[meta_match.end():]
             seo_metadata = generate_seo_metadata(titolo_formatted, content, kb, combo)
             if llm_meta_desc and len(llm_meta_desc) >= 80:
-                seo_metadata["meta_description"] = llm_meta_desc[:160]
+                seo_metadata["meta_description"] = _truncate_meta_desc(llm_meta_desc)
             await db.articles.insert_one({"id": article_id, "client_id": client_id, "titolo": titolo_formatted,
                 "contenuto": content, "stato": "generated", "wordpress_post_id": None, "created_at": now,
                 "published_at": None, "combination": combo, "seo_metadata": seo_metadata})
@@ -397,7 +397,7 @@ async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp,
                 content = content[:meta_match.start()].rstrip() + content[meta_match.end():]
             seo_metadata = generate_seo_metadata(titolo, content, kb, combo)
             if llm_meta_desc and len(llm_meta_desc) >= 80:
-                seo_metadata["meta_description"] = llm_meta_desc[:160]
+                seo_metadata["meta_description"] = _truncate_meta_desc(llm_meta_desc)
             await db.articles.insert_one({"id": article_id, "client_id": client_id, "titolo": titolo,
                 "contenuto": content, "contenuto_html": content,
                 "keyword_principale": keyword,
