@@ -51,14 +51,20 @@ export const GscPage = () => {
   const [redirectUri, setRedirectUri] = useState('');
 
   useEffect(() => {
-    fetchClient();
-    checkIntegration();
-    if (searchParams.get('gsc_connected') === 'true') {
-      toast.success('Google Search Console connesso con successo!');
-    }
-    if (searchParams.get('error') === 'auth_failed') {
-      toast.error('Autorizzazione Google fallita. Riprova.');
-    }
+    const init = async () => {
+      await fetchClient();
+      checkIntegration();
+      // After OAuth redirect, re-fetch to ensure fresh state
+      if (searchParams.get('gsc_connected') === 'true') {
+        toast.success('Google Search Console connesso con successo!');
+        // Small delay then re-fetch to ensure DB write completed
+        setTimeout(() => fetchClient(), 500);
+      }
+      if (searchParams.get('error') === 'auth_failed') {
+        toast.error('Autorizzazione Google fallita. Riprova.');
+      }
+    };
+    init();
   }, [clientId]);
 
   const checkIntegration = async () => {
