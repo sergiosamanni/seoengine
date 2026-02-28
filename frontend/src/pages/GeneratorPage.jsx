@@ -832,11 +832,31 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
         serp_context: serpData ? { competitors: serpData.competitors, extracted: serpData.extracted } : undefined,
         publish_to_wordpress: true
       }, { headers: getAuthHeaders() });
-      setResult(res.data);
+      setResult({ ...res.data, status: 'running' });
       toast.success('Generazione avviata!');
+      const jobId = res.data.job_id;
+      const poll = async () => {
+        try {
+          const jr = await axios.get(`${API}/jobs/${jobId}`, { headers: getAuthHeaders() });
+          if (jr.data.status === 'completed' || jr.data.status === 'failed') {
+            const r = jr.data.results?.[0] || {};
+            setResult({ ...res.data, ...r, status: jr.data.status });
+            setGenerating(false);
+            if (jr.data.status === 'completed' && r.generation_status === 'success') {
+              toast.success(r.publish_status === 'success' ? 'Articolo pubblicato su WordPress!' : 'Articolo generato!');
+            } else {
+              toast.error('Errore nella generazione');
+            }
+            return;
+          }
+          setTimeout(poll, 5000);
+        } catch (e) { setTimeout(poll, 6000); }
+      };
+      setTimeout(poll, 5000);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Errore nella generazione');
-    } finally { setGenerating(false); }
+      setGenerating(false);
+    }
   };
 
   return (
