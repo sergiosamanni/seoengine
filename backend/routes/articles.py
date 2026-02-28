@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from database import db
 from auth import get_current_user, require_admin, ADMIN_MASTER_PASSWORD
 from models import (ArticleGenerate, ArticlePublish, ArticleResponse, SimpleGenerateRequest,
-                    VerifyPasswordRequest, UpdateAdvancedPromptRequest)
+                    VerifyPasswordRequest, UpdateAdvancedPromptRequest, SerpScrapingRequest)
 from helpers import (build_system_prompt, generate_seo_metadata, generate_with_llm,
                      publish_to_wordpress, log_activity, LLM_PROVIDERS)
 
