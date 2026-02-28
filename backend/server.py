@@ -66,6 +66,7 @@ class ClientCreate(BaseModel):
     nome: str
     settore: str
     sito_web: str
+    siti_web: List[str] = []
     attivo: bool = True
 
 class ClientUpdate(BaseModel):
@@ -163,6 +164,7 @@ class ClientResponse(BaseModel):
     nome: str
     settore: str
     sito_web: str
+    siti_web: List[str] = []
     attivo: bool
     created_at: str
     totale_articoli: int = 0
