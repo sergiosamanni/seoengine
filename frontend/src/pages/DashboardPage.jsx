@@ -138,9 +138,9 @@ export const DashboardPage = () => {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'Clienti', value: stats.clients_count || clients.length, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'Articoli Totali', value: stats.articles_count || 0, icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-            { label: 'Pubblicati', value: stats.published_count || 0, icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },
+            { label: 'Clienti', value: stats.total_clients || stats.clients_count || clients.length, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'Articoli Totali', value: stats.total_articles || stats.articles_count || 0, icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'Pubblicati', value: stats.published_articles || stats.published_count || 0, icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },
             { label: 'Ultimi 7 giorni', value: stats.recent_count || 0, icon: BarChart3, color: 'text-orange-600', bg: 'bg-orange-50' },
           ].map(s => (
             <Card key={s.label} className="border-slate-200">
