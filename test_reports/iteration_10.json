@@ -1,0 +1,94 @@
+{
+  "summary": "Iteration 10: Fixed critical GSC config persistence bug. GSC configuration was not being returned in GET /api/clients/{id} response because ClientConfiguration Pydantic model was missing the 'gsc' field. Added GSCConfig model and included it in ClientConfiguration. Now GSC connected status properly shows in Generator 5-step wizard. All 11 backend tests passed. All frontend flows verified.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Backend: POST /api/auth/login - Admin login returns token and role=admin",
+    "Backend: POST /api/auth/login - Invalid credentials return 401",
+    "Backend: GET /api/clients/{id} - NOW RETURNS GSC CONFIG (fixed this iteration)",
+    "Backend: GET /api/gsc/status - Returns redirect_uri and configured=true",
+    "Backend: POST /api/articles/simple-generate - Accepts gsc_context without error",
+    "Backend: POST /api/articles/simple-generate - Accepts serp_context without error",
+    "Backend: POST /api/articles/simple-generate - Accepts both contexts together",
+    "Backend: POST /api/serp/analyze-full - Returns competitors with retry logic",
+    "Backend: GET /api/stats/overview - Returns dashboard statistics",
+    "Backend: GET /api/activity-logs - Returns activity log entries (34+ operations)",
+    "Backend: GET /api/clients - Returns clients with totale_articoli",
+    "Frontend: Login with admin@seoengine.it / admin123 works",
+    "Frontend: Dashboard unified - shows stats (1 client, 9 articles, 4 published) AND clients table",
+    "Frontend: GeneratorPage - 5 step wizard (Strategia, Analisi SERP, GSC, Prompt, Genera)",
+    "Frontend: GSC step NOW shows 'GSC' without 'N/C' when connected (fixed)",
+    "Frontend: GSC step auto-loads data and shows 'Connesso' badge with 9 keywords",
+    "Frontend: GSC step shows metrics (80 impressions, 47 avg position)",
+    "Frontend: Storico Articoli (Article History) collapsible at bottom - shows 9 articles",
+    "Frontend: Activity Log page shows 34 operations, 16 successes, 0 errors, 3 WP publications",
+    "Frontend: ConfigurationPage has 3 tabs: API Keys, Knowledge Base, Tono & Stile"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_iteration_10.py",
+    "/app/test_reports/pytest/pytest_iteration10.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/models.py",
+    "/app/backend/tests/test_iteration_10.py"
+  ],
+  "bug_fixed": {
+    "description": "GSC configuration was not being returned in client API response, causing frontend to show 'GSC (N/C)' even when GSC was connected",
+    "root_cause": "ClientConfiguration Pydantic model in models.py was missing the 'gsc' field. When MongoDB returned the full client document including gsc config, Pydantic filtered it out because it wasn't defined in the model.",
+    "fix": "Added GSCConfig model class and included 'gsc: Optional[GSCConfig] = None' in ClientConfiguration model",
+    "files_modified": ["/app/backend/models.py"],
+    "verification": "GET /api/clients/{id} now returns configuration.gsc with site_url, connected, enabled, and tokens fields"
+  },
+  "success_rate": {
+    "backend": "100% (11/11 passed)",
+    "frontend": "100% - All UI flows verified"
+  },
+  "test_credentials": {
+    "admin": "admin@seoengine.it / admin123",
+    "test_client_id": "a8ab5383-b444-4f17-9465-41fa32c34bb9",
+    "test_client_name": "Noleggio Auto Salerno"
+  },
+  "seed_data_creation": "None - used existing test data",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 10 fixed GSC persistence bug. The ClientConfiguration model now includes 'gsc' field so GET /api/clients/{id} returns GSC config. Test client has GSC connected with valid tokens (expiry 2026-02-28T14:54:51). Generator 5-step wizard properly shows GSC connected status and auto-loads GSC data when entering step 3. Configuration page has 3 tabs as expected.",
+  "key_features_verified": {
+    "gsc_persistence_fix": {
+      "status": "FIXED",
+      "issue": "GSC config was filtered out by Pydantic model",
+      "solution": "Added GSCConfig model to models.py",
+      "verification": "API now returns configuration.gsc with connected=true"
+    },
+    "gsc_step_in_generator": {
+      "status": "Working",
+      "shows_connected": "Yes - 'GSC' without 'N/C' in step bar",
+      "auto_loads_data": "Yes - when entering step 3",
+      "displays_metrics": "Yes - clicks, impressions, CTR, position"
+    },
+    "simple_generate_context_injection": {
+      "status": "Working",
+      "accepts_gsc_context": "Yes",
+      "accepts_serp_context": "Yes",
+      "injects_into_prompt": "Yes - appends to system_prompt"
+    },
+    "gsc_redirect_uri": {
+      "status": "Working",
+      "endpoint": "GET /api/gsc/status",
+      "returns": "redirect_uri: https://gsc-content-builder.preview.emergentagent.com/api/gsc/callback"
+    },
+    "configuration_page": {
+      "status": "Working",
+      "tabs": ["API Keys", "Knowledge Base", "Tono & Stile"],
+      "tab_count": 3
+    }
+  }
+}
