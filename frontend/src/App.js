@@ -1,190 +1,68 @@
 import React from 'react';
-import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { Toaster } from './components/ui/sonner';
+import { DashboardLayout } from './components/DashboardLayout';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
-import { ClientsPage } from './pages/ClientsPage';
 import { ConfigurationPage } from './pages/ConfigurationPage';
 import { GeneratorPage } from './pages/GeneratorPage';
-import { ArticlesPage } from './pages/ArticlesPage';
-import { SessionHistoryPage } from './pages/SessionHistoryPage';
 import { ActivityLogPage } from './pages/ActivityLogPage';
-import { ClientSimpleGenerator } from './pages/ClientSimpleGenerator';
-import { GscPage } from './pages/GscPage';
 import { UsersPage } from './pages/UsersPage';
-import { DashboardLayout } from './components/DashboardLayout';
+import { GscPage } from './pages/GscPage';
+import './App.css';
 
-// Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false }) => {
-  const { isAuthenticated, loading, isAdmin } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (adminOnly && !isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
+  const { user, isAdmin } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (adminOnly && !isAdmin) return <Navigate to="/generate" replace />;
   return <DashboardLayout>{children}</DashboardLayout>;
 };
 
-// Public Route Component (redirects to dashboard if authenticated)
-const PublicRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+function AppRoutes() {
+  const { user, isAdmin } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
-      </div>
-    );
-  }
-
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return children;
-};
-
-const AppRoutes = () => {
   return (
     <Routes>
-      {/* Public Routes */}
-      <Route path="/login" element={
-        <PublicRoute>
-          <LoginPage />
-        </PublicRoute>
-      } />
+      <Route path="/login" element={user ? <Navigate to={isAdmin ? "/dashboard" : "/generate"} replace /> : <LoginPage />} />
 
-      {/* Protected Routes */}
-      <Route path="/dashboard" element={
-        <ProtectedRoute>
-          <DashboardPage />
-        </ProtectedRoute>
-      } />
+      {/* Admin: Unified Dashboard (stats + clients) */}
+      <Route path="/dashboard" element={<ProtectedRoute adminOnly><DashboardPage /></ProtectedRoute>} />
 
-      <Route path="/clients" element={
-        <ProtectedRoute adminOnly>
-          <ClientsPage />
-        </ProtectedRoute>
-      } />
+      {/* Admin: Client detail pages */}
+      <Route path="/clients/:clientId" element={<ProtectedRoute adminOnly><GeneratorPage /></ProtectedRoute>} />
+      <Route path="/clients/:clientId/config" element={<ProtectedRoute adminOnly><ConfigurationPage /></ProtectedRoute>} />
+      <Route path="/clients/:clientId/generate" element={<ProtectedRoute adminOnly><GeneratorPage /></ProtectedRoute>} />
+      <Route path="/clients/:clientId/gsc" element={<ProtectedRoute adminOnly><GscPage /></ProtectedRoute>} />
 
-      <Route path="/clients/:clientId" element={
-        <ProtectedRoute adminOnly>
-          <GeneratorPage />
-        </ProtectedRoute>
-      } />
+      {/* Admin: Users management */}
+      <Route path="/users" element={<ProtectedRoute adminOnly><UsersPage /></ProtectedRoute>} />
 
-      <Route path="/clients/:clientId/config" element={
-        <ProtectedRoute adminOnly>
-          <ConfigurationPage />
-        </ProtectedRoute>
-      } />
+      {/* Shared: Activity Log */}
+      <Route path="/activity-log" element={<ProtectedRoute><ActivityLogPage /></ProtectedRoute>} />
 
-      <Route path="/clients/:clientId/generate" element={
-        <ProtectedRoute adminOnly>
-          <GeneratorPage />
-        </ProtectedRoute>
-      } />
+      {/* Client: Generate */}
+      <Route path="/generate" element={<ProtectedRoute><GeneratorPage /></ProtectedRoute>} />
+      <Route path="/config" element={<ProtectedRoute><ConfigurationPage /></ProtectedRoute>} />
+      <Route path="/configuration" element={<ProtectedRoute><ConfigurationPage /></ProtectedRoute>} />
 
-      <Route path="/configuration" element={
-        <ProtectedRoute>
-          <ConfigurationPage />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/config" element={
-        <ProtectedRoute>
-          <ConfigurationPage />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/generator" element={
-        <ProtectedRoute>
-          <GeneratorPage />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/articles" element={
-        <ProtectedRoute>
-          <ArticlesPage />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/history" element={
-        <ProtectedRoute>
-          <SessionHistoryPage />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/clients/:clientId/history" element={
-        <ProtectedRoute adminOnly>
-          <SessionHistoryPage />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/activity" element={
-        <ProtectedRoute adminOnly>
-          <ActivityLogPage />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/users" element={
-        <ProtectedRoute adminOnly>
-          <UsersPage />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/clients/:clientId/gsc" element={
-        <ProtectedRoute adminOnly>
-          <GscPage />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/simple-generator" element={
-        <ProtectedRoute>
-          <ClientSimpleGenerator />
-        </ProtectedRoute>
-      } />
-
-      <Route path="/settings" element={
-        <ProtectedRoute adminOnly>
-          <div className="p-8">
-            <h1 className="text-3xl font-bold text-slate-900 font-['Manrope']">Impostazioni</h1>
-            <p className="text-slate-500 mt-2">Coming soon...</p>
-          </div>
-        </ProtectedRoute>
-      } />
-
-      {/* Redirect root to dashboard or login */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      
-      {/* 404 */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* Redirects */}
+      <Route path="/clients" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/articles" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to={user ? (isAdmin ? "/dashboard" : "/generate") : "/login"} replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
-};
+}
 
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </BrowserRouter>
-    </div>
+    <Router>
+      <AuthProvider>
+        <AppRoutes />
+        <Toaster position="top-right" richColors />
+      </AuthProvider>
+    </Router>
   );
 }
 
