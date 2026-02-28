@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { Badge } from '../../components/ui/badge';
 import { ScrollArea } from '../../components/ui/scroll-area';
-import { Alert, AlertDescription } from '../../components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -13,12 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { Search, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-export const SerpAnalysisTab = ({ apify, effectiveClientId, getAuthHeaders }) => {
+export const SerpAnalysisTab = ({ effectiveClientId, getAuthHeaders }) => {
   const [serpKeyword, setSerpKeyword] = React.useState('');
   const [serpCountry, setSerpCountry] = React.useState('it');
   const [serpLoading, setSerpLoading] = React.useState(false);
@@ -28,8 +28,8 @@ export const SerpAnalysisTab = ({ apify, effectiveClientId, getAuthHeaders }) =>
     if (!serpKeyword.trim()) { toast.error('Inserisci una keyword'); return; }
     setSerpLoading(true);
     try {
-      const response = await axios.post(`${API}/clients/${effectiveClientId}/serp-analysis`, {
-        keyword: serpKeyword, country: serpCountry, num_results: 4
+      const response = await axios.post(`${API}/serp/search`, {
+        keyword: serpKeyword, country: serpCountry, num_results: 5
       }, { headers: getAuthHeaders() });
       setSerpResults(response.data.results);
       toast.success(`Trovati ${response.data.results.length} risultati`);
@@ -40,25 +40,6 @@ export const SerpAnalysisTab = ({ apify, effectiveClientId, getAuthHeaders }) =>
     }
   };
 
-  if (!apify.enabled) {
-    return (
-      <Card className="border-slate-200">
-        <CardContent className="py-16 text-center">
-          <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-            <Search className="w-8 h-8 text-slate-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">Apify non abilitato</h3>
-          <p className="text-slate-500 max-w-md mx-auto mb-4">
-            Per utilizzare l'analisi SERP, abilita Apify nella tab "API Keys" e configura la tua API key.
-          </p>
-          <Button variant="outline" onClick={() => document.querySelector('[data-testid="tab-api"]')?.click()}>
-            Vai alle API Keys
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card className="border-slate-200">
@@ -67,17 +48,9 @@ export const SerpAnalysisTab = ({ apify, effectiveClientId, getAuthHeaders }) =>
             <Search className="w-5 h-5 text-purple-600" />
             Analisi SERP
           </CardTitle>
-          <CardDescription>Scraping dei primi 4 risultati Google per una keyword</CardDescription>
+          <CardDescription>Scraping dei primi risultati Google per una keyword (nessuna API key necessaria)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!apify.api_key && (
-            <Alert className="bg-amber-50 border-amber-200">
-              <AlertCircle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-amber-700">
-                Configura prima la API Key Apify nella tab "API Keys"
-              </AlertDescription>
-            </Alert>
-          )}
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Keyword da analizzare</Label>
@@ -85,6 +58,7 @@ export const SerpAnalysisTab = ({ apify, effectiveClientId, getAuthHeaders }) =>
                 value={serpKeyword}
                 onChange={(e) => setSerpKeyword(e.target.value)}
                 placeholder="es: noleggio auto salerno"
+                onKeyPress={(e) => e.key === 'Enter' && !serpLoading && runSerpAnalysis()}
                 data-testid="serp-keyword-input"
               />
             </div>
@@ -104,7 +78,7 @@ export const SerpAnalysisTab = ({ apify, effectiveClientId, getAuthHeaders }) =>
             </div>
             <Button
               onClick={runSerpAnalysis}
-              disabled={serpLoading || !apify.api_key}
+              disabled={serpLoading}
               className="w-full bg-purple-600 hover:bg-purple-700"
               data-testid="serp-analyze-btn"
             >
@@ -121,7 +95,7 @@ export const SerpAnalysisTab = ({ apify, effectiveClientId, getAuthHeaders }) =>
       <Card className="border-slate-200">
         <CardHeader>
           <CardTitle>Risultati SERP</CardTitle>
-          <CardDescription>Top 4 risultati per la keyword analizzata</CardDescription>
+          <CardDescription>Top risultati Google con headings e contenuto</CardDescription>
         </CardHeader>
         <CardContent>
           {serpResults.length === 0 ? (
@@ -136,14 +110,21 @@ export const SerpAnalysisTab = ({ apify, effectiveClientId, getAuthHeaders }) =>
                   <div key={i} className="p-4 bg-slate-50 rounded-lg">
                     <div className="flex items-start gap-3">
                       <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold">
-                        {result.position || i + 1}
+                        {result.position}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <a href={result.url} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline line-clamp-1">
-                          {result.title}
+                        <a href={result.url} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline line-clamp-1 flex items-center gap-1">
+                          {result.title} <ExternalLink className="w-3 h-3 flex-shrink-0" />
                         </a>
-                        <p className="text-xs text-emerald-600 truncate mt-1">{result.displayed_url}</p>
-                        <p className="text-sm text-slate-600 mt-2 line-clamp-2">{result.description}</p>
+                        <p className="text-xs text-emerald-600 truncate mt-0.5">{result.url}</p>
+                        <p className="text-sm text-slate-600 mt-1.5 line-clamp-2">{result.description}</p>
+                        {result.headings && result.headings.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {result.headings.slice(0, 4).map((h, j) => (
+                              <Badge key={j} variant="outline" className="text-xs font-normal">{h}</Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
