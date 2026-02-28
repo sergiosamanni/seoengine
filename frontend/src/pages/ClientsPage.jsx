@@ -80,8 +80,10 @@ export const ClientsPage = () => {
     nome: '',
     settore: 'altro',
     sito_web: '',
+    siti_web: [],
     attivo: true
   });
+  const [newSiteInput, setNewSiteInput] = useState('');
 
   const fetchClients = async () => {
     try {
