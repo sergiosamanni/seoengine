@@ -73,6 +73,7 @@ class ClientUpdate(BaseModel):
     nome: Optional[str] = None
     settore: Optional[str] = None
     sito_web: Optional[str] = None
+    siti_web: Optional[List[str]] = None
     attivo: Optional[bool] = None
 
 class WordPressConfig(BaseModel):
