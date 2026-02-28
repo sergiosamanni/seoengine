@@ -72,7 +72,7 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
   const [results, setResults] = useState([]);
   const [publishToWp, setPublishToWp] = useState(true);
   const [progressPercent, setProgressPercent] = useState(0);
-  const [contentType, setContentType] = useState('articolo_blog');
+  const [contentType, setContentType] = useState('articolo');
 
   const config = client?.configuration || {};
   const llmConfig = config.llm || config.openai || {};
