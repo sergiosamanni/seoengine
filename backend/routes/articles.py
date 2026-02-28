@@ -329,11 +329,12 @@ async def simple_generate_article(request: SimpleGenerateRequest, current_user: 
     await db.jobs.insert_one({"id": job_id, "client_id": client_id, "status": "running",
         "total": 1, "completed": 0, "results": [], "created_at": datetime.now(timezone.utc).isoformat()})
     asyncio.create_task(_run_simple_generate(job_id, client_id, request.keyword, request.topic,
-        request.publish_to_wordpress, system_prompt, llm_config, wp_config, kb, combo, titolo_suggerito))
+        request.publish_to_wordpress, system_prompt, llm_config, wp_config, kb, combo, titolo_suggerito,
+        request.content_type, request.image_ids or []))
     return {"job_id": job_id, "status": "running", "keyword": request.keyword}
 
 
-async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp, system_prompt, llm_config, wp_config, kb, combo, titolo_suggerito=""):
+async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp, system_prompt, llm_config, wp_config, kb, combo, titolo_suggerito="", content_type="articolo", image_ids=None):
     provider = llm_config.get("provider", "openai")
     titolo = titolo_suggerito or keyword.strip()
     await log_activity(client_id, "article_generate", "running", {"titolo": titolo, "step": "generazione"})
