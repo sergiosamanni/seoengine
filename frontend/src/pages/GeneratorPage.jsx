@@ -1018,6 +1018,9 @@ export const GeneratorPage = () => {
       ) : (
         <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
       )}
+
+      {/* Article History */}
+      <ArticleHistory effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
     </div>
   );
 };
