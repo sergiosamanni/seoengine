@@ -594,6 +594,16 @@ const AdminGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate })
                     <Textarea value={singleObjective} onChange={(e) => setSingleObjective(e.target.value)} rows={3}
                       placeholder="Es: Posizionarsi per ricerche locali..." data-testid="single-objective-input" />
                   </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                    <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-blue-600" /><span className="text-sm font-medium">Pubblica su WordPress</span></div>
+                    <button type="button" role="switch" onClick={() => setPublishToWp(!publishToWp)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${publishToWp ? 'bg-blue-600' : 'bg-slate-200'}`} data-testid="single-publish-wp-toggle">
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${publishToWp ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {!hasWpConfig && publishToWp && (
+                    <p className="text-xs text-amber-600">Credenziali WordPress non configurate. La pubblicazione potrebbe fallire.</p>
+                  )}
                   <Button onClick={handleSingleGenerate} disabled={singleGenerating || !hasApiKey || (!singleTitle && !singleKeywords)}
                     className="w-full bg-orange-500 hover:bg-orange-600 h-12 text-base font-semibold" data-testid="single-generate-btn">
                     {singleGenerating ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generazione...</> : <><Zap className="w-5 h-5 mr-2" />Genera Articolo</>}
