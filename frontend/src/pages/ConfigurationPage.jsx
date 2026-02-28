@@ -267,7 +267,8 @@ export const ConfigurationPage = () => {
           <TabsTrigger value="knowledge" className="rounded-lg" data-testid="tab-knowledge"><FileText className="w-4 h-4 mr-2" />Knowledge Base</TabsTrigger>
           <TabsTrigger value="tone" className="rounded-lg" data-testid="tab-tone"><Sparkles className="w-4 h-4 mr-2" />Tono & Stile</TabsTrigger>
           <TabsTrigger value="keywords" className="rounded-lg" data-testid="tab-keywords"><Globe className="w-4 h-4 mr-2" />Keywords</TabsTrigger>
-          <TabsTrigger value="serp" className="rounded-lg" data-testid="tab-serp"><Search className="w-4 h-4 mr-2" />SERP Analysis</TabsTrigger>
+          <TabsTrigger value="strategy" className="rounded-lg" data-testid="tab-strategy"><Zap className="w-4 h-4 mr-2" />Strategia</TabsTrigger>
+          <TabsTrigger value="serp" className="rounded-lg" data-testid="tab-serp"><Search className="w-4 h-4 mr-2" />SERP</TabsTrigger>
           <TabsTrigger value="advanced" className="rounded-lg" data-testid="tab-advanced"><Lock className="w-4 h-4 mr-2" />Prompt Avanzato</TabsTrigger>
         </TabsList>
 
