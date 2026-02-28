@@ -1,16 +1,24 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import axios from 'axios';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Badge } from '../../components/ui/badge';
 import { ScrollArea } from '../../components/ui/scroll-area';
-import { Plus, X } from 'lucide-react';
+import { Alert, AlertDescription } from '../../components/ui/alert';
+import { Plus, X, Globe, Loader2, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 
-export const KnowledgeBaseTab = ({ knowledge, setKnowledge }) => {
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+export const KnowledgeBaseTab = ({ knowledge, setKnowledge, isAdmin, effectiveClientId, getAuthHeaders }) => {
   const [newPuntoInteresse, setNewPuntoInteresse] = React.useState('');
   const [newPuntoForza, setNewPuntoForza] = React.useState('');
+  const [scrapeUrl, setScrapeUrl] = React.useState('');
+  const [scraping, setScraping] = React.useState(false);
+  const [scrapeResult, setScrapeResult] = React.useState(null);
 
   const addToList = (field, value, setValue) => {
     const trimmedValue = value.trim();
