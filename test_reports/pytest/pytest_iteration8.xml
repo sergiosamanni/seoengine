@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="10" skipped="0" tests="12" time="2.299" timestamp="2026-02-28T13:02:59.249272+00:00" hostname="agent-env-c0cf27e9-750a-40f4-89c6-e8bfceec5d5f"><testcase classname="backend.tests.test_iteration_8.TestAuthEndpoints" name="test_admin_login_success" time="0.495"><failure message="AssertionError: Response should contain access_token&#10;assert 'access_token' in {'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZjY1MzJkZDItMjg2Zi00OGJkLWI1YzctZTdiNWNjYTdjNGYzIiwiZW1haWwiOiJhZG1pbkBzZW9lbmdpbmUuaXQiLCJyb2xlIjoiYWRtaW4iLCJjbGllbnRfaWQiOm51bGwsImV4cCI6MTc3MjM3MDE3OX0.ZqQ_EivEfo39nzE5dglrj8FhYaN6AW0NtHfgMBpoxUc', 'user': {'client_id': None, 'email': 'admin@seoengine.it', 'id': 'f6532dd2-286f-48bd-b5c7-e7b5cca7c4f3', 'name': 'Admin SEO', ...}}">backend/tests/test_iteration_8.py:30: in test_admin_login_success
+    assert "access_token" in data, "Response should contain access_token"
+E   AssertionError: Response should contain access_token
+E   assert 'access_token' in {'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZjY1MzJkZDItMjg2Zi00OGJkLWI1YzctZTdiNWNjYTdjNGYzIiwiZW1haWwiOiJhZG1pbkBzZW9lbmdpbmUuaXQiLCJyb2xlIjoiYWRtaW4iLCJjbGllbnRfaWQiOm51bGwsImV4cCI6MTc3MjM3MDE3OX0.ZqQ_EivEfo39nzE5dglrj8FhYaN6AW0NtHfgMBpoxUc', 'user': {'client_id': None, 'email': 'admin@seoengine.it', 'id': 'f6532dd2-286f-48bd-b5c7-e7b5cca7c4f3', 'name': 'Admin SEO', ...}}</failure></testcase><testcase classname="backend.tests.test_iteration_8.TestAuthEndpoints" name="test_login_invalid_credentials" time="0.110" /><testcase classname="backend.tests.test_iteration_8.TestSimpleGenerateEndpoint" name="test_simple_generate_with_client_id_for_admin" time="0.489" /><testcase classname="backend.tests.test_iteration_8.TestSimpleGenerateEndpoint" name="test_simple_generate_without_client_id_for_admin_fails" time="0.107"><failure message="AssertionError: Expected 400 for missing client_id, got 401&#10;assert 401 == 400&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration_8.py:101: in test_simple_generate_without_client_id_for_admin_fails
+    assert response.status_code == 400, f"Expected 400 for missing client_id, got {response.status_code}"
+E   AssertionError: Expected 400 for missing client_id, got 401
+E   assert 401 == 400
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration_8.TestSerpAnalyzeFullEndpoint" name="test_serp_analyze_full_returns_competitors" time="0.152"><failure message="AssertionError: Expected 200, got 401: {&quot;detail&quot;:&quot;Token non valido&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration_8.py:124: in test_serp_analyze_full_returns_competitors
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 401: {"detail":"Token non valido"}
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration_8.TestSerpAnalyzeFullEndpoint" name="test_serp_analyze_full_empty_keyword_fails" time="0.112"><failure message="AssertionError: Expected 400 for empty keyword, got 401&#10;assert 401 == 400&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration_8.py:159: in test_serp_analyze_full_empty_keyword_fails
+    assert response.status_code == 400, f"Expected 400 for empty keyword, got {response.status_code}"
+E   AssertionError: Expected 400 for empty keyword, got 401
+E   assert 401 == 400
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration_8.TestExistingSerpSearchEndpoint" name="test_serp_search_returns_results" time="0.105"><failure message="AssertionError: Expected 200, got 401: {&quot;detail&quot;:&quot;Token non valido&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration_8.py:171: in test_serp_search_returns_results
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 401: {"detail":"Token non valido"}
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration_8.TestClientsEndpoints" name="test_get_clients" time="0.113"><failure message="AssertionError: Expected 200, got 401&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration_8.py:183: in test_get_clients
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+E   AssertionError: Expected 200, got 401
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration_8.TestClientsEndpoints" name="test_get_specific_client" time="0.116"><failure message="AssertionError: Expected 200, got 401: {&quot;detail&quot;:&quot;Token non valido&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration_8.py:190: in test_get_specific_client
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 401: {"detail":"Token non valido"}
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration_8.TestActivityLogs" name="test_get_all_activity_logs" time="0.111"><failure message="AssertionError: Expected 200, got 401&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration_8.py:201: in test_get_all_activity_logs
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+E   AssertionError: Expected 200, got 401
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration_8.TestActivityLogs" name="test_get_client_activity_logs" time="0.132"><failure message="AssertionError: Expected 200, got 401&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration_8.py:208: in test_get_client_activity_logs
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+E   AssertionError: Expected 200, got 401
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration_8.TestStatsOverview" name="test_get_stats_overview" time="0.102"><failure message="AssertionError: Expected 200, got 401&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration_8.py:219: in test_get_stats_overview
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+E   AssertionError: Expected 200, got 401
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase></testsuite></testsuites>
