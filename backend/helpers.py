@@ -432,7 +432,35 @@ Output SOLO in formato HTML valido.
 
 REGOLA CRITICA: Usa UN SOLO tag <h1> in tutto il documento. Non usare MAI piu di un <h1>.
 
-Struttura obbligatoria:
+"""
+
+    if content_type == "landing_page":
+        prompt += """Struttura LANDING PAGE:
+1. <h1> - Headline principale con keyword + beneficio (UNICO)
+2. <p> - Sottotitolo che amplifica la proposta di valore
+3. <h2> - Problema del target
+4. <h2> - La soluzione (il servizio/prodotto)
+5. <h2> - Vantaggi chiave (con <ul><li> elenco puntato)
+6. <h2> - Come funziona (3-4 step)
+7. <h2> - Testimonianze o social proof
+8. <p> - CTA finale forte e diretta
+NOTA: Una landing page ha una sola CTA ripetuta 2-3 volte. Niente navigazione, niente distrazioni.
+"""
+    elif content_type == "pillar_page":
+        prompt += f"""Struttura PILLAR PAGE (contenuto esaustivo 2500-4000 parole):
+1. <h1> - Guida completa sulla keyword principale (UNICO)
+2. <p> - Introduzione ampia al tema (200-300 parole)
+3. <h2> - Indice dei contenuti (con link interni se possibile)
+4. <h2> - Almeno 6-8 sezioni principali che coprono ogni aspetto
+5. <h3> - Sottosezioni dettagliate per ogni H2
+6. <ul><li> - Elenchi per confronti, vantaggi, checklist
+7. <strong> - Evidenzia concetti chiave
+{'8. <h2>Domande Frequenti</h2> con 5-8 FAQ dettagliate' if include_faq else ''}
+9. <p> - Conclusione con riepilogo e CTA
+NOTA: La pillar page deve essere la risorsa piu completa disponibile sul tema. Copri ogni angolo.
+"""
+    else:
+        prompt += f"""Struttura obbligatoria ARTICOLO BLOG:
 1. <h1> - Titolo principale SEO ottimizzato (UNICO in tutto il testo)
 2. <p> - Paragrafo introduttivo (150-200 parole)
 3. <h2> - Sezioni principali (almeno 3-4)
@@ -440,8 +468,10 @@ Struttura obbligatoria:
 5. <ul><li> - Elenchi puntati per vantaggi
 6. <strong> - Evidenzia 2-3 concetti chiave per paragrafo
 7. <p> finale con call to action
-
 {'8. <h2>Domande Frequenti</h2> con 3-5 FAQ' if include_faq else ''}
+"""
+
+    prompt += f"""
 
 === REGOLE SEO ===
 1. LUNGHEZZA: Minimo {lunghezza_target} parole
