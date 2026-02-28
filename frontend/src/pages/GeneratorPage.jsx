@@ -361,6 +361,82 @@ export const GeneratorPage = () => {
 
               <Separator />
 
+              {/* Content Type & Strategy */}
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-500">Tipo Contenuto</Label>
+                  <Select value={contentType} onValueChange={setContentType}>
+                    <SelectTrigger data-testid="content-type-select" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="articolo_blog">Articolo Blog</SelectItem>
+                      <SelectItem value="pillar_page">Pillar Page (lungo)</SelectItem>
+                      <SelectItem value="landing_page">Landing Page</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Strategy summary from client config */}
+                {client?.configuration?.content_strategy && (
+                  <div className="p-2.5 bg-slate-50 rounded-lg text-xs space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Funnel</span>
+                      <Badge variant="outline" className="text-xs h-5">{client.configuration.content_strategy.funnel_stage || 'TOFU'}</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Modello Copy</span>
+                      <Badge variant="outline" className="text-xs h-5">{client.configuration.content_strategy.modello_copywriting || 'PAS'}</Badge>
+                    </div>
+                    {client.configuration.content_strategy.leve_psicologiche?.length > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Leve</span>
+                        <span className="text-slate-700">{client.configuration.content_strategy.leve_psicologiche.length} attive</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Expandable Brief */}
+                <button
+                  type="button"
+                  onClick={() => setShowBrief(!showBrief)}
+                  className="w-full flex items-center justify-between p-2.5 rounded-lg border border-dashed border-slate-300 text-xs text-slate-600 hover:border-slate-400 transition-colors"
+                  data-testid="toggle-brief-btn"
+                >
+                  <span className="font-medium">Brief personalizzato (opzionale)</span>
+                  {showBrief ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+                {showBrief && (
+                  <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">CTA per questa generazione</Label>
+                      <Textarea
+                        value={briefCta}
+                        onChange={(e) => setBriefCta(e.target.value)}
+                        placeholder="Es: Prenota ora il tuo veicolo..."
+                        rows={2}
+                        className="text-sm"
+                        data-testid="brief-cta-input"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Note aggiuntive</Label>
+                      <Textarea
+                        value={briefNotes}
+                        onChange={(e) => setBriefNotes(e.target.value)}
+                        placeholder="Istruzioni specifiche per questa generazione..."
+                        rows={2}
+                        className="text-sm"
+                        data-testid="brief-notes-input"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
               {/* WordPress toggle */}
               <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200">
                 <div className="flex items-center gap-2">
