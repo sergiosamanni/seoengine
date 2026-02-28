@@ -264,6 +264,12 @@ export const GscPage = () => {
             {!siteUrl && (
               <p className="text-xs text-slate-400 text-center">Inserisci e salva l'URL del sito prima di connetterti</p>
             )}
+            {redirectUri && (
+              <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="text-xs font-medium text-slate-600 mb-1">URI di reindirizzamento autorizzato (da aggiungere in Google Cloud Console):</p>
+                <code className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded break-all block" data-testid="gsc-redirect-uri">{redirectUri}</code>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (
