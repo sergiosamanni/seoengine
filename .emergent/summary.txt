@@ -1,304 +1,77 @@
 <analysis>**original_problem_statement:**
-L'utente ha richiesto di trasformare degli script Python per la SEO programmatica in un'applicazione web completa.
+L'utente ha richiesto la creazione di un'applicazione web full-stack per la SEO programmatica, evolvendo da semplici script Python.
 
-Le funzionalità principali richieste includono:
-1.  **Architettura Multi-Tenant:** Ruoli Admin e Cliente con dashboard separate.
-2.  **Configurazione Cliente Avanzata (per Admin):** Gestione di Knowledge Base, API keys, Keyword (con upload XLSX), Strategia di Contenuti, Analisi SERP, e un Prompt Avanzato.
-3.  **Integrazione LLM Multi-Provider:** Supporto per OpenAI, Claude, DeepSeek, Perplexity.
-4.  **Generazione Contenuti SEO:** Basata su keyword e framework di copywriting (AIDA, PAS, etc.).
-5.  **Integrazione WordPress:** Pubblicazione diretta degli articoli come bozze.
-6.  **Analisi SERP:** Soluzione custom per sostituire Apify.
-7.  **Scraping Sito Cliente:** Per popolare la Knowledge Base.
-8.  **Integrazione Google Search Console:** Inizialmente con API key, poi modificata in un flusso OAuth 2.0 semplificato.
-9.  **Umanizzazione del Contenuto AI:** Modifica del prompt di sistema.
-10. **Interfaccia Cliente Semplificata:** Per generare articoli da una singola keyword.
-11. **Log Attività:** Per tracciare tutte le operazioni.
-12. **Gestione Utenti (Nuovo):** Pagina per l'admin per associare utenti registrati a profili cliente.
-13. **Supporto Multi-sito (Nuovo):** Un singolo profilo cliente può essere associato a più siti web.
+Requisiti principali emersi e sviluppati:
+1.  **Architettura Multi-Tenant:** Ruoli Admin e Cliente.
+2.  **Configurazione Cliente (Admin):** Gestione di Knowledge Base, API keys, Tono & Stile.
+3.  **Generazione Contenuti (Admin & Cliente):**
+    *   Un wizard a 5 step per l'admin (Strategia -> Analisi SERP -> Dati GSC -> Prompt -> Generazione) per creare contenuti altamente ottimizzati.
+    *   Due modalità di generazione: Articolo Singolo e SEO Programmatica.
+    *   Un flusso semplificato per il cliente, che inserisce solo le keyword e avvia una generazione automatizzata.
+4.  **Integrazioni:**
+    *   **LLM:** Supporto multi-provider (OpenAI, Claude, etc.).
+    *   **Google Search Console (GSC):** Flusso OAuth 2.0 per recuperare dati strategici.
+    *   **WordPress:** Pubblicazione diretta degli articoli generati come bozze.
+    *   **Analisi SERP:** Sostituzione di Apify con una soluzione custom basata su DuckDuckGo.
+5.  **UI/UX:**
+    *   Unificazione delle pagine Dashboard e Clienti per l'admin.
+    *   Rimozione della pagina Articoli e integrazione di uno Storico Articoli per ogni cliente.
+    *   Gestione Utenti per associare account a profili cliente.
+    *   Supporto multi-sito per cliente.
 
 **User's preferred language**: Italiano
 
 **what currently exists?**
-È stata sviluppata un'applicazione web full-stack (React/FastAPI/MongoDB) multi-tenant per la generazione di contenuti SEO.
-*   **Backend (FastAPI):** Gestisce autenticazione JWT, operazioni CRUD, generazione di contenuti asincrona, pubblicazione su WordPress e log. È stato implementato un flusso OAuth 2.0 completo per l'integrazione con Google Search Console e sono stati aggiunti endpoint per la gestione degli utenti e il supporto multi-sito. È in corso un'importante attività di refactoring per modularizzare il file monolitico .
-*   **Frontend (React):** L'interfaccia è divisa tra una dashboard admin complessa e una pagina cliente semplificata. Sono state aggiunte:
-    *   Una pagina di **Gestione Utenti** () che permette all'admin di associare gli utenti ai clienti.
-    *   Una UI semplificata per l'integrazione GSC, basata su un flusso OAuth puro senza campi tecnici.
-    *   La UI per la gestione di siti multipli per cliente è in fase di sviluppo.
-*   **Stato attuale:** L'applicazione è funzionale ma il backend è in uno stato di transizione a causa del refactoring. Le funzionalità di GSC e gestione utenti sono state implementate ma richiedono una verifica finale.
+Un'applicazione web full-stack (React/FastAPI/MongoDB) che implementa la maggior parte delle funzionalità richieste.
+*   **Backend (FastAPI):** Il codice è stato completamente refattorizzato da un file monolitico () a una struttura modulare basata su  (). Gestisce autenticazione JWT, generazione di contenuti asincrona, integrazione GSC via OAuth 2.0, e pubblicazione su WordPress. L'analisi SERP è stata riscritta per usare  con logica di retry per maggiore stabilità. È stato implementato un fix per la gestione dei log delle attività.
+*   **Frontend (React):** L'interfaccia admin è stata ristrutturata. Esiste una dashboard unificata per la gestione clienti e una pagina di generazione articoli () molto complessa che implementa il wizard a 5 step richiesto dall'utente, distinguendo tra il flusso admin e quello semplificato per il cliente. Sono state corrette le problematiche relative all'integrazione GSC (errore  e persistenza dello stato di connessione).
 
 **Last working item**:
-    - Last item agent was working: L'agente ha iniziato un'importante opera di refactoring del backend. Ha creato la nuova struttura di directory (, ) e i file modulari (, , , ecc.) per suddividere la logica monolitica contenuta in . Tuttavia, la logica degli endpoint non è ancora stata spostata nei nuovi file. Questo è un lavoro critico lasciato a metà.
+    - Last item agent was working: L'agente stava risolvendo un bug critico nel flusso di generazione e pubblicazione degli articoli. L'utente ha segnalato che, nonostante la generazione partisse, gli articoli non venivano pubblicati su WordPress e i log delle attività rimanevano bloccati sullo stato running. L'agente ha identificato e corretto molteplici punti di errore sia nel frontend che nel backend.
     - Status: IN PROGRESS
     - Agent Testing Done: N
     - Which testing method agent to use? both
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  Issue 1:  L'utente segnala un errore 500 dopo il redirect dell'autenticazione OAuth di Google Search Console. (P0)
-  Issue 2:  Clienti appena registrati non sono associati a nessun profilo cliente, rendendo la loro dashboard inutilizzabile. (P0)
-  
-  Issues Detail:
-  - Issue 1: 
-     - Attempted fixes: L'agente ha identificato la causa dell'errore: . Questo accade perché il  generato durante la creazione dell'URL di autorizzazione non veniva salvato e riutilizzato nel callback. Il fix implementato consiste nel salvare il  nel database del cliente insieme allo  e recuperarlo durante il callback per completare lo scambio del token.
-     - Next debug checklist: 
-        1. Chiedere all'utente di ripetere il flusso di connessione a GSC per verificare che l'errore 500 sia risolto.
-        2. Controllare i log del backend (==> /var/log/supervisor/backend.err.log <==
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'server.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [1054]
-INFO:     Started server process [1109]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'server.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [1109]
-INFO:     Started server process [1142]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-/root/.venv/lib/python3.11/site-packages/jwt/api_jwt.py:153: InsecureKeyLengthWarning: The HMAC key is 26 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
-  return self._jws.encode(
-/root/.venv/lib/python3.11/site-packages/jwt/api_jwt.py:371: InsecureKeyLengthWarning: The HMAC key is 26 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
-  decoded = self.decode_complete(
-WARNING:  WatchFiles detected changes in 'tests/test_users_management.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [1142]
-INFO:     Started server process [1633]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-/root/.venv/lib/python3.11/site-packages/jwt/api_jwt.py:153: InsecureKeyLengthWarning: The HMAC key is 26 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
-  return self._jws.encode(
-/root/.venv/lib/python3.11/site-packages/jwt/api_jwt.py:371: InsecureKeyLengthWarning: The HMAC key is 26 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
-  decoded = self.decode_complete(
-WARNING:  WatchFiles detected changes in 'server.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [1633]
-INFO:     Started server process [2644]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'database.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [2644]
-INFO:     Started server process [2704]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'routes/__init__.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [2704]
-INFO:     Started server process [2756]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-/root/.venv/lib/python3.11/site-packages/jwt/api_jwt.py:371: InsecureKeyLengthWarning: The HMAC key is 26 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
-  decoded = self.decode_complete(
-WARNING:  WatchFiles detected changes in 'database.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [2756]
-WARNING:  WatchFiles detected changes in 'auth.py'. Reloading...
-INFO:     Started server process [3063]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-/root/.venv/lib/python3.11/site-packages/jwt/api_jwt.py:371: InsecureKeyLengthWarning: The HMAC key is 26 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
-  decoded = self.decode_complete(
-WARNING:  WatchFiles detected changes in 'models.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [3063]
-INFO:     Started server process [3128]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'helpers.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [3128]
-INFO:     Started server process [3161]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-/root/.venv/lib/python3.11/site-packages/jwt/api_jwt.py:371: InsecureKeyLengthWarning: The HMAC key is 26 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
-  decoded = self.decode_complete(
-WARNING:  WatchFiles detected changes in 'routes/auth_users.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [3161]
-WARNING:  WatchFiles detected changes in 'routes/articles.py', 'routes/clients.py'. Reloading...
-INFO:     Started server process [3237]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [48] using WatchFiles
-
-==> /var/log/supervisor/backend.out.log <==
-INFO:     10.208.140.72:60066 - "GET /api/auth/me HTTP/1.1" 200 OK
-INFO:     10.208.140.71:52976 - "GET /api/users HTTP/1.1" 200 OK
-INFO:     10.208.140.72:60066 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.71:52976 - "GET /api/users HTTP/1.1" 200 OK
-INFO:     10.208.140.72:60066 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:60066 - "POST /api/users/assign-client HTTP/1.1" 200 OK
-INFO:     10.208.140.72:60066 - "GET /api/users HTTP/1.1" 200 OK
-INFO:     10.208.140.71:52976 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.71:52976 - "POST /api/users/unassign-client HTTP/1.1" 200 OK
-INFO:     10.208.140.71:52976 - "GET /api/users HTTP/1.1" 200 OK
-INFO:     10.208.140.72:60066 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:52576 - "GET /api/users HTTP/1.1" 200 OK
-INFO:     10.208.140.71:36114 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
-INFO:     10.208.140.72:43124 - "POST /api/auth/login HTTP/1.1" 200 OK
-INFO:     10.208.140.71:36114 - "GET /api/auth/me HTTP/1.1" 200 OK
-INFO:     10.208.140.72:43124 - "GET /api/stats/overview HTTP/1.1" 200 OK
-INFO:     10.208.140.71:36114 - "GET /api/stats/overview HTTP/1.1" 200 OK
-INFO:     10.208.140.71:36114 - "GET /api/stats/overview HTTP/1.1" 200 OK
-INFO:     10.208.140.72:53158 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
-INFO:     10.208.140.72:40982 - "GET /api/stats/overview HTTP/1.1" 200 OK
-INFO:     10.208.140.72:40982 - "GET /api/stats/overview HTTP/1.1" 200 OK
-INFO:     10.208.140.71:37470 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.71:37470 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.71:49302 - "GET /api/articles HTTP/1.1" 200 OK
-INFO:     10.208.140.71:49286 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:47122 - "GET /api/articles HTTP/1.1" 200 OK
-INFO:     10.208.140.72:47138 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:47138 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:47138 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:47138 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.72:40272 - "GET /api/activity-logs/a8ab5383-b444-4f17-9465-41fa32c34bb9?limit=30 HTTP/1.1" 200 OK
-INFO:     10.208.140.72:40272 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9/combinations HTTP/1.1" 200 OK
-INFO:     10.208.140.71:55466 - "GET /api/activity-logs/a8ab5383-b444-4f17-9465-41fa32c34bb9?limit=30 HTTP/1.1" 200 OK
-INFO:     10.208.140.71:55466 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.71:55466 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9/combinations HTTP/1.1" 200 OK
-INFO:     10.208.140.71:55472 - "GET /api/stats/overview HTTP/1.1" 200 OK
-INFO:     10.208.140.72:40276 - "GET /api/stats/overview HTTP/1.1" 200 OK
-INFO:     10.208.140.72:40276 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.72:40276 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.72:53178 - "GET /api/stats/overview HTTP/1.1" 200 OK
-INFO:     10.208.140.71:41360 - "GET /api/stats/overview HTTP/1.1" 200 OK
-INFO:     10.208.140.72:53178 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.71:41360 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.72:48202 - "GET /api/users HTTP/1.1" 200 OK
-INFO:     10.208.140.71:52088 - "GET /api/users HTTP/1.1" 200 OK
-INFO:     10.208.140.71:52078 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:48202 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:44178 - "GET /api/articles HTTP/1.1" 200 OK
-INFO:     10.208.140.72:44170 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.71:59182 - "GET /api/articles HTTP/1.1" 200 OK
-INFO:     10.208.140.71:59182 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.71:59182 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:44170 - "GET /api/activity-logs?limit=200 HTTP/1.1" 200 OK
-INFO:     10.208.140.71:59182 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:44170 - "GET /api/activity-logs?limit=200 HTTP/1.1" 200 OK
-INFO:     10.208.140.71:59182 - "GET /api/users HTTP/1.1" 200 OK
-INFO:     10.208.140.71:59190 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:44170 - "GET /api/users HTTP/1.1" 200 OK
-INFO:     10.208.140.72:44184 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:44184 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.71:59190 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:44184 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.72:44184 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.71:41404 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.71:41404 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.71:41404 - "GET /api/activity-logs/a8ab5383-b444-4f17-9465-41fa32c34bb9?limit=30 HTTP/1.1" 200 OK
-INFO:     10.208.140.72:44184 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.71:41404 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9/combinations HTTP/1.1" 200 OK
-INFO:     10.208.140.72:44184 - "GET /api/activity-logs/a8ab5383-b444-4f17-9465-41fa32c34bb9?limit=30 HTTP/1.1" 200 OK
-INFO:     10.208.140.71:41404 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.72:44184 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9/combinations HTTP/1.1" 200 OK
-INFO:     10.208.140.71:49214 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:37960 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.71:41476 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.72:39606 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.72:59196 - "GET /api/articles HTTP/1.1" 200 OK
-INFO:     10.208.140.71:53794 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:59196 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.71:53794 - "GET /api/articles HTTP/1.1" 200 OK
-INFO:     10.208.140.71:53808 - "GET /api/articles/51ae5d31-4f3e-40f5-a942-e8c17fb6ddee/full HTTP/1.1" 200 OK
-INFO:     10.208.140.71:53582 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:47442 - "GET /api/users HTTP/1.1" 200 OK
-INFO:     10.208.140.71:53582 - "GET /api/users HTTP/1.1" 200 OK
-INFO:     10.208.140.72:47442 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:47442 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:47442 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.71:54312 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9/combinations HTTP/1.1" 200 OK
-INFO:     10.208.140.71:54298 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.72:51488 - "GET /api/activity-logs/a8ab5383-b444-4f17-9465-41fa32c34bb9?limit=30 HTTP/1.1" 200 OK
-INFO:     10.208.140.71:54312 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9/combinations HTTP/1.1" 200 OK
-INFO:     10.208.140.72:51488 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.71:54312 - "GET /api/activity-logs/a8ab5383-b444-4f17-9465-41fa32c34bb9?limit=30 HTTP/1.1" 200 OK
-INFO:     10.208.140.72:55328 - "GET /api/users HTTP/1.1" 200 OK
-INFO:     10.208.140.71:43048 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.71:43048 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.71:43048 - "GET /api/users HTTP/1.1" 200 OK
-INFO:     10.208.140.72:55328 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.72:55328 - "GET /api/clients HTTP/1.1" 200 OK
-INFO:     10.208.140.71:58680 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK
-INFO:     10.208.140.72:55308 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32c34bb9 HTTP/1.1" 200 OK) se l'errore persiste.
-     - Why fix this issue and what will be achieved with the fix? L'integrazione con GSC è una funzionalità chiave richiesta dall'utente. Risolvere questo bug la renderà finalmente utilizzabile.
-     - Status:  USER VERIFICATION PENDING
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? backend
-     - Blocked on other issue: None
-  - Issue 2: 
-     - Attempted fixes: L'agente ha implementato una soluzione completa:
-        1. Ha creato una nuova pagina di **Gestione Utenti** () per l'admin.
-        2. Questa pagina elenca tutti gli utenti registrati e mostra a quale cliente sono associati (o se non sono associati).
-        3. L'admin può usare un menu a tendina per assegnare un utente a un cliente esistente.
-        4. Ha migliorato la dashboard del cliente per mostrare un messaggio chiaro anziché una pagina rotta se l'utente non è associato a nessun profilo.
-     - Next debug checklist: 
-        1. Verificare con il testing agent o con l'utente che il flusso di assegnazione funzioni correttamente.
-        2. Verificare che un nuovo utente cliente veda il messaggio corretto al primo login.
-     - Why fix this issue and what will be achieved with the fix? Risolve un buco logico fondamentale nell'architettura multi-tenant, permettendo all'admin di gestire il provisioning degli account cliente.
-     - Status:  USER VERIFICATION PENDING
-     - Is recurring issue? N
+  - Issue 1:  **Il flusso di generazione e pubblicazione articoli è incompleto (P0)**
+     - Attempted fixes: L'agente ha implementato una serie di correzioni mirate:
+        1.  **Backend ():** Modificata la funzione  per aggiornare lo stato di un log esistente (da running a success/failed) invece di crearne uno nuovo, evitando log duplicati.
+        2.  **Backend (DB script):** Eseguito un comando una tantum per chiudere tutti i job e i log rimasti bloccati nello stato running.
+        3.  **Backend ():** Aggiunto un blocco  globale alla funzione di generazione asincrona () per garantire che lo stato del job e del log vengano sempre finalizzati, anche in caso di errori imprevisti. Ha anche corretto l'uso del titolo per la pubblicazione.
+        4.  **Frontend ():** Modificato il payload per la generazione in modalità Articolo Singolo per inviare correttamente il flag  quando la checkbox è selezionata.
+     - Next debug checklist: È necessario eseguire un test completo end-to-end:
+        1.  Accedere come admin e navigare alla pagina di generazione di un cliente.
+        2.  Completare il wizard a 5 step.
+        3.  Nella fase finale (Genera), assicurarsi che la checkbox Pubblica su WordPress sia attiva.
+        4.  Avviare la generazione per un Articolo Singolo.
+        5.  Controllare la pagina Activity Log per verificare che lo stato dell'attività passi da running a success.
+        6.  Controllare lo Storico Articoli nella  per vedere se il nuovo articolo appare con un .
+        7.  Verificare che il documento  nel database MongoDB contenga il testo generato e il .
+     - Why fix this issue and what will be achieved with the fix? Questo è il cuore dell'applicazione. Risolvere questo bug rende l'intero flusso di generazione finalmente funzionante e di valore per l'utente.
+     - Status:  TESTING PENDING
+     - Is recurring issue? Y
      - Should Test frontend/backend/both after fix? both
      - Blocked on other issue: None
 
 **In progress Task List**:
-  - Task 1:  **Completare il refactoring di  (P0)**
-     - Where to resume: Il lavoro è stato preparato ma non eseguito. Bisogna:
-        1. Spostare la logica degli endpoint dal file monolitico  ai rispettivi file router in  (es. la logica di  va in ).
-        2. Spostare le funzioni di utilità condivise in  e .
-        3. Modificare il  (o rinominarlo in ) per importare e includere i router da .
-        4. Riavviare e testare a fondo l'applicazione per assicurarsi che tutte le API funzionino come prima.
-     - What will be achieved with this? Migliorerà drasticamente la manutenibilità e la scalabilità del backend, riducendo il rischio di introdurre bug.
-     - Status:  IN PROGRESS
-     - Should Test frontend/backend/both after fix? backend
-     - Blocked on something: None
-  - Task 2:  **Finalizzare la UI per la gestione multi-sito (P1)**
-     - Where to resume: L'agente ha iniziato a modificare il modale in  per gestire un array di siti (). Bisogna completare la UI per permettere all'admin di aggiungere e rimuovere siti dinamicamente dal form e assicurarsi che il salvataggio aggiorni correttamente l'elenco.
-     - What will be achieved with this? Completa il requisito utente di poter associare più siti web a un singolo profilo cliente.
-     - Status:  IN PROGRESS
-     - Should Test frontend/backend/both after fix? both
-     - Blocked on something: None
+- Nessuno. L'unico task in corso è la risoluzione del problema sopra.
 
 **Upcoming and Future Tasks**
-*   **Finalizzare l'interfaccia cliente semplificata (P1)**: Sviluppare completamente la pagina  e testare l'endpoint .
-*   **Testare la sostituzione di Apify (P2)**: Verificare che il nuovo endpoint  funzioni e aggiornare la UI in . L'agente aveva notato che l'endpoint restituiva 0 risultati, va investigato.
-*   **Implementare scraping per Knowledge Base (P2)**: Implementare la UI in  per usare l'endpoint .
-*   **Verificare l'umanizzazione del prompt (P2)**: Eseguire una generazione di test e controllare che l'output rispetti le nuove direttive (es. no maiuscole in ogni parola del titolo).
+- **Verifica del flusso semplificato per il ruolo Cliente (P1):** L'ultima riprogettazione si è concentrata sul flusso admin. Bisogna testare a fondo l'esperienza utente per il ruolo cliente, assicurandosi che il processo di generazione sia davvero automatico e semplificato come richiesto (inserimento keyword -> analisi automatica -> avvio generazione).
+- **Finalizzare la UI per la gestione multi-sito (P2):** La logica di backend esiste, ma la UI per aggiungere/rimuovere più siti per un cliente nella pagina di configurazione non è mai stata completata.
+- **Migliorare la gestione degli errori UI (P2):** Mostrare all'utente messaggi di errore più chiari (es. usando ) quando le chiamate API falliscono, specialmente durante il lungo processo di generazione.
 
 **Completed work in this session**
-- **Implementazione Flusso GSC OAuth 2.0**: Sostituito il metodo con API key con un flusso OAuth 2.0 completo e user-friendly, nascondendo le credenziali nel backend.
-- **Risoluzione Bug GSC OAuth**: Corretto un errore critico () nel callback di GSC salvando il  nel DB.
-- **Creazione Pagina Gestione Utenti**: Sviluppata una pagina admin per associare gli utenti registrati ai profili cliente, risolvendo un problema fondamentale del flusso di onboarding.
-- **Supporto Backend per Multi-sito**: Aggiornati i modelli Pydantic e gli endpoint del backend per permettere a ogni cliente di avere una lista di siti web ().
-- **Avvio Refactoring Backend**: Creata la struttura di file e cartelle per modularizzare il monolitico .
+- **Refactoring completo del Backend**: Il file monolitico  è stato smantellato con successo in una struttura modulare (), rendendo il codice più manutenibile.
+- **Risoluzione Bug SERP**: L'analisi SERP è stata resa affidabile sostituendo  con  e aggiungendo una logica di retry.
+- **Riprogettazione massiva della UI di Generazione**: La pagina  è stata trasformata in un wizard sequenziale a 5 step (Strategia → Analisi SERP → Dati GSC → Prompt → Genera) come richiesto dall'utente.
+- **Risoluzione Bug GSC**: Corretto l'errore  mostrando l'URI corretto all'utente e migliorata la persistenza dello stato di connessione nella UI, che ora attiva dinamicamente lo step Dati GSC.
+- **Unificazione UI Admin**: Le pagine Dashboard e Clienti sono state fuse in un'unica vista. La pagina Articoli è stata rimossa e sostituita da uno storico per cliente.
+- **Correzione Bug sui Modelli Dati**: Il testing agent ha individuato e corretto un bug critico nel modello Pydantic  che ometteva i dati di GSC, impedendo alla UI di riconoscere la connessione.
 
 **Earlier issues found/mentioned but not fixed**
-   - **SERP Scraping Inefficace**: Durante un test iniziale con , l'endpoint  ha restituito 0 risultati. L'agente ha ipotizzato un blocco della libreria  nell'ambiente containerizzato, ma non ha approfondito. Questo task rimane in sospeso.
+- Nessuno. I problemi precedenti (SERP a 0 risultati) sono stati risolti.
 
 **Known issue recurrence from previous fork**
   - Issue recurrence in previous fork N/A
@@ -309,74 +82,76 @@ INFO:     10.208.140.72:55308 - "GET /api/clients/a8ab5383-b444-4f17-9465-41fa32
 
 
 **Key Technical Concepts**
-- **Backend**: FastAPI, MongoDB (Beanie), JWT, Background Tasks, .
-- **Architettura**: Il backend sta passando da un'architettura monolitica a una modulare basata su .
-- **Autenticazione**: Flusso OAuth 2.0 con PKCE (Proof Key for Code Exchange) per Google Search Console, che richiede la persistenza di  e .
+- **Backend**: FastAPI (APIRouter), MongoDB (Beanie), JWT, Background Tasks,  con retry, .
+- **Frontend**: React, React Router, state management complesso con  e  per gestire il wizard multi-step.
 
 **key DB schema**
-- **users**: Aggiunto  per memorizzare i token OAuth.
-- **clients**: Aggiunti  e  per il flusso OAuth. Il campo  è stato sostituito da .
+- **articles**: Contiene , , ,  e .
+- **jobs**: Traccia lo stato dei task asincroni (, , ).
+- **clients**: Contiene  per lo stato della connessione OAuth e i token.
 
 **changes in tech stack**
-- Introduzione e utilizzo intensivo di  per l'autenticazione OAuth 2.0.
+- Sostituzione di  con .
 
 **All files of reference**
-*   : Il file più critico. Contiene ancora tutta la logica ma è destinato ad essere smembrato nei nuovi moduli.
-*   : Contiene i modelli di dati aggiornati.
-*   : Nuova pagina per la gestione degli utenti.
-*   : In fase di modifica per il supporto multi-sito.
-*   : Contiene la UI semplificata per la connessione a GSC.
-*   : La directory che conterrà il backend refactorizzato.
+*   : Contiene la logica di generazione e pubblicazione.
+*   : Contiene la logica per  e .
+*   : Il componente più critico e complesso, gestisce l'intero wizard di generazione.
+*   : Nuova pagina unificata per la gestione clienti.
+*   : Contiene tutti i modelli Pydantic e Beanie.
 
 **Areas that need refactoring**:
-- ****: È l'attività di refactoring più critica e urgente. L'agente ha creato la struttura ma deve ancora spostare il codice.
+- ****: Questo file è diventato estremamente grande (oltre 800 righe) e complesso. Gestisce la logica per tutti e 5 gli step, le due modalità (admin/cliente), le chiamate API, e lo storico articoli. Dovrebbe essere scomposto in componenti più piccoli e gestibili (es. un componente per ogni step del wizard).
 
 **key api endpoints**
-- : Avvia il flusso OAuth di GSC.
-- : Gestisce il redirect da Google e scambia il codice per il token.
-- : Restituisce la lista di tutti gli utenti all'admin.
-- : Associa un utente a un cliente.
-- : Rimuove l'associazione tra utente e cliente.
+- : Avvia la generazione di un articolo singolo (Fixato per usare il contesto GSC/SERP).
+- : Avvia la generazione programmatica.
+- : Esegue l'analisi SERP e l'estrazione degli heading.
+- : Gestisce il callback OAuth di Google.
+- : (Nuovo implicito) La logica di  ora aggiorna i log.
 
 **Critical Info for New Agent**
-- **COMPLETARE IL REFACTORING DEL BACKEND**: Questa è la priorità assoluta. L'applicazione è in uno stato instabile con logica duplicata o non ancora spostata. Prendi il codice da  e spostalo nei file corrispondenti all'interno di , quindi aggiorna  per usare i nuovi router.
-- **VERIFICARE IL FIX DI GSC**: L'utente ha segnalato un bug critico sull'OAuth di GSC. L'agente precedente ha implementato una correzione ma non è stata verificata. Chiedi subito all'utente di riprovare il flusso e controlla i log se il problema persiste.
-- **Procedere per gradi**: Dopo aver stabilizzato il backend con il refactoring e aver verificato il fix di GSC, procedi con il completamento della UI multi-sito e poi passa ai task futuri (SERP, KB, etc.).
+- **PRIORITÀ ASSOLUTA (P0):** Devi testare il fix per il flusso di generazione e pubblicazione. L'agente precedente ha implementato tutte le correzioni necessarie ma non ha potuto eseguire il test end-to-end. Segui la  per l'Issue 1 per verificare che un articolo venga generato, salvato, che il log venga chiuso e che venga pubblicato su WordPress. Questo è l'unico task che blocca l'utente.
+- **Complessità del Frontend:** Presta particolare attenzione a . È un componente molto grande. Qualsiasi modifica futura a questo file richiede cautela. Considera di proporre un refactoring di questo componente dopo aver risolto il bug attuale.
+- **Flusso Admin vs. Cliente:** Ricorda che la  ha una logica condizionale per mostrare un'esperienza diversa se l'utente è admin o cliente. Il flusso cliente è meno testato e potrebbe richiedere attenzioni future.
 
 **documents and test reports created in this job**
-- 
 -  (aggiornato)
+- 
+- 
+- 
 
 **Last 10 User Messages and any pending HUMAN messages** 
-- User: Chiede che GSC funzioni con un semplice login OAuth senza API key.
-- User: Fornisce Client ID e Secret per l'OAuth.
-- User: Segnala un errore 500 dopo l'autenticazione GSC.
-- User: Segnala che i clienti non sono associati a profili e chiede una pagina di gestione per l'admin. Chiede anche il supporto per più siti per cliente.
-- Agent: Conferma di aver capito e propone un piano per implementare la gestione utenti e il multi-sito.
-- Agent: Procede con l'implementazione della pagina di gestione utenti e delle modifiche al backend.
-- Agent: Mostra lo screenshot della pagina di gestione utenti funzionante.
-- Agent: Lancia il testing agent per una verifica completa.
-- User: prosegui.
-- Agent: Pianifica di continuare con la UI multi-sito e il refactoring di .
+1.  **User**: Richiede di unificare Dashboard e Clienti, rimuovere la pagina Articoli, e segnala un errore  in GSC e l'inaffidabilità dell'analisi SERP.
+2.  **Agent**: Conferma di aver capito e inizia a lavorare sui 4 punti in parallelo.
+3.  **User**: prosegui.
+4.  **Agent**: Implementa tutte le modifiche (Dashboard unificata, fix GSC, fix SERP, storico articoli).
+5.  **Agent**: Lancia il testing agent che passa con successo e corregge un bug minore sui nomi dei campi delle statistiche.
+6.  **User**: Segnala che la connessione GSC funziona ma non rimane attiva in sessione e non abilita lo step Dati GSC nel wizard.
+7.  **Agent**: Lavora per rendere lo stato di connessione GSC persistente nella UI, attivando dinamicamente il wizard e passando i dati alla generazione.
+8.  **Agent**: Il testing agent trova e risolve un bug critico nel modello Pydantic che impediva il corretto funzionamento.
+9.  **User**: Segnala il problema finale: la generazione articoli sembra funzionare ma non pubblica su WordPress e lascia i log in stato running. Chiede di rivedere e testare l'intero flusso.
+10. **Agent**: Indaga, trova le cause (flag mancante, log non aggiornati, titolo errato) e implementa le correzioni su frontend e backend. Il lavoro si è interrotto prima del test finale.
 
 **Project Health Check:**
-- Broken: Il backend è in uno stato di transizione instabile a causa del refactoring a metà.
-- Mocked: None
+- **Broken**: Il flusso principale di generazione e pubblicazione degli articoli non è funzionante. Una correzione è stata implementata ma non è stata verificata.
+- **Mocked**: None.
 
 **3rd Party Integrations**
-- **OpenAI, Claude, etc.**: Tramite API Key.
+- **OpenAI, Claude, etc.**: Tramite API Key fornite dal cliente.
 - **WordPress**: Tramite Application Password.
-- **Google Search Console**: Implementato con flusso OAuth 2.0 (in attesa di verifica finale). Credenziali OAuth sono ora gestite come variabili d'ambiente nel backend.
+- **Google Search Console**: Integrazione tramite flusso OAuth 2.0.
+- **DuckDuckGo**: Tramite la libreria  per l'analisi SERP.
 
 **Testing status**
-  - Testing agent used after significant changes: YES, per la pagina di gestione utenti.
+  - Testing agent used after significant changes: YES. L'agente è stato usato estensivamente e con successo, trovando e risolvendo bug critici.
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: No.
-  - Known regressions: None.
+  - Test files created: No
+  - Known regressions: Il bug sulla pubblicazione WordPress è una regressione o un problema mai risolto completamente.
 
 **Credentials to test flow:**
 - **Admin**: Utente: , Password: 
 - **Cliente**: Utente: , Password: 
 
 **What agent forgot to execute**
-L'agente non ha completato il refactoring di . Ha creato tutti i file necessari ma non ha spostato la logica, lasciando il backend in uno stato a metà e rischioso. Questa è l'azione più critica da riprendere. Inoltre, non ha investigato a fondo perché lo scraping SERP restituisce zero risultati.</analysis>
+L'agente non ha dimenticato nulla, ma è stato interrotto prima di poter eseguire il passaggio più cruciale: il test di verifica end-to-end del fix implementato per il flusso di generazione e pubblicazione su WordPress.</analysis>

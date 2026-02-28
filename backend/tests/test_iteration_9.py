@@ -11,7 +11,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://gsc-content-builder.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://serp-wizard.preview.emergentagent.com').rstrip('/')
 TEST_CLIENT_ID = "a8ab5383-b444-4f17-9465-41fa32c34bb9"
 
 

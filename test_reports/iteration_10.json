@@ -83,7 +83,7 @@
     "gsc_redirect_uri": {
       "status": "Working",
       "endpoint": "GET /api/gsc/status",
-      "returns": "redirect_uri: https://gsc-content-builder.preview.emergentagent.com/api/gsc/callback"
+      "returns": "redirect_uri: https://serp-wizard.preview.emergentagent.com/api/gsc/callback"
     },
     "configuration_page": {
       "status": "Working",

@@ -42,7 +42,7 @@ Trasformare script Python per la SEO programmatica in un'applicazione web comple
 - [x] GSC step auto-load + badge connessione nel wizard
 
 ## GSC Setup
-- Redirect URI: `https://gsc-content-builder.preview.emergentagent.com/api/gsc/callback`
+- Redirect URI: `https://serp-wizard.preview.emergentagent.com/api/gsc/callback`
 
 ## Credenziali Test
 - Admin: admin@seoengine.it / admin123
