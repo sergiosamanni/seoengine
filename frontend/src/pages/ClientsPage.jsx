@@ -40,7 +40,9 @@ import {
   ExternalLink,
   Settings,
   PenTool,
-  BarChart3
+  BarChart3,
+  Globe,
+  X
 } from 'lucide-react';
 import {
   DropdownMenu,
