@@ -18,6 +18,19 @@ logger = logging.getLogger("server")
 router = APIRouter()
 
 
+def _truncate_meta_desc(md: str) -> str:
+    """Ensure meta description ends with a complete word/sentence, max 155 chars."""
+    if len(md) <= 155:
+        return md
+    cut = md[:152]
+    for end_char in ['.', '!', '?']:
+        last_end = cut.rfind(end_char)
+        if last_end > 80:
+            return cut[:last_end + 1]
+    last_space = cut.rfind(' ')
+    return (cut[:last_space].rstrip(',;- ') + ".") if last_space > 80 else (cut.rstrip(',;- ') + ".")
+
+
 # ============== ARTICLES CRUD ==============
 
 @router.get("/articles", response_model=List[ArticleResponse])
