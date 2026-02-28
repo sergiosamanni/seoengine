@@ -335,57 +335,72 @@ async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp,
     provider = llm_config.get("provider", "openai")
     titolo = titolo_suggerito or keyword.strip()
     await log_activity(client_id, "article_generate", "running", {"titolo": titolo, "step": "generazione"})
-    content = None
-    gen_error = None
-    for attempt in range(3):
-        try:
-            user_prompt = f"{titolo}\n\nArgomento specifico: {topic}" if topic else titolo
-            content = await generate_with_llm(provider, llm_config["api_key"],
-                llm_config.get("modello", "gpt-4-turbo-preview"), llm_config.get("temperatura", 0.7),
-                system_prompt, user_prompt)
-            break
-        except Exception as e:
-            gen_error = str(e)
-            if attempt < 2:
-                await asyncio.sleep(2 ** attempt)
-    article_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
-    result = {"titolo": titolo, "generation_status": "pending", "publish_status": "pending"}
-    if not content:
-        await db.articles.insert_one({"id": article_id, "client_id": client_id, "titolo": titolo,
-            "contenuto": f"Errore: {gen_error}", "stato": "failed", "wordpress_post_id": None,
-            "created_at": now, "published_at": None, "combination": combo})
-        result["id"] = article_id
-        result["generation_status"] = "failed"
-        await log_activity(client_id, "article_generate", "failed", {"titolo": titolo, "error": gen_error})
-    else:
-        seo_metadata = generate_seo_metadata(titolo, content, kb, combo)
-        await db.articles.insert_one({"id": article_id, "client_id": client_id, "titolo": titolo,
-            "contenuto": content, "stato": "generated", "wordpress_post_id": None, "created_at": now,
-            "published_at": None, "combination": combo, "seo_metadata": seo_metadata})
-        result["id"] = article_id
-        result["generation_status"] = "success"
-        await log_activity(client_id, "article_generate", "success", {"titolo": titolo, "article_id": article_id})
-        if publish_to_wp:
+    try:
+        content = None
+        gen_error = None
+        for attempt in range(3):
             try:
-                wp_result = await publish_to_wordpress(url=wp_config["url_api"], username=wp_config["utente"],
-                    password=wp_config["password_applicazione"], title=titolo, content=content,
-                    wp_status=wp_config.get("stato_pubblicazione", "draft"), seo_metadata=seo_metadata, tags=seo_metadata.get("tags", []))
-                await db.articles.update_one({"id": article_id}, {"$set": {"stato": "published",
-                    "wordpress_post_id": str(wp_result["post_id"]), "wordpress_link": wp_result.get("link"),
-                    "published_at": datetime.now(timezone.utc).isoformat()}})
-                result["publish_status"] = "success"
-                await log_activity(client_id, "wordpress_publish", "success", {"titolo": titolo, "post_id": wp_result["post_id"]})
+                user_prompt = f"{titolo}\n\nArgomento specifico: {topic}" if topic else titolo
+                content = await generate_with_llm(provider, llm_config["api_key"],
+                    llm_config.get("modello", "gpt-4-turbo-preview"), llm_config.get("temperatura", 0.7),
+                    system_prompt, user_prompt)
+                break
             except Exception as e:
-                await db.articles.update_one({"id": article_id}, {"$set": {"stato": "publish_failed", "publish_error": str(e)}})
-                result["publish_status"] = "failed"
-                await log_activity(client_id, "wordpress_publish", "failed", {"titolo": titolo, "error": str(e)})
+                gen_error = str(e)
+                if attempt < 2:
+                    await asyncio.sleep(2 ** attempt)
+        article_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        result = {"titolo": titolo, "generation_status": "pending", "publish_status": "pending"}
+        if not content:
+            await db.articles.insert_one({"id": article_id, "client_id": client_id, "titolo": titolo,
+                "contenuto": f"Errore: {gen_error}", "contenuto_html": f"<p>Errore: {gen_error}</p>",
+                "keyword_principale": keyword, "meta_description": "",
+                "stato": "failed", "wordpress_post_id": None,
+                "created_at": now, "published_at": None, "combination": combo})
+            result["id"] = article_id
+            result["generation_status"] = "failed"
+            result["generation_error"] = gen_error
+            await log_activity(client_id, "article_generate", "failed", {"titolo": titolo, "error": gen_error})
         else:
-            result["publish_status"] = "skipped"
-    await db.jobs.update_one({"id": job_id}, {"$set": {"status": "completed", "completed": 1, "results": [result],
-        "summary": {"total": 1, "generated_ok": 1 if result["generation_status"] == "success" else 0,
-                     "published_ok": 1 if result["publish_status"] == "success" else 0},
-        "finished_at": datetime.now(timezone.utc).isoformat()}})
+            seo_metadata = generate_seo_metadata(titolo, content, kb, combo)
+            await db.articles.insert_one({"id": article_id, "client_id": client_id, "titolo": titolo,
+                "contenuto": content, "contenuto_html": content,
+                "keyword_principale": keyword,
+                "meta_description": seo_metadata.get("meta_description", ""),
+                "stato": "generated", "wordpress_post_id": None, "created_at": now,
+                "published_at": None, "combination": combo, "seo_metadata": seo_metadata})
+            result["id"] = article_id
+            result["generation_status"] = "success"
+            await log_activity(client_id, "article_generate", "success", {"titolo": titolo, "article_id": article_id})
+            if publish_to_wp and wp_config.get("url_api") and wp_config.get("utente") and wp_config.get("password_applicazione"):
+                try:
+                    await log_activity(client_id, "wordpress_publish", "running", {"titolo": titolo})
+                    wp_result = await publish_to_wordpress(url=wp_config["url_api"], username=wp_config["utente"],
+                        password=wp_config["password_applicazione"], title=titolo, content=content,
+                        wp_status=wp_config.get("stato_pubblicazione", "draft"), seo_metadata=seo_metadata, tags=seo_metadata.get("tags", []))
+                    await db.articles.update_one({"id": article_id}, {"$set": {"stato": "published",
+                        "wordpress_post_id": str(wp_result["post_id"]), "wordpress_link": wp_result.get("link"),
+                        "published_at": datetime.now(timezone.utc).isoformat()}})
+                    result["publish_status"] = "success"
+                    result["wordpress_link"] = wp_result.get("link")
+                    await log_activity(client_id, "wordpress_publish", "success", {"titolo": titolo, "post_id": wp_result["post_id"], "link": wp_result.get("link")})
+                except Exception as e:
+                    await db.articles.update_one({"id": article_id}, {"$set": {"stato": "publish_failed", "publish_error": str(e)}})
+                    result["publish_status"] = "failed"
+                    result["publish_error"] = str(e)
+                    await log_activity(client_id, "wordpress_publish", "failed", {"titolo": titolo, "error": str(e)})
+            else:
+                result["publish_status"] = "skipped"
+        await db.jobs.update_one({"id": job_id}, {"$set": {"status": "completed", "completed": 1, "results": [result],
+            "summary": {"total": 1, "generated_ok": 1 if result["generation_status"] == "success" else 0,
+                         "published_ok": 1 if result["publish_status"] == "success" else 0},
+            "finished_at": datetime.now(timezone.utc).isoformat()}})
+    except Exception as e:
+        logger.error(f"Fatal error in _run_simple_generate: {e}")
+        await db.jobs.update_one({"id": job_id}, {"$set": {"status": "failed",
+            "finished_at": datetime.now(timezone.utc).isoformat(), "error": str(e)}})
+        await log_activity(client_id, "article_generate", "failed", {"titolo": titolo, "error": f"Errore fatale: {str(e)}"})
 
 
 # ============== JOBS ==============
