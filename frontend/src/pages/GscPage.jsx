@@ -118,7 +118,8 @@ export const GscPage = () => {
     }
     setConnecting(true);
     try {
-      const res = await axios.get(`${API}/gsc/authorize/${clientId}`, { headers: getAuthHeaders() });
+      const currentRedirectUri = `${window.location.origin}/api/gsc/callback`;
+      const res = await axios.get(`${API}/gsc/authorize/${clientId}?redirect_uri=${encodeURIComponent(currentRedirectUri)}`, { headers: getAuthHeaders() });
       window.location.href = res.data.authorization_url;
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Errore avvio connessione Google');
@@ -295,8 +296,16 @@ export const GscPage = () => {
             )}
             {redirectUri && (
               <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <p className="text-xs font-medium text-slate-600 mb-1">URI di reindirizzamento autorizzato (da aggiungere in Google Cloud Console):</p>
-                <code className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded break-all block" data-testid="gsc-redirect-uri">{redirectUri}</code>
+                <p className="text-xs font-medium text-slate-600 mb-1">Questo URI deve essere presente tra gli "URI di reindirizzamento autorizzati" nella Google Cloud Console:</p>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded break-all block flex-1" data-testid="gsc-redirect-uri">{redirectUri}</code>
+                  <Button variant="outline" size="sm" onClick={() => {navigator.clipboard.writeText(redirectUri); toast.success('URI copiato!');}}>
+                    Copia
+                  </Button>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Se ricevi errore "redirect_uri_mismatch", verifica che questo URI sia registrato esattamente nella tua Google Cloud Console {'>'} Credenziali {'>'} Client OAuth 2.0
+                </p>
               </div>
             )}
           </CardContent>

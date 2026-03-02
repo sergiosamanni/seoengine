@@ -3,8 +3,7 @@ import os
 import uuid
 import logging
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, Depends, HTTPException
-from starlette.responses import RedirectResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 
 from database import db
 from auth import get_current_user, require_admin
@@ -17,11 +16,12 @@ GSC_OAUTH_CLIENT_ID = os.environ.get("GSC_OAUTH_CLIENT_ID", "")
 GSC_OAUTH_CLIENT_SECRET = os.environ.get("GSC_OAUTH_CLIENT_SECRET", "")
 
 
-def _get_gsc_redirect_uri():
-    # Use explicit override if set, otherwise derive from FRONTEND_URL
+def _get_gsc_redirect_uri(base_url: str = None):
     override = os.environ.get("GSC_REDIRECT_URI", "")
     if override:
         return override
+    if base_url:
+        return f"{base_url.rstrip('/')}/api/gsc/callback"
     frontend_url = os.environ.get("FRONTEND_URL", "")
     if not frontend_url:
         raise HTTPException(status_code=500, detail="FRONTEND_URL non configurato")
@@ -48,14 +48,19 @@ async def save_gsc_config(client_id: str, request: dict, current_user: dict = De
 
 
 @router.get("/gsc/authorize/{client_id}")
-async def gsc_authorize(client_id: str, current_user: dict = Depends(get_current_user)):
+async def gsc_authorize(client_id: str, request: Request, redirect_uri: str = Query(None), current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
     _require_gsc_credentials()
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client_doc:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
-    redirect_uri = _get_gsc_redirect_uri()
+    # Use frontend-provided redirect_uri, or derive from request
+    if redirect_uri:
+        final_redirect_uri = redirect_uri
+    else:
+        base = str(request.base_url).rstrip('/')
+        final_redirect_uri = _get_gsc_redirect_uri(base)
     from google_auth_oauthlib.flow import Flow
     client_config = {
         "web": {
@@ -63,28 +68,31 @@ async def gsc_authorize(client_id: str, current_user: dict = Depends(get_current
             "client_secret": GSC_OAUTH_CLIENT_SECRET,
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [redirect_uri]
+            "redirect_uris": [final_redirect_uri]
         }
     }
-    flow = Flow.from_client_config(client_config, scopes=GSC_SCOPES, redirect_uri=redirect_uri)
+    flow = Flow.from_client_config(client_config, scopes=GSC_SCOPES, redirect_uri=final_redirect_uri)
     authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes='true', prompt='consent')
     await db.gsc_states.insert_one({
         "state": state, "client_id": client_id, "code_verifier": flow.code_verifier,
+        "redirect_uri": final_redirect_uri,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
-    return {"authorization_url": authorization_url, "state": state}
+    return {"authorization_url": authorization_url, "state": state, "redirect_uri": final_redirect_uri}
 
 
 @router.get("/gsc/callback")
 async def gsc_callback(code: str, state: str):
+    from starlette.responses import RedirectResponse
     _require_gsc_credentials()
     state_doc = await db.gsc_states.find_one({"state": state})
     if not state_doc:
         raise HTTPException(status_code=400, detail="State non valido o scaduto")
     client_id = state_doc["client_id"]
     code_verifier = state_doc.get("code_verifier")
+    saved_redirect_uri = state_doc.get("redirect_uri")
     await db.gsc_states.delete_one({"state": state})
-    redirect_uri = _get_gsc_redirect_uri()
+    redirect_uri = saved_redirect_uri or _get_gsc_redirect_uri()
     from google_auth_oauthlib.flow import Flow
     client_config = {
         "web": {
@@ -133,8 +141,9 @@ async def gsc_disconnect(client_id: str, current_user: dict = Depends(get_curren
 
 
 @router.get("/gsc/status")
-async def gsc_integration_status(current_user: dict = Depends(get_current_user)):
-    redirect_uri = _get_gsc_redirect_uri()
+async def gsc_integration_status(request: Request, current_user: dict = Depends(get_current_user)):
+    base = str(request.base_url).rstrip('/')
+    redirect_uri = _get_gsc_redirect_uri(base)
     return {
         "configured": bool(GSC_OAUTH_CLIENT_ID and GSC_OAUTH_CLIENT_SECRET),
         "redirect_uri": redirect_uri,
