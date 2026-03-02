@@ -13,37 +13,65 @@ logger = logging.getLogger("server")
 
 # ============== HTML SANITIZATION & GUTENBERG ==============
 
-def sanitize_single_h1(html_content: str) -> str:
-    """Ensure only one H1 tag exists. Remove extras, keeping the first."""
-    h1_pattern = re.compile(r'<h1[^>]*>.*?</h1>', re.DOTALL | re.IGNORECASE)
-    matches = list(h1_pattern.finditer(html_content))
-    if len(matches) <= 1:
-        return html_content
-    # Keep first H1, remove the rest
-    for match in reversed(matches[1:]):
-        html_content = html_content[:match.start()] + html_content[match.end():]
-    return html_content
+def clean_llm_output(raw: str) -> str:
+    """Clean LLM output: remove markdown fences, full HTML doc structure, extract body content."""
+    content = raw.strip()
+    # Remove markdown code fences (```html ... ``` or ```...```)
+    content = re.sub(r'^```\w*\s*\n?', '', content)
+    content = re.sub(r'\n?```\s*$', '', content)
+    content = content.strip()
+    # Remove META_DESCRIPTION comment if present
+    content = re.sub(r'<!--\s*META_DESCRIPTION:.*?-->', '', content, flags=re.DOTALL).strip()
+    # If it's a full HTML document, extract body/article content
+    if '<html' in content.lower() or '<!doctype' in content.lower():
+        soup = BeautifulSoup(content, 'html.parser')
+        # Try to find article or body
+        article = soup.find('article')
+        if article:
+            content = article.decode_contents()
+        else:
+            body = soup.find('body')
+            if body:
+                content = body.decode_contents()
+        content = content.strip()
+    # Remove standalone <title> tags
+    content = re.sub(r'<title[^>]*>.*?</title>', '', content, flags=re.DOTALL | re.IGNORECASE).strip()
+    return content
 
 
-def convert_to_gutenberg_blocks(html_content: str) -> str:
-    """Convert plain HTML to WordPress Gutenberg block format."""
-    html_content = sanitize_single_h1(html_content)
-    soup = BeautifulSoup(html_content, 'html.parser')
+def convert_to_gutenberg_blocks(html_content: str, remove_h1: bool = True) -> str:
+    """Convert plain HTML to WordPress Gutenberg block format.
+    Each element becomes its own block. H1 is removed (WP title handles it)."""
+    content = clean_llm_output(html_content)
+    soup = BeautifulSoup(content, 'html.parser')
     blocks = []
     for el in soup.children:
         if isinstance(el, str):
             text = el.strip()
-            if text:
-                blocks.append(f'<!-- wp:paragraph -->\n<p>{text}</p>\n<!-- /wp:paragraph -->')
+            if not text:
+                continue
+            # Skip raw text that looks like artifacts
+            if text in ('html', 'HTML') or text.startswith('```'):
+                continue
+            blocks.append(f'<!-- wp:paragraph -->\n<p>{text}</p>\n<!-- /wp:paragraph -->')
             continue
         tag = el.name
         if not tag:
             continue
-        if tag in ('h1', 'h2', 'h3', 'h4', 'h5', 'h6'):
+        # Skip structural tags that shouldn't be in content
+        if tag in ('html', 'head', 'body', 'article', 'meta', 'title', 'link', 'script', 'style'):
+            continue
+        if tag == 'h1':
+            if remove_h1:
+                continue  # Skip H1 - WP title handles it
+            blocks.append(f'<!-- wp:heading {{"level":1}} -->\n{str(el)}\n<!-- /wp:heading -->')
+        elif tag in ('h2', 'h3', 'h4', 'h5', 'h6'):
             level = int(tag[1])
             blocks.append(f'<!-- wp:heading {{"level":{level}}} -->\n{str(el)}\n<!-- /wp:heading -->')
         elif tag == 'p':
-            blocks.append(f'<!-- wp:paragraph -->\n{str(el)}\n<!-- /wp:paragraph -->')
+            inner = el.decode_contents().strip()
+            if inner:
+                blocks.append(f'<!-- wp:paragraph -->\n<p>{inner}</p>\n<!-- /wp:paragraph -->')
         elif tag == 'ul':
             blocks.append(f'<!-- wp:list -->\n{str(el)}\n<!-- /wp:list -->')
         elif tag == 'ol':
@@ -56,9 +84,49 @@ def convert_to_gutenberg_blocks(html_content: str) -> str:
             blocks.append(f'<!-- wp:table -->\n<figure class="wp-block-table">{str(el)}</figure>\n<!-- /wp:table -->')
         elif tag == 'hr':
             blocks.append('<!-- wp:separator -->\n<hr class="wp-block-separator"/>\n<!-- /wp:separator -->')
+        elif tag == 'div':
+            # Recursively process div children
+            for child in el.children:
+                if isinstance(child, str):
+                    t = child.strip()
+                    if t:
+                        blocks.append(f'<!-- wp:paragraph -->\n<p>{t}</p>\n<!-- /wp:paragraph -->')
+                elif child.name:
+                    sub_html = str(child)
+                    sub_blocks = convert_to_gutenberg_blocks(sub_html, remove_h1=remove_h1)
+                    if sub_blocks.strip():
+                        blocks.append(sub_blocks)
         else:
-            blocks.append(f'<!-- wp:html -->\n{str(el)}\n<!-- /wp:html -->')
+            inner = str(el).strip()
+            if inner:
+                blocks.append(f'<!-- wp:html -->\n{inner}\n<!-- /wp:html -->')
     return '\n\n'.join(blocks)
+
+
+def distribute_images_in_blocks(blocks_str: str, image_blocks: list) -> str:
+    """Distribute image blocks evenly among paragraph blocks."""
+    if not image_blocks:
+        return blocks_str
+    # Split into individual blocks
+    parts = re.split(r'\n\n(?=<!-- wp:)', blocks_str)
+    if len(parts) < 2:
+        return blocks_str + '\n\n' + '\n\n'.join(image_blocks)
+    # Find paragraph block indices (good places to insert images after)
+    para_indices = [i for i, p in enumerate(parts) if '<!-- wp:paragraph -->' in p]
+    if not para_indices or len(para_indices) < 2:
+        # Fallback: just append
+        return blocks_str + '\n\n' + '\n\n'.join(image_blocks)
+    # Calculate evenly spaced insertion points (skip first paragraph)
+    usable = para_indices[1:]  # Don't insert after the very first paragraph
+    step = max(1, len(usable) // (len(image_blocks) + 1))
+    insert_positions = []
+    for idx, img in enumerate(image_blocks):
+        pos_idx = min((idx + 1) * step, len(usable) - 1)
+        insert_positions.append((usable[pos_idx], img))
+    # Insert in reverse order to maintain indices
+    for pos, img_block in reversed(insert_positions):
+        parts.insert(pos + 1, img_block)
+    return '\n\n'.join(parts)
 
 
 # ============== ACTIVITY LOG ==============
@@ -257,29 +325,22 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                 except Exception as e:
                     logger.warning(f"Error uploading image {img_id} to WP: {e}")
 
-        # Insert non-featured images into content using Gutenberg image blocks
+        # Convert content to Gutenberg blocks FIRST
+        gutenberg_content = convert_to_gutenberg_blocks(content)
+
+        # Insert non-featured images distributed evenly among paragraphs
         if len(wp_media_ids) > 1:
             img_blocks = []
             for mid in wp_media_ids[1:]:
                 try:
                     media_info = await http_client.get(f"{base_url}/media/{mid}", auth=(username, password), timeout=10.0)
-                    if media_info.status_code == 200:
-                        src_url = media_info.json().get("source_url", "")
-                    else:
-                        src_url = ""
+                    src_url = media_info.json().get("source_url", "") if media_info.status_code == 200 else ""
                 except Exception:
                     src_url = ""
-                img_blocks.append(f'\n<!-- wp:image {{"id":{mid},"sizeSlug":"large"}} -->\n<figure class="wp-block-image size-large"><img src="{src_url}" alt="" class="wp-image-{mid}"/></figure>\n<!-- /wp:image -->')
-            # Insert after first heading block
-            import re as re_mod
-            heading_match = re_mod.search(r'(<!-- /wp:heading -->)', content)
-            if heading_match:
-                insert_pos = heading_match.end()
-                content = content[:insert_pos] + "".join(img_blocks) + content[insert_pos:]
-            else:
-                content += "".join(img_blocks)
+                img_blocks.append(f'<!-- wp:image {{"id":{mid},"sizeSlug":"large"}} -->\n<figure class="wp-block-image size-large"><img src="{src_url}" alt="" class="wp-image-{mid}"/></figure>\n<!-- /wp:image -->')
+            gutenberg_content = distribute_images_in_blocks(gutenberg_content, img_blocks)
 
-        post_data = {"title": title, "content": convert_to_gutenberg_blocks(content), "status": "publish"}
+        post_data = {"title": title, "content": gutenberg_content, "status": "publish"}
         if wp_media_ids:
             post_data["featured_media"] = wp_media_ids[0]
         if seo_metadata and seo_metadata.get("slug"):
@@ -499,9 +560,14 @@ INTENTO DI RICERCA: {search_intent}
 {f'=== KEYWORD LSI (SEMANTICHE) ==={chr(10)}Usa varianti e sinonimi: {", ".join(kw_lsi)}' if kw_lsi else ''}
 
 === STRUTTURA HTML RICHIESTA ===
-Output SOLO in formato HTML valido.
+Output SOLO come frammento HTML. NON generare un documento completo.
 
-REGOLA CRITICA: Usa UN SOLO tag <h1> in tutto il documento. Non usare MAI piu di un <h1>.
+REGOLE CRITICHE:
+- NON usare mai tag ```html, ```, <html>, <head>, <body>, <article>, <title>, <meta>, <!DOCTYPE>
+- NON avvolgere il contenuto in markdown code blocks
+- Inizia DIRETTAMENTE con il primo tag HTML del contenuto (es. <h1>)
+- Usa UN SOLO tag <h1> in tutto il documento per il titolo principale
+- Ogni paragrafo deve essere un <p> separato (non raggruppare piu paragrafi)
 
 """
 
