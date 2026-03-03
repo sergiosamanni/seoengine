@@ -1,4 +1,5 @@
 """Authentication and user management routes."""
+import os
 import uuid
 from datetime import datetime, timezone
 from typing import List
@@ -88,12 +89,13 @@ async def delete_user(user_id: str, current_user: dict = Depends(require_admin))
 
 @router.post("/seed")
 async def seed_data():
-    admin = await db.users.find_one({"email": "admin@seoengine.it"})
+    admin = await db.users.find_one({"email": os.environ.get("ADMIN_SEED_EMAIL", "admin@seoengine.it")})
     if not admin:
         admin_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
         await db.users.insert_one({
-            "id": admin_id, "email": "admin@seoengine.it", "password": hash_password("admin123"),
+            "id": admin_id, "email": os.environ.get("ADMIN_SEED_EMAIL", "admin@seoengine.it"),
+            "password": hash_password(os.environ.get("ADMIN_SEED_PASSWORD", "changeme")),
             "name": "Admin SEO", "role": "admin", "client_id": None, "created_at": now
         })
     return {"message": "Seed completato"}

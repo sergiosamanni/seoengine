@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 
-JWT_SECRET = os.environ.get('JWT_SECRET', 'seo-engine-secret-key-2024')
+JWT_SECRET = os.environ.get('JWT_SECRET')
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
@@ -49,4 +49,4 @@ async def require_admin(current_user: dict = Depends(get_current_user)):
 
 
 # Global admin password for accessing advanced features
-ADMIN_MASTER_PASSWORD = os.environ.get('ADMIN_MASTER_PASSWORD', 'seo_admin_2024')
+ADMIN_MASTER_PASSWORD = os.environ.get('ADMIN_MASTER_PASSWORD')
