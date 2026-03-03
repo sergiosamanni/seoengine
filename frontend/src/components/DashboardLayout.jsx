@@ -22,7 +22,6 @@ export const DashboardLayout = ({ children }) => {
   ];
   const clientNav = [
     { label: 'Genera', icon: FileText, path: '/generate' },
-    { label: 'Activity Log', icon: Activity, path: '/activity-log' },
   ];
   const navItems = isAdmin ? adminNav : clientNav;
 

@@ -978,7 +978,7 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
     <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6 px-1">
       <div className="text-center space-y-1 sm:space-y-2">
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 font-['Manrope']">Genera Articolo SEO</h1>
-        <p className="text-sm sm:text-base text-slate-500">Inserisci la keyword target e il sistema analizzera la SERP automaticamente.</p>
+        <p className="text-sm sm:text-base text-slate-500">Inserisci una breve frase che rappresenta di cosa vuoi scrivere (non piu di 5 parole). Il sistema fara il resto.</p>
       </div>
 
       {!hasApiKey && (
@@ -1278,14 +1278,16 @@ export const GeneratorPage = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        {isAdmin && <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} data-testid="back-btn"><ArrowLeft className="w-5 h-5" /></Button>}
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 font-['Manrope'] tracking-tight">Genera Articoli</h1>
-          <p className="text-slate-500 mt-1">{client?.nome}</p>
+      {/* Header - only for admin */}
+      {isAdmin && (
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} data-testid="back-btn"><ArrowLeft className="w-5 h-5" /></Button>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 font-['Manrope'] tracking-tight">Genera Articoli</h1>
+            <p className="text-slate-500 mt-1">{client?.nome}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {!hasApiKey && (
         <Alert className="bg-amber-50 border-amber-200">
