@@ -43,6 +43,7 @@ async def create_client(client: ClientCreate, current_user: dict = Depends(requi
     now = datetime.now(timezone.utc).isoformat()
     client_doc = {
         "id": client_id, "nome": client.nome, "settore": client.settore,
+        "agenzia": client.agenzia,
         "sito_web": client.sito_web,
         "siti_web": client.siti_web if client.siti_web else [client.sito_web] if client.sito_web else [],
         "attivo": client.attivo, "created_at": now, "ultimo_run": None, "configuration": None
@@ -149,10 +150,33 @@ async def remove_site_from_client(client_id: str, request: dict, current_user: d
 async def scrape_website_for_kb(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
-    url = request.get("url", "").strip()
-    if not url:
-        raise HTTPException(status_code=400, detail="URL obbligatorio")
-    info = await scrape_website_info(url, max_pages=6)
+    url_home = request.get("url_home", "").strip()
+    url_chi_siamo = request.get("url_chi_siamo", "").strip()
+    url_contatti = request.get("url_contatti", "").strip()
+    
+    urls = [u for u in [url_home, url_chi_siamo, url_contatti] if u]
+    if not urls:
+        raise HTTPException(status_code=400, detail="Almeno un URL è obbligatorio")
+    
+    # 1. Scrape raw data
+    from helpers import scrape_website_info, extract_structured_kb_with_llm
+    info = await scrape_website_info(urls, max_pages=6)
+    
+    # 2. Refine with LLM if possible
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if client:
+        config = client.get("configuration", {})
+        llm_config = config.get("llm", {}) or config.get("openai", {})
+        if llm_config.get("api_key"):
+            provider = llm_config.get("provider", "openai")
+            model = llm_config.get("modello", "gpt-4o") # Use gpt-4o for better extraction
+            refined_info = await extract_structured_kb_with_llm(info, provider, llm_config["api_key"], model)
+            if refined_info:
+                # Merge refined info back into info, keeping raw data for debugging/fallback
+                for key, value in refined_info.items():
+                    if value:
+                        info[key] = value
+    
     return info
 
 

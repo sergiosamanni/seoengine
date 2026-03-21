@@ -103,41 +103,49 @@ export const ConfigurationPage = () => {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
+      <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-[#f1f3f6] shadow-sm">
         <div className="flex items-center gap-4">
           {isAdmin && (
-            <Button variant="ghost" size="icon" onClick={() => navigate('/clients')} data-testid="back-btn">
-              <ArrowLeft className="w-5 h-5" />
+            <Button variant="ghost" size="icon" onClick={() => navigate('/clients')} className="h-9 w-9 rounded-lg hover:bg-slate-50" data-testid="back-btn">
+              <ArrowLeft className="w-4 h-4 text-slate-400" />
             </Button>
           )}
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 font-['Manrope'] tracking-tight">Configurazione</h1>
-            {client && <p className="text-slate-500 mt-1">{client.nome} — Impostazioni base</p>}
+          <div className={isAdmin ? "border-l border-[#f1f3f6] pl-4" : ""}>
+            <h1 className="text-lg font-bold text-slate-900 tracking-tight leading-none">Configurazione</h1>
+            {client && <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-semibold">{client.nome}</p>}
           </div>
         </div>
-        <Button onClick={handleSave} disabled={saving} className="bg-slate-900 hover:bg-slate-800" data-testid="save-config-btn">
-          {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-          {saving ? 'Salvataggio...' : 'Salva Configurazione'}
+        <Button onClick={handleSave} disabled={saving} className="bg-slate-900 hover:bg-slate-800 h-9 rounded-lg px-4 text-xs shadow-lg shadow-slate-100" data-testid="save-config-btn">
+          {saving ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-2" />}
+          {saving ? 'Salvataggio...' : 'Salva Impostazioni'}
         </Button>
       </div>
 
       <Tabs defaultValue="api" className="w-full">
-        <TabsList className="w-full justify-start bg-slate-100 p-1 rounded-xl">
-          <TabsTrigger value="api" className="rounded-lg" data-testid="tab-api"><Key className="w-4 h-4 mr-2" />API Keys</TabsTrigger>
-          <TabsTrigger value="knowledge" className="rounded-lg" data-testid="tab-knowledge"><FileText className="w-4 h-4 mr-2" />Knowledge Base</TabsTrigger>
-          <TabsTrigger value="tone" className="rounded-lg" data-testid="tab-tone"><Sparkles className="w-4 h-4 mr-2" />Tono & Stile</TabsTrigger>
+        <TabsList className="w-full justify-start bg-transparent p-0 h-auto flex-wrap mb-6 border-b border-[#f1f3f6] rounded-none gap-8 px-2">
+            <TabsTrigger value="api" className="rounded-none py-3 px-1 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-xs font-semibold uppercase tracking-wider text-slate-400 data-[state=active]:text-slate-900 transition-all">
+                API Keys
+            </TabsTrigger>
+            <TabsTrigger value="knowledge" className="rounded-none py-3 px-1 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-xs font-semibold uppercase tracking-wider text-slate-400 data-[state=active]:text-slate-900 transition-all">
+                Knowledge Base
+            </TabsTrigger>
+            <TabsTrigger value="tone" className="rounded-none py-3 px-1 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-xs font-semibold uppercase tracking-wider text-slate-400 data-[state=active]:text-slate-900 transition-all">
+                Brand Style
+            </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="api" className="mt-6">
-          <ApiKeysTab llm={llm} setLlm={setLlm} wordpress={wordpress} setWordpress={setWordpress} apify={apify} setApify={setApify} />
-        </TabsContent>
-        <TabsContent value="knowledge" className="mt-6">
-          <KnowledgeBaseTab knowledge={knowledge} setKnowledge={setKnowledge} isAdmin={isAdmin} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
-        </TabsContent>
-        <TabsContent value="tone" className="mt-6">
-          <ToneStyleTab tono={tono} setTono={setTono} />
-        </TabsContent>
+        <div className="bg-white rounded-2xl border border-[#f1f3f6] shadow-sm overflow-hidden p-8">
+            <TabsContent value="api" className="mt-0">
+                <ApiKeysTab llm={llm} setLlm={setLlm} wordpress={wordpress} setWordpress={setWordpress} apify={apify} setApify={setApify} />
+            </TabsContent>
+            <TabsContent value="knowledge" className="mt-0">
+                <KnowledgeBaseTab knowledge={knowledge} setKnowledge={setKnowledge} isAdmin={isAdmin} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
+            </TabsContent>
+            <TabsContent value="tone" className="mt-0">
+                <ToneStyleTab tono={tono} setTono={setTono} />
+            </TabsContent>
+        </div>
       </Tabs>
     </div>
   );

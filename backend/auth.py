@@ -33,6 +33,9 @@ def create_token(user_id: str, email: str, role: str, client_id: Optional[str] =
 
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if not JWT_SECRET:
+        raise HTTPException(status_code=500, detail="Server misconfiguration")
+    
     try:
         payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload
@@ -40,6 +43,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="Token scaduto")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Token non valido")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Errore autenticazione")
 
 
 async def require_admin(current_user: dict = Depends(get_current_user)):

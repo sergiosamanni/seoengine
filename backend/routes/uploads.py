@@ -15,7 +15,9 @@ JWT_SECRET = os.environ.get('JWT_SECRET')
 def _decode_token(token: str) -> dict:
     try:
         return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger("server").warning(f"Upload auth failed: {e}")
         return None
 
 

@@ -26,69 +26,94 @@ export const DashboardLayout = ({ children }) => {
   const navItems = isAdmin ? adminNav : clientNav;
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-[#f8fafc]">
       {/* Mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-black/20 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar - hidden on mobile by default */}
-      <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 z-50' : 'hidden'} lg:flex lg:static lg:z-auto w-60 bg-slate-900 text-white flex-col flex-shrink-0`}>
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold font-['Manrope'] tracking-tight">SEO Engine</h1>
-            <p className="text-xs text-slate-400 mt-0.5">{isAdmin ? 'Admin Panel' : 'Client Panel'}</p>
+      {/* Sidebar */}
+      <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 z-50' : 'hidden'} lg:flex lg:static lg:z-auto w-64 bg-white border-r border-[#f1f3f6] flex-col flex-shrink-0 transition-all`}>
+        {/* Brand */}
+        <div className="p-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-200">
+               <span className="text-sm font-bold tracking-tighter italic">AG</span>
+            </div>
+            <div className="leading-none">
+              <h1 className="text-sm font-bold tracking-tight text-slate-900">Antigravity</h1>
+              <p className="text-[9px] text-slate-400 mt-1 uppercase tracking-[0.2em] font-bold">{isAdmin ? 'Enterprise' : 'Workspace'}</p>
+            </div>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white">
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-900">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <ScrollArea className="flex-1 px-3 py-4">
-          <nav className="space-y-1">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.path ||
-                (item.path === '/dashboard' && location.pathname.startsWith('/clients'));
-              return (
-                <Link key={item.path} to={item.path}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-                  data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}>
-                  <item.icon className="w-4.5 h-4.5" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+        {/* Navigation */}
+        <ScrollArea className="flex-1 px-4 py-2">
+          <div className="space-y-8">
+            <div>
+              <p className="px-4 text-[9px] uppercase font-bold tracking-[0.2em] text-slate-300 mb-4">Main Menu</p>
+              <nav className="space-y-1">
+                {navItems.map((item) => {
+                  const isActive = location.pathname === item.path ||
+                    (item.path === '/dashboard' && location.pathname.startsWith('/clients'));
+                  return (
+                    <Link key={item.path} to={item.path}
+                       onClick={() => setSidebarOpen(false)}
+                       className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold tracking-tight transition-all duration-200 ${
+                         isActive 
+                         ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' 
+                         : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                       }`}
+                       data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}>
+                      <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400 opacity-60'}`} />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          </div>
         </ScrollArea>
 
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 mb-3 px-1">
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold">
+        {/* User Info & Actions */}
+        <div className="p-6 space-y-4">
+          <div className="bg-slate-50 border border-[#f1f3f6] rounded-2xl p-4 flex items-center gap-4 group transition-all hover:bg-white hover:shadow-xl hover:shadow-slate-100">
+            <div className="w-10 h-10 rounded-xl bg-white border border-[#f1f3f6] flex items-center justify-center text-xs font-bold text-slate-600 shadow-sm group-hover:scale-105 transition-transform">
               {user?.nome?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user?.nome || 'Utente'}</p>
-              <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+              <p className="text-xs font-bold text-slate-900 truncate leading-none mb-1">{user?.nome || 'Utente'}</p>
+              <p className="text-[9px] text-slate-400 font-medium truncate tracking-tight">{user?.email}</p>
             </div>
           </div>
-          <Button variant="ghost" className="w-full justify-start text-slate-400 hover:text-white hover:bg-white/5"
-            onClick={handleLogout} data-testid="logout-btn">
-            <LogOut className="w-4 h-4 mr-2" />Esci
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-red-500 hover:bg-red-50/50 h-11 px-4 rounded-xl transition-colors"
+            onClick={handleLogout} 
+            data-testid="logout-btn"
+          >
+            <LogOut className="w-4 h-4 mr-3 opacity-60" />
+            Esci dall'app
           </Button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto min-w-0">
-        {/* Mobile header */}
-        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-sm border-b border-slate-200 px-4 py-3 flex items-center gap-3 lg:hidden">
-          <button onClick={() => setSidebarOpen(true)} className="p-1.5 rounded-lg hover:bg-slate-100" data-testid="mobile-menu-btn">
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-auto bg-[#f8fafc]">
+        {/* Mobile Navbar */}
+        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[#f1f3f6] px-6 py-4 flex items-center gap-4 lg:hidden">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-[#f1f3f6]" data-testid="mobile-menu-btn">
             <Menu className="w-5 h-5 text-slate-700" />
           </button>
-          <span className="font-semibold text-slate-900 font-['Manrope']">SEO Engine</span>
+          <span className="text-sm font-bold text-slate-900 tracking-tight">Antigravity Console</span>
         </div>
-        <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
+
+        {/* Dynamic Content Container */}
+        <div className="p-6 sm:p-10 max-w-7xl mx-auto min-h-full">
           {children}
         </div>
       </main>

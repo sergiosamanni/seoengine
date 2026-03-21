@@ -1,12 +1,17 @@
 """Shared helper functions for article generation, publishing, scraping, and logging."""
+import os
 import re
 import logging
 import asyncio
 import httpx
+import json
 from datetime import datetime, timezone
 from typing import List
 from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
+from urllib.parse import urlparse
 from database import db
+
 
 logger = logging.getLogger("server")
 
@@ -169,6 +174,14 @@ LLM_PROVIDERS = {
         "base_url": "https://api.deepseek.com/v1/chat/completions",
         "models": ["deepseek-chat", "deepseek-coder", "deepseek-reasoner"]
     },
+    "google": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "models": ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"]
+    },
+    "groq": {
+        "base_url": "https://api.groq.com/openai/v1/chat/completions",
+        "models": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
+    },
     "perplexity": {
         "base_url": "https://api.perplexity.ai/chat/completions",
         "models": ["sonar-pro", "sonar", "sonar-small", "llama-3.1-sonar-large-128k-online"]
@@ -206,8 +219,390 @@ async def generate_with_llm(provider: str, api_key: str, model: str, temperature
             return response.json()["choices"][0]["message"]["content"]
 
 
+async def generate_with_rotation(llm_config: dict, system_prompt: str, user_prompt: str) -> str:
+    """Try primary model, then rotate through available free-tier providers if quota is reached."""
+    # List of configs to try in order
+    rotation_queue = []
+    
+    # 1. Primary from config
+    primary_provider = llm_config.get("provider", "openai")
+    primary_key = llm_config.get("api_key")
+    primary_model = llm_config.get("modello", "gpt-4-turbo-preview")
+    
+    if primary_key:
+        rotation_queue.append({
+            "provider": primary_provider, 
+            "api_key": primary_key, 
+            "model": primary_model
+        })
+    
+    # 2. Check for alternative keys in config or env
+    keys = {
+        "google": llm_config.get("google_api_key") or os.environ.get("GOOGLE_API_KEY"),
+        "groq": llm_config.get("groq_api_key") or os.environ.get("GROQ_API_KEY"),
+        "deepseek": llm_config.get("deepseek_api_key") or os.environ.get("DEEPSEEK_API_KEY"),
+        "openai": llm_config.get("api_key") # Already has primary or alternative
+    }
+    
+    # Models to try for each free provider
+    free_models = {
+        "google": "gemini-1.5-flash",
+        "groq": "llama-3.3-70b-versatile",
+        "deepseek": "deepseek-chat",
+        "openai": "gpt-4o-mini"
+    }
+
+    # Add available free providers to rotation (if they aren't the primary one already)
+    for prov in ["google", "groq", "deepseek", "openai"]:
+        if keys.get(prov) and prov != primary_provider:
+             rotation_queue.append({
+                 "provider": prov,
+                 "api_key": keys[prov],
+                 "model": free_models[prov]
+             })
+             
+    last_err = None
+    for attempt in rotation_queue:
+        try:
+            logger.info(f"LLM Attempt: {attempt['provider']}/{attempt['model']}")
+            return await generate_with_llm(
+                attempt["provider"], 
+                attempt["api_key"], 
+                attempt["model"], 
+                llm_config.get("temperatura", 0.7), 
+                system_prompt, 
+                user_prompt
+            )
+        except Exception as e:
+            err_str = str(e).lower()
+            if "429" in err_str or "quota" in err_str or "exhaust" in err_str or "limit" in err_str:
+                logger.warning(f"LLM Provider {attempt['provider']} exhausted (Rate Limit). Trying next...")
+                last_err = e
+                continue
+            else:
+                logger.error(f"LLM Provider {attempt['provider']} failed: {e}")
+                last_err = e
+                # Fixed errors (like prompt blocked) should stop rotation usually, but for reliability we continue
+                continue
+                
+    raise last_err or Exception("All LLM providers failed and no rotation was possible.")
+
+
 async def generate_with_openai(api_key: str, model: str, temperature: float, system_prompt: str, user_prompt: str) -> str:
     return await generate_with_llm("openai", api_key, model, temperature, system_prompt, user_prompt)
+
+
+async def generate_image_pollinations(prompt: str, user_id: str, model: str = "flux") -> dict:
+    """Generate an image using Pollinations.ai (Free, no key required).
+    
+    Available models: flux (default), flux-realism, turbo, stable-diffusion
+    """
+    import uuid
+    import random
+    import urllib.parse
+    from storage import put_object, APP_NAME
+    
+    # Pollinations can fail with 500 if the prompt is too long or has too many special chars
+    safe_prompt = prompt[:500] if len(prompt) > 500 else prompt
+    
+    seed = random.randint(1, 1000000)
+    encoded_prompt = urllib.parse.quote(safe_prompt)
+    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model={model}&width=1024&height=1024&nologo=true&seed={seed}"
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    }
+    
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        try:
+            logger.info(f"Pollinations/{model} request (len={len(safe_prompt)}): {image_url[:100]}...")
+            response = await client.get(image_url, headers=headers, timeout=90.0)
+            
+            if response.status_code != 200:
+                logger.error(f"Pollinations/{model} error status: {response.status_code}")
+                if response.status_code == 500:
+                   await asyncio.sleep(1)
+                   tiny_prompt = prompt[:200]
+                   tiny_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(tiny_prompt)}?model={model}&width=1024&height=1024&nologo=true&seed={seed+1}"
+                   logger.info(f"Retrying Pollinations/{model} with tiny prompt...")
+                   response = await client.get(tiny_url, headers=headers, timeout=60.0)
+                   if response.status_code != 200:
+                       raise Exception(f"Pollinations/{model} retry failed: {response.status_code}")
+                else:
+                    raise Exception(f"Pollinations/{model} error: {response.status_code}")
+            
+            file_id = str(uuid.uuid4())
+            path = f"{APP_NAME}/uploads/{user_id}/{file_id}.jpg"
+            content_type = "image/jpeg"
+            result = put_object(path, response.content, content_type)
+            file_doc = {
+                "id": file_id,
+                "storage_path": result["path"],
+                "original_filename": f"pollinations-{model}-{file_id[:8]}.jpg",
+                "content_type": content_type,
+                "size": len(response.content),
+                "user_id": user_id,
+                "is_deleted": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.files.insert_one(file_doc)
+            return {"id": file_id, "url": image_url, "storage_path": result["path"], "provider": f"pollinations_{model}"}
+        except Exception as e:
+            logger.error(f"Pollinations/{model} generation failed: {e}")
+            raise
+
+
+async def generate_image_horde(prompt: str, user_id: str) -> dict:
+    """Generate an image using AI Horde (Free, anonymous)."""
+    import uuid
+    import asyncio
+    from storage import put_object, APP_NAME
+    
+    # 512x512 is faster for anonymous
+    payload = {
+        "prompt": prompt,
+        "params": {
+            "n": 1,
+            "steps": 20,
+            "width": 512,
+            "height": 512,
+            "sampler_name": "k_euler"
+        },
+        "models": ["stable_diffusion"]
+    }
+    headers = {"apikey": "0000000000", "Client-Agent": "SEOEngine:v1:agent"}
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            logger.info("Requesting image from AI Horde...")
+            submit_res = await client.post("https://stablehorde.net/api/v2/generate/async", json=payload, headers=headers, timeout=30.0)
+            if submit_res.status_code != 202:
+                raise Exception(f"Horde submit failed: {submit_res.status_code}")
+            
+            job_id = submit_res.json()["id"]
+            
+            # Poll for results (max 60s)
+            for _ in range(12):
+                await asyncio.sleep(5)
+                status_res = await client.get(f"https://stablehorde.net/api/v2/generate/status/{job_id}", headers=headers, timeout=10.0)
+                if status_res.status_code == 200:
+                    data = status_res.json()
+                    if data.get("done"):
+                        generations = data.get("generations", [])
+                        if generations:
+                            img_url = generations[0]["img"]
+                            # Horde returns base64 or URL. Usually base64 for anonymous? No, it's a URL to webui or similar.
+                            # If it's a URL, download it.
+                            img_response = await client.get(img_url, timeout=30.0)
+                            if img_response.status_code == 200:
+                                file_id = str(uuid.uuid4())
+                                path = f"{APP_NAME}/uploads/{user_id}/{file_id}.webp"
+                                content_type = "image/webp"
+                                result = put_object(path, img_response.content, content_type)
+                                file_doc = {
+                                    "id": file_id,
+                                    "storage_path": result["path"],
+                                    "original_filename": f"horde-{file_id[:8]}.webp",
+                                    "content_type": content_type,
+                                    "size": len(img_response.content),
+                                    "user_id": user_id,
+                                    "is_deleted": False,
+                                    "created_at": datetime.now(timezone.utc).isoformat()
+                                }
+                                await db.files.insert_one(file_doc)
+                                return {"id": file_id, "url": img_url, "storage_path": result["path"], "provider": "horde"}
+            raise Exception("Horde polling timed out")
+        except Exception as e:
+            logger.error(f"Horde generation failed: {e}")
+            raise
+
+async def generate_image_together(prompt: str, user_id: str, api_key: str = None) -> dict:
+    """Generate an image using Together.ai Flux-Schnell (free tier available)."""
+    import uuid
+    import base64
+    from storage import put_object, APP_NAME
+    
+    key = api_key or os.environ.get("TOGETHER_API_KEY", "")
+    if not key:
+        raise Exception("No Together.ai API key available")
+    
+    payload = {
+        "model": "black-forest-labs/FLUX.1-schnell-Free",
+        "prompt": prompt[:1000],
+        "width": 1024,
+        "height": 1024,
+        "steps": 4,
+        "n": 1,
+        "response_format": "b64_json"
+    }
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            logger.info("Requesting image from Together.ai Flux-Schnell...")
+            response = await client.post(
+                "https://api.together.xyz/v1/images/generations",
+                headers=headers, json=payload, timeout=90.0
+            )
+            if response.status_code != 200:
+                raise Exception(f"Together.ai error: {response.status_code} - {response.text[:200]}")
+            
+            data = response.json()
+            b64_data = data["data"][0].get("b64_json", "")
+            if not b64_data:
+                raise Exception("Together.ai returned no image data")
+            
+            img_bytes = base64.b64decode(b64_data)
+            file_id = str(uuid.uuid4())
+            path = f"{APP_NAME}/uploads/{user_id}/{file_id}.png"
+            content_type = "image/png"
+            result = put_object(path, img_bytes, content_type)
+            file_doc = {
+                "id": file_id,
+                "storage_path": result["path"],
+                "original_filename": f"together-flux-{file_id[:8]}.png",
+                "content_type": content_type,
+                "size": len(img_bytes),
+                "user_id": user_id,
+                "is_deleted": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.files.insert_one(file_doc)
+            return {"id": file_id, "url": "", "storage_path": result["path"], "provider": "together_flux"}
+        except Exception as e:
+            logger.error(f"Together.ai generation failed: {e}")
+            raise
+
+
+async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: str = None, together_key: str = None) -> dict:
+    """Try multiple image generation providers in sequence with smart fallback.
+    
+    Chain: DALL-E (if key) → Pollinations/flux-realism → Pollinations/turbo → Together.ai/Flux-Schnell → AI Horde
+    """
+    errors = []
+    
+    # 1. Try DALL-E if OpenAI key is provided
+    if openai_key and len(openai_key) > 20:
+        try:
+            logger.info("Attempting image generation with DALL-E 3...")
+            result = await generate_image_dalle(openai_key, prompt, user_id)
+            result["provider"] = "dalle"
+            logger.info("✓ DALL-E 3 succeeded")
+            return result
+        except Exception as e:
+            err_msg = f"DALL-E failed: {str(e)}"
+            logger.warning(err_msg)
+            errors.append(err_msg)
+
+    # 2. Try Pollinations with flux-realism model (Free, high quality)
+    try:
+        logger.info("Attempting image generation with Pollinations (flux-realism)...")
+        result = await generate_image_pollinations(prompt, user_id, model="flux-realism")
+        logger.info("✓ Pollinations flux-realism succeeded")
+        return result
+    except Exception as e:
+        err_msg = f"Pollinations flux-realism failed: {str(e)}"
+        logger.warning(err_msg)
+        errors.append(err_msg)
+
+    # 3. Try Pollinations with turbo model (faster, free)
+    try:
+        logger.info("Attempting image generation with Pollinations (turbo)...")
+        result = await generate_image_pollinations(prompt, user_id, model="turbo")
+        logger.info("✓ Pollinations turbo succeeded")
+        return result
+    except Exception as e:
+        err_msg = f"Pollinations turbo failed: {str(e)}"
+        logger.warning(err_msg)
+        errors.append(err_msg)
+
+    # 4. Try Together.ai Flux-Schnell (free tier)
+    env_together_key = together_key or os.environ.get("TOGETHER_API_KEY", "")
+    if env_together_key:
+        try:
+            logger.info("Attempting image generation with Together.ai Flux-Schnell...")
+            result = await generate_image_together(prompt, user_id, env_together_key)
+            logger.info("✓ Together.ai Flux-Schnell succeeded")
+            return result
+        except Exception as e:
+            err_msg = f"Together.ai Flux failed: {str(e)}"
+            logger.warning(err_msg)
+            errors.append(err_msg)
+
+    # 5. Try AI Horde (completely anonymous free)
+    try:
+        logger.info("Attempting image generation with AI Horde...")
+        result = await generate_image_horde(prompt[:300], user_id)
+        logger.info("✓ AI Horde succeeded")
+        return result
+    except Exception as e:
+        err_msg = f"AI Horde failed: {str(e)}"
+        logger.warning(err_msg)
+        errors.append(err_msg)
+        
+    combined_errors = "; ".join(errors)
+    logger.error(f"Image generation total failure: {combined_errors}")
+    raise Exception(f"Tutti i provider di generazione immagine hanno fallito: {combined_errors}")
+
+
+async def generate_image_dalle(api_key: str, prompt: str, user_id: str) -> dict:
+    """Generate an image using DALL-E 3, download it, and store it in our system."""
+    import uuid
+    from storage import put_object, APP_NAME
+    
+    url = "https://api.openai.com/v1/images/generations"
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    payload = {
+        "model": "dall-e-3",
+        "prompt": prompt,
+        "n": 1,
+        "size": "1024x1024",
+        "quality": "standard",
+        "response_format": "url"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            logger.info(f"DALL-E request for prompt: {prompt[:50]}...")
+            response = await client.post(url, headers=headers, json=payload, timeout=120.0)
+            if response.status_code != 200:
+                error_body = response.text
+                logger.error(f"DALL-E API Error: {response.status_code} - {error_body}")
+                raise Exception(f"DALL-E API error: {response.status_code}")
+            
+            data = response.json()
+            image_url = data["data"][0]["url"]
+            
+            # Download image
+            img_response = await client.get(image_url)
+            if img_response.status_code != 200:
+                raise Exception(f"Failed to download generated image: {img_response.status_code}")
+                
+            # Store image
+            file_id = str(uuid.uuid4())
+            path = f"{APP_NAME}/uploads/{user_id}/{file_id}.png"
+            content_type = "image/png"
+            
+            result = put_object(path, img_response.content, content_type)
+            
+            # Create file record
+            file_doc = {
+                "id": file_id,
+                "storage_path": result["path"],
+                "original_filename": f"dalle-{file_id[:8]}.png",
+                "content_type": content_type,
+                "size": len(img_response.content),
+                "user_id": user_id,
+                "is_deleted": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.files.insert_one(file_doc)
+            
+            return {"id": file_id, "url": image_url, "storage_path": result["path"]}
+            
+        except Exception as e:
+            logger.error(f"DALL-E generation failed: {e}")
+            raise
 
 
 # ============== SEO METADATA ==============
@@ -297,7 +692,7 @@ def generate_seo_metadata(title: str, content: str, kb: dict, combination: dict)
 async def publish_to_wordpress(url: str, username: str, password: str, title: str, content: str,
                                 wp_status: str = "draft", seo_metadata: dict = None,
                                 categories: List[int] = None, tags: List[str] = None,
-                                wp_type: str = "post", image_ids: List[str] = None) -> dict:
+                                wp_type: str = "post", image_ids: List[str] = None, schedule_date: str = None) -> dict:
     from storage import get_object
     async with httpx.AsyncClient() as http_client:
         base_url = url.replace("/posts", "")
@@ -340,7 +735,12 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                 img_blocks.append(f'<!-- wp:image {{"id":{mid},"sizeSlug":"large"}} -->\n<figure class="wp-block-image size-large"><img src="{src_url}" alt="" class="wp-image-{mid}"/></figure>\n<!-- /wp:image -->')
             gutenberg_content = distribute_images_in_blocks(gutenberg_content, img_blocks)
 
-        post_data = {"title": title, "content": gutenberg_content, "status": "publish"}
+        if schedule_date and wp_status == "publish":
+            wp_status = "future"
+            
+        post_data = {"title": title, "content": gutenberg_content, "status": wp_status}
+        if schedule_date:
+            post_data["date"] = schedule_date
         if wp_media_ids:
             post_data["featured_media"] = wp_media_ids[0]
         if seo_metadata and seo_metadata.get("slug"):
@@ -412,11 +812,30 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
         raise Exception(last_error or "Errore sconosciuto nella pubblicazione")
 
 
+async def update_wordpress_post(url: str, username: str, password: str, post_id: str, content: str, wp_type: str = "post") -> bool:
+    async with httpx.AsyncClient() as http_client:
+        base_url = url.replace("/posts", "")
+        endpoint = f"{base_url}/pages/{post_id}" if wp_type == "page" else f"{url}/{post_id}"
+        
+        gutenberg_content = convert_to_gutenberg_blocks(content)
+        post_data = {"content": gutenberg_content}
+        
+        for attempt in range(3):
+            try:
+                response = await http_client.post(endpoint, auth=(username, password), json=post_data, timeout=30.0)
+                if response.status_code in [200, 201]:
+                    return True
+            except Exception as e:
+                pass
+            await asyncio.sleep(1)
+        return False
+
 # ============== SYSTEM PROMPT BUILDER ==============
 
 def build_system_prompt(kb: dict, tone: dict, seo: dict, client_name: str,
                         advanced_prompt: dict = None, strategy: dict = None,
-                        content_type: str = "articolo_blog", brief_override: dict = None) -> str:
+                        content_type: str = "articolo_blog", brief_override: dict = None,
+                        existing_articles: list = None) -> str:
     lingua = seo.get("lingua", "italiano")
     lunghezza = seo.get("lunghezza_minima_parole", 1500)
     include_faq = seo.get("include_faq_in_fondo", False)
@@ -639,6 +1058,19 @@ REGOLE DI UMANIZZAZIONE:
 - I titoli H2 e H3 in minuscolo normale (solo prima lettera maiuscola)
 """
 
+    if existing_articles and len(existing_articles) > 0:
+        links_list = "\n".join([f'- {l.get("titolo")}: {l.get("url")}' for l in existing_articles[:10]])
+        prompt += f"""
+=== LINK INTERNI DA INTEGRARE (STRATEGICO) ===
+Inserisci ALMENO 2-3 link interni ai seguenti articoli correlati. 
+FALLO IN MODO NATURALE all'interno del testo:
+{links_list}
+REGOLE LINK:
+- Usa il titolo dell'articolo o varianti naturali come anchor text.
+- NON forzare il link se non e pertinente.
+- I link devono essere in formato <a href="URL">TESTO</a>.
+"""
+
     if advanced_prompt:
         secondo_livello = advanced_prompt.get("secondo_livello_prompt", "")
         keyword_template = advanced_prompt.get("keyword_injection_template", "")
@@ -646,9 +1078,55 @@ REGOLE DI UMANIZZAZIONE:
             prompt += f"\n=== ISTRUZIONI AVANZATE ===\n{secondo_livello}\n"
         if keyword_template:
             prompt += f"\n=== TEMPLATE KEYWORD ===\n{keyword_template}\n"
+    if existing_articles:
+        prompt += "\n=== CONTESTO LINK INTERNI (OBBLIGATORIO) ===\n"
+        prompt += "INSERISCI ALMENO 3 LINK INTERNI scegliendo tra questi candidati. DEVI integrare i link naturalmente nei paragrafi (NON alla fine):\n"
+        for ea in existing_articles[:15]:
+            prompt += f"- ARTICOLO CORRELATO: {ea['titolo']} | URL: {ea['url']}\n"
+        prompt += """
+REGOLE MANDATORIE PER I LINK INTERNI:
+1. DEVI inserire almeno 3 collegamenti ipertestuali <a> nel corpo dell'articolo.
+2. Usa anchor text rilevanti e brevi (3-5 parole). Esempio: "servizio di <a href='URL'>noleggio auto a lungo termine</a>".
+3. Distribuisci i link in paragrafi diversi, non tutti nello stesso punto.
+4. NON usare mai anchor text generici ("clicca qui", "leggi tutto", ecc).
+"""
 
     prompt += "\n=== ISTRUZIONE FINALE ===\nGenera un contenuto SEO completo, dettagliato e ottimizzato. Applica il modello di copywriting indicato, integra le leve psicologiche e rispetta tutte le regole SEO on-page.\n\n=== META DESCRIPTION ===\nAlla FINE del contenuto HTML, aggiungi un blocco separato:\n<!-- META_DESCRIPTION: [scrivi qui una meta description di 150-160 caratteri, con keyword principale, intento di ricerca e call to action implicita] -->"
     return prompt
+
+
+# ============== INTERNAL LINKING ==============
+
+async def generate_internal_link_update(provider: str, api_key: str, model: str, temperature: float, 
+                                        old_article_title: str, old_article_content: str, 
+                                        new_article_title: str, new_article_keyword: str, new_article_url: str) -> str:
+    """Generates a new paragraph to be appended to an old article, which links to the new article."""
+    system_prompt = """Sei un esperto SEO responsabile dell'internal linking.
+Il tuo compito è scrivere UN SINGOLO PARAGRAFO (2-3 frasi) da aggiungere alla fine di un articolo esistente per linkare un nuovo articolo appena pubblicato sullo stesso sito.
+REGOLE RIGIDE:
+1. Usa "anchor text" SEO-friendly: breve (max 5 parole), rilevante e pertinente (exact-match o varianti naturali di keyword per il nuovo articolo).
+2. Evita anchor text generici ("clicca qui", "leggi di più", "questo articolo").
+3. Assicurati che il paragrafo si leghi in modo naturale ("Se ti è piaciuto questo argomento...", "Per approfondire...", ecc.).
+4. Restituisci SOLO IL PARAGRAFO in formato HTML (<p>...</p>), senza nient'altro, e includi il link: <a href="URL">anchor text</a>.
+"""
+    user_prompt = f"""
+ARTICOLO ESISTENTE:
+Titolo: {old_article_title}
+
+NUOVO ARTICOLO DA LINKARE:
+Titolo: {new_article_title}
+Keyword Rilevante: {new_article_keyword}
+URL: {new_article_url}
+
+Scrivi il paragrafo HTML con il link interno.
+"""
+    try:
+        content = await generate_with_llm(provider, api_key, model, temperature, system_prompt, user_prompt)
+        return clean_llm_output(content)
+    except Exception as e:
+        import logging
+        logging.getLogger("server").error(f"Error generating internal link update: {e}")
+        return ""
 
 
 # ============== SERP SCRAPING ==============
@@ -737,18 +1215,31 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
     return results
 
 
-async def scrape_website_info(url: str, max_pages: int = 6) -> dict:
+async def scrape_website_info(urls: list, max_pages: int = 6) -> dict:
     from urllib.parse import urljoin, urlparse
     info = {
         "descrizione_attivita": "", "servizi": [], "citta_principale": "", "regione": "",
         "punti_di_forza": [], "contatti": {}, "pagine_analizzate": [],
-        "raw_titles": [], "raw_headings": [], "raw_meta_descriptions": []
+        "raw_titles": [], "raw_headings": [], "raw_meta_descriptions": [],
+        "full_text_corpus": ""
     }
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    base_url = url.rstrip("/")
-    if not base_url.startswith("http"):
-        base_url = "https://" + base_url
-    pages_to_visit = [base_url]
+    
+    pages_to_visit = []
+    base_urls = []
+    for u in urls:
+        if not u or not isinstance(u, str): continue
+        u = u.strip()
+        if not u: continue
+        base_url = u.rstrip("/")
+        if not base_url.startswith("http"):
+            base_url = "https://" + base_url
+        pages_to_visit.append(base_url)
+        base_urls.append(base_url)
+        
+    if not pages_to_visit:
+        return info
+
     visited = set()
 
     async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers=headers) as client_http:
@@ -773,13 +1264,17 @@ async def scrape_website_info(url: str, max_pages: int = 6) -> dict:
                 for tag in soup(["script", "style", "nav", "header", "footer", "aside"]):
                     tag.decompose()
                 body_text = soup.get_text(separator=" ", strip=True)
-                if page_url == base_url:
+                
+                # Accumulate text for LLM analysis (limited to ~2000 chars per page to avoid context bloat)
+                info["full_text_corpus"] += f"\n--- PAGE: {page_url} ---\n{body_text[:2000]}\n"
+
+                if page_url in base_urls and not info["descrizione_attivita"]:
                     info["descrizione_attivita"] = body_text[:800]
-                base_domain = urlparse(base_url).netloc
+                page_domain = urlparse(page_url).netloc
                 for a in soup.find_all("a", href=True):
                     full_url = urljoin(page_url, a["href"])
                     parsed = urlparse(full_url)
-                    if parsed.netloc == base_domain and full_url not in visited:
+                    if parsed.netloc == page_domain and full_url not in visited:
                         link_text = a.get_text(strip=True).lower()
                         important = ["chi siamo", "about", "servizi", "services", "contatti", "contact", "cosa facciamo"]
                         if any(kw in link_text or kw in full_url.lower() for kw in important):
@@ -792,14 +1287,17 @@ async def scrape_website_info(url: str, max_pages: int = 6) -> dict:
                     info["contatti"]["telefono"] = phones[0]
                 if emails:
                     info["contatti"]["email"] = emails[0]
+                
+                # Basic heuristic fallback
                 italian_cities = ["roma", "milano", "napoli", "torino", "palermo", "genova", "bologna",
                                   "firenze", "bari", "catania", "venezia", "verona", "salerno", "avellino",
                                   "caserta", "benevento", "padova", "trieste", "brescia", "parma", "modena"]
                 body_lower = body_text.lower()
-                for city in italian_cities:
-                    if city in body_lower:
-                        info["citta_principale"] = city.title()
-                        break
+                if not info["citta_principale"]:
+                    for city in italian_cities:
+                        if city in body_lower:
+                            info["citta_principale"] = city.title()
+                            break
             except Exception as e:
                 logger.warning(f"Error scraping {page_url}: {e}")
 
@@ -811,3 +1309,171 @@ async def scrape_website_info(url: str, max_pages: int = 6) -> dict:
             info["servizi"].append(h)
     info["servizi"] = info["servizi"][:10]
     return info
+
+
+async def extract_structured_kb_with_llm(scraped_data: dict, provider: str, api_key: str, model: str) -> dict:
+    """Uses LLM to transform raw scraped website data into a structured Knowledge Base."""
+    prompt = f"""Estrai informazioni aziendali strutturate dai seguenti dati scansionati dal sito web.
+Dati grezzi (Titoli, Meta, Heading e porzioni di testo):
+TITOLI: {", ".join(scraped_data.get("raw_titles", []))}
+META DESC: {", ".join(scraped_data.get("raw_meta_descriptions", []))}
+HEADING: {", ".join(scraped_data.get("raw_headings", []))}
+TESTO CORPO:
+{scraped_data.get("full_text_corpus", "")[:6000]}
+
+Restituisci un oggetto JSON con i seguenti campi (usa stringhe vuote o liste vuote se non trovi info):
+- descrizione_attivita: (riassunto di 2-3 paragrafi di cosa fa l'azienda)
+- storia_brand: (brevi info sulla storia o missione se presenti)
+- citta_principale: (città dove opera o sede principale)
+- regione: (regione italiana)
+- descrizione_geografica: (breve descrizione del territorio in cui opera)
+- punti_di_interesse_locali: (lista di luoghi famosi vicini menzionati)
+- punti_di_forza: (lista di 3-5 vantaggi competitivi)
+- pubblico_target_primario: (chi è il cliente tipo)
+- pubblico_target_secondario: (altre categorie di clienti)
+- call_to_action_principale: (es. "Richiedi un preventivo gratuito", "Contattaci su WhatsApp")
+- servizi: (lista dei 5-8 servizi principali offerti)
+
+IMPORTANTE: Rispondi SOLO con il JSON puro, senza markdown block.
+"""
+    try:
+        response = await generate_with_llm(provider, api_key, model, 0.3, prompt, "Knowledge Base Extraction")
+        # Clean potential markdown
+        cleaned = response.strip()
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r'^```(json)?\s*', '', cleaned)
+            cleaned = re.sub(r'\s*```$', '', cleaned)
+        data = json.loads(cleaned)
+        return data
+    except Exception as e:
+        logger.error(f"Error in extract_structured_kb_with_llm: {e}")
+        return {}
+
+
+# ============== SITEMAP PARSING ==============
+
+def _guess_title_from_url(url: str) -> str:
+    """Guess a readable title from a URL slug."""
+    parsed = urlparse(url)
+    path = parsed.path.strip("/")
+    if not path:
+        return "Home"
+    slug = path.split("/")[-1]
+    title = slug.replace("-", " ").replace("_", " ").capitalize()
+    return title
+
+
+async def get_sitemap_links(sitemap_url: str) -> List[dict]:
+    """Fetch and parse a sitemap (or index) to extract URLs."""
+    links = []
+    visited_sitemaps = set()
+
+    async def _parse(url: str):
+        if url in visited_sitemaps or not url.startswith("http"):
+            return
+        visited_sitemaps.add(url)
+        try:
+            async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+                resp = await client.get(url)
+                if resp.status_code != 200:
+                    return
+                # Use a more lenient approach for namespaces
+                content = resp.content
+                import xml.etree.ElementTree as ET
+                try:
+                    root = ET.fromstring(content)
+                except ET.ParseError:
+                    # Try cleaning up common issues
+                    content_str = resp.text.strip()
+                    root = ET.fromstring(content_str)
+
+                tag_lower = root.tag.lower()
+                
+                # Helper to find tags regardless of namespace
+                def find_all_tags(element, target):
+                    results = []
+                    for child in element.iter():
+                        if child.tag.split('}')[-1] == target:
+                            results.append(child)
+                    return results
+
+                # If sitemap index
+                if "sitemapindex" in tag_lower:
+                    locs = find_all_tags(root, "loc")
+                    for loc in locs:
+                        if loc.text:
+                            await _parse(loc.text.strip())
+                # If regular sitemap
+                elif "urlset" in tag_lower:
+                    locs = find_all_tags(root, "loc")
+                    for loc in locs:
+                        if loc.text:
+                            url_val = loc.text.strip()
+                            links.append({
+                                "url": url_val,
+                                "titolo": _guess_title_from_url(url_val),
+                                "keyword": ""
+                            })
+        except Exception as e:
+            logger.warning(f"Error parsing sitemap {url}: {e}")
+
+    await _parse(sitemap_url)
+    return links
+
+
+async def get_internal_linking_context(client_id: str, config: dict, target_keyword: str) -> List[dict]:
+    """Get the best 10-15 internal link candidates from DB and Sitemap."""
+    # 1. Fetch from DB
+    cursor = db.articles.aggregate([
+        {"$match": {"client_id": client_id, "stato": "published", "wordpress_link": {"$regex": "^https?://"}}},
+        {"$sort": {"published_at": -1}},
+        {"$group": {
+            "_id": "$wordpress_link",
+            "titolo": {"$first": "$titolo"},
+            "keyword": {"$first": "$seo_metadata.focus_keyword"}
+        }},
+        {"$limit": 30}
+    ])
+    db_links = []
+    async for a in cursor:
+        db_links.append({"titolo": a["titolo"], "url": a["_id"], "keyword": a.get("keyword", "")})
+    
+    # 2. Fetch from Sitemap
+    # Check multiple possible config locations
+    sitemap_url = config.get("seo", {}).get("sitemap_url") or config.get("knowledge_base", {}).get("sitemap_url")
+    sitemap_links = []
+    if sitemap_url:
+        sitemap_links = await get_sitemap_links(sitemap_url)
+    
+    # 3. Combine and Deduplicate
+    all_links = {l["url"]: l for l in db_links}
+    for l in sitemap_links:
+        if l["url"] not in all_links:
+            # Avoid linking to sitemap itself or very common non-content pages
+            ignored = [".xml", "wp-content", "/tag/", "/category/", "/author/"]
+            if not any(x in l["url"] for x in ignored):
+                all_links[l["url"]] = l
+            
+    # 4. Filter by relevance to the target keyword and exclude current
+    target_lower = target_keyword.lower()
+    kws = [k.lower() for k in target_keyword.split() if len(k) > 2]
+    scored = []
+    for url, l in all_links.items():
+        # Exclude current URL if possible (by simple string match on url/title)
+        if target_lower in l["titolo"].lower() or l["titolo"].lower() in target_lower:
+            continue
+            
+        score = 0
+        text = (l["titolo"] + " " + url).lower()
+        for kw in kws:
+            if kw in text:
+                score += 1
+        # Boost DB articles slightly as they are usually more relevant
+        if any(db_l["url"] == url for db_l in db_links):
+            score += 0.5
+        scored.append((score, l))
+    
+    scored.sort(key=lambda x: x[0], reverse=True)
+    results = [x[1] for x in scored[:15]]
+    logger.info(f"Internal linking context for '{target_keyword}': {len(results)} links found (DB: {len(db_links)}, Sitemap: {len(sitemap_links)}).")
+    return results

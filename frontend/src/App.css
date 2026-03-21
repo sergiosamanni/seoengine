@@ -1,3 +1,76 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+:root {
+  --font-main: 'Outfit', sans-serif;
+  --bg-primary: #fbfbfc;
+  --bg-card: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border: #f1f3f6;
+  --accent: #0f172a;
+  --accent-soft: #f1f5f9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
+
 .App {
   min-height: 100vh;
+}
+
+/* Custom compact table styles */
+.compact-cell {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+
+/* Smooth transitions */
+.transition-colors {
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+/* Glassmorphism subtle */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Antigravity Custom Styles for SEO Engine */
+.agency-group-header {
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  font-size: 0.7rem;
+}
+
+.card-minimal {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+  border-color: #f1f3f6;
 }

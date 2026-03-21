@@ -11,14 +11,15 @@ Applicazione web full-stack per la SEO programmatica. Genera articoli SEO ottimi
 - **SERP**: DuckDuckGo Lite con retry logic
 - **WordPress**: Pubblicazione via REST API (post + pagine), formato Gutenberg blocks
 - **GSC**: OAuth 2.0 per dati Google Search Console
-- **Object Storage**: Emergent Object Storage per upload immagini
+- **Object Storage**: Local system storage by default, configurable remote API
+- **Branding**: Logo-less, brand-first, focused on result aesthetics
 
 ## Core Features (Implemented)
 1. Multi-Tenant: Ruoli Admin e Cliente
-2. Wizard 5 Step (Admin): Strategia -> SERP -> GSC -> Prompt -> Genera
-3. Generazione Articoli: Singolo e Programmatica (batch)
-4. 3 Tipi Contenuto: Articolo Blog, Landing Page, Pillar Page (con prompt differenziati)
-5. Pubblicazione WordPress immediata: Post per articoli, Pagine per landing/pillar (status: publish)
+2. Generator Hub: Articolo Singolo, Piano Editoriale e SEO Programmatica (batch)
+3. Generazione Articoli: Basati su SERP e GSC (topic mapping)
+4. Tipi Contenuto: Articoli Blog e Landing Pages (via Programmatica)
+5. Pubblicazione WordPress: Post (articoli), Pagine (programmatica)
 6. Upload Immagini (Admin + Client): Prima=evidenza WP, altre inline. Responsive/mobile-first
 7. Formato Gutenberg: Contenuto convertito in wp:heading, wp:paragraph, wp:list blocks
 8. H1 Unico: Sanitizzazione post-generazione rimuove H1 duplicati

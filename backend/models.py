@@ -7,6 +7,7 @@ class ClientCreate(BaseModel):
     settore: str
     sito_web: str
     siti_web: List[str] = []
+    agenzia: str = "diretto"
     attivo: bool = True
 
 
@@ -15,6 +16,7 @@ class ClientUpdate(BaseModel):
     settore: Optional[str] = None
     sito_web: Optional[str] = None
     siti_web: Optional[List[str]] = None
+    agenzia: Optional[str] = None
     attivo: Optional[bool] = None
 
 
@@ -43,6 +45,7 @@ class KnowledgeBase(BaseModel):
     pubblico_target_primario: Optional[str] = None
     pubblico_target_secondario: Optional[str] = None
     call_to_action_principale: Optional[str] = None
+    pagine_scansionate: Optional[List[Dict[str, str]]] = None
 
 
 class ToneStyle(BaseModel):
@@ -58,6 +61,7 @@ class SEOSettings(BaseModel):
     lingua: Optional[str] = "italiano"
     lunghezza_minima_parole: Optional[int] = 1500
     include_faq_in_fondo: Optional[bool] = False
+    sitemap_url: Optional[str] = None
 
 
 class KeywordCombinations(BaseModel):
@@ -93,6 +97,8 @@ class GSCConfig(BaseModel):
     enabled: Optional[bool] = False
     connected: Optional[bool] = False
     tokens: Optional[Dict] = None
+    oauth_client_id: Optional[str] = None
+    oauth_client_secret: Optional[str] = None
 
 
 class ClientConfiguration(BaseModel):
@@ -114,6 +120,7 @@ class ClientResponse(BaseModel):
     settore: str
     sito_web: str
     siti_web: List[str] = []
+    agenzia: str = "diretto"
     attivo: bool
     created_at: str
     totale_articoli: int = 0

@@ -159,18 +159,20 @@ export const GscPage = () => {
 
   if (!integrationConfigured) {
     return (
-      <div className="space-y-6 animate-fade-in" data-testid="gsc-page">
+      <div className="space-y-6 animate-fade-in max-w-5xl mx-auto" data-testid="gsc-page">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 font-['Manrope'] tracking-tight">Google Search Console</h1>
-          <p className="text-slate-500 mt-1">{client?.nome}</p>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-none">Google Search Console</h1>
+          <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-widest font-semibold">{client?.nome}</p>
         </div>
-        <Card className="border-amber-200 bg-amber-50/70">
-          <CardContent className="py-12 text-center">
-            <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">Integrazione GSC non configurata</h3>
-            <p className="text-slate-500 max-w-lg mx-auto">
-              L'integrazione con Google Search Console richiede la configurazione delle credenziali OAuth a livello di sistema.
-              Contatta l'amministratore di sistema per abilitarla.
+        <Card className="border-[#f1f3f6] shadow-sm rounded-2xl overflow-hidden bg-white">
+          <CardContent className="py-20 text-center">
+            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <AlertTriangle className="w-8 h-8 text-amber-400" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Integrazione non configurata</h3>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+              L'integrazione richiede la configurazione delle credenziali OAuth.
+              Contatta l'amministratore per abilitarla.
             </p>
           </CardContent>
         </Card>
@@ -179,237 +181,189 @@ export const GscPage = () => {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in" data-testid="gsc-page">
+    <div className="space-y-6 animate-fade-in max-w-5xl mx-auto" data-testid="gsc-page">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 font-['Manrope'] tracking-tight">Google Search Console</h1>
-          <p className="text-slate-500 mt-1">{client?.nome} — Dati di posizionamento e performance</p>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-none">Google Search Console</h1>
+          <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-widest font-semibold">{client?.nome} — Performance e Posizionamento</p>
         </div>
         {gscConnected && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Select value={days} onValueChange={(v) => setDays(v)}>
-              <SelectTrigger className="w-[140px]" data-testid="gsc-period-select">
+              <SelectTrigger className="w-[150px] h-9 border-[#f1f3f6] rounded-xl text-[11px] font-bold bg-white" data-testid="gsc-period-select">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Ultimi 7 giorni</SelectItem>
-                <SelectItem value="28">Ultimi 28 giorni</SelectItem>
-                <SelectItem value="90">Ultimi 3 mesi</SelectItem>
+              <SelectContent className="rounded-xl border-[#f1f3f6]">
+                <SelectItem value="7" className="text-xs font-medium">Ultimi 7 giorni</SelectItem>
+                <SelectItem value="28" className="text-xs font-medium">Ultimi 28 giorni</SelectItem>
+                <SelectItem value="90" className="text-xs font-medium">Ultimi 3 mesi</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={fetchData} disabled={loading} data-testid="gsc-refresh-btn">
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />Aggiorna
+            <Button variant="ghost" onClick={fetchData} disabled={loading} className="text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:text-slate-900 h-9 px-4 rounded-xl border border-[#f1f3f6] bg-white shadow-sm" data-testid="gsc-refresh-btn">
+              <RefreshCw className={`w-3.5 h-3.5 mr-2 ${loading ? 'animate-spin' : ''}`} />Aggiorna
             </Button>
           </div>
         )}
       </div>
 
-      {/* Connected Status Banner */}
+      {/* Connected Status Banner - Modern & Minimal */}
       {gscConnected && (
-        <Card className="border-emerald-200 bg-emerald-50/60" data-testid="gsc-connected-banner">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+        <div className="bg-slate-900 rounded-2xl p-4 flex items-center justify-between shadow-lg shadow-slate-200" data-testid="gsc-connected-banner">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
               </div>
               <div>
-                <p className="font-semibold text-emerald-800">Google Search Console Connesso</p>
-                <p className="text-sm text-emerald-600">{siteUrl}</p>
+                <p className="text-xs font-bold text-white tracking-tight">GSC Connesso</p>
+                <p className="text-[10px] text-slate-400 font-medium">{siteUrl}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Attivo</Badge>
-              <Button variant="outline" size="sm" onClick={disconnectGoogle} className="text-red-600 border-red-200 hover:bg-red-50" data-testid="gsc-disconnect-btn">
-                <Unlink className="w-4 h-4 mr-1" />Disconnetti
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            <Button variant="ghost" size="sm" onClick={disconnectGoogle} className="text-[10px] uppercase font-bold tracking-widest text-red-400 hover:text-red-500 hover:bg-red-500/10 h-9 px-4 rounded-xl" data-testid="gsc-disconnect-btn">
+                <Unlink className="w-3.5 h-3.5 mr-2" /> Disconnetti
+            </Button>
+        </div>
       )}
 
-      {/* Connection Card */}
+      {/* Connection Card - Minimal */}
       {!gscConnected ? (
-        <Card className="border-slate-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <BarChart3 className="w-6 h-6 text-blue-600" />
-              Connetti Google Search Console
+        <Card className="border-[#f1f3f6] shadow-sm rounded-2xl overflow-hidden bg-white">
+          <CardHeader className="p-8 bg-slate-50 border-b border-[#f1f3f6]">
+            <CardTitle className="text-lg font-bold flex items-center gap-3">
+              <BarChart3 className="w-5 h-5 text-slate-400" />
+              Configura Connessione
             </CardTitle>
-            <CardDescription>
-              Accedi con il tuo account Google per visualizzare keyword, posizionamenti e performance del sito
+            <CardDescription className="text-xs font-medium text-slate-400 uppercase tracking-widest mt-1">
+              Accedi con Google per importare i dati organici
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
-            {/* Step 1: Site URL */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">URL del sito (come appare in GSC)</Label>
+          <CardContent className="p-8 space-y-8">
+            <div className="space-y-3">
+              <Label className="text-[10px] uppercase font-bold tracking-[0.2em] text-slate-400 ml-1">Proprietà GSC (URL Sito)</Label>
               <div className="flex gap-2">
                 <Input
                   value={siteUrlInput}
                   onChange={(e) => setSiteUrlInput(e.target.value)}
-                  placeholder="https://www.tuosito.com/"
-                  className="flex-1"
+                  placeholder="https://www.esempio.it/"
+                  className="h-11 border-[#f1f3f6] rounded-xl text-xs font-bold shadow-sm"
                   data-testid="gsc-site-url-input"
                 />
                 <Button
                   variant="outline"
                   onClick={saveSiteUrl}
                   disabled={savingSiteUrl || !siteUrlInput.trim()}
+                  className="h-11 w-11 p-0 border-[#f1f3f6] rounded-xl text-slate-400 hover:text-slate-900 bg-white"
                   data-testid="gsc-save-url-btn"
                 >
                   {savingSiteUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 </Button>
               </div>
               {siteUrl && (
-                <p className="text-xs text-emerald-600 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> URL salvato: {siteUrl}
-                </p>
+                <div className="flex items-center gap-2 px-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">URL configurato: {siteUrl}</span>
+                </div>
               )}
             </div>
 
-            {/* Step 2: Connect */}
             <Button
               size="lg"
               onClick={connectGoogle}
               disabled={connecting || !siteUrl}
-              className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-base font-semibold"
+              className="w-full bg-slate-900 rounded-xl h-14 text-xs font-bold uppercase tracking-widest shadow-lg shadow-slate-200"
               data-testid="gsc-connect-btn"
             >
               {connecting ? (
-                <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Connessione in corso...</>
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <>
-                  <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  Connetti Google Search Console
-                </>
+                <div className="flex items-center gap-3">
+                  <LogIn className="w-4 h-4" />
+                  Connetti Account Google
+                </div>
               )}
             </Button>
 
-            {!siteUrl && (
-              <p className="text-xs text-slate-400 text-center">Inserisci e salva l'URL del sito prima di connetterti</p>
-            )}
             {redirectUri && (
-              <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <p className="text-xs font-medium text-slate-600 mb-1">Questo URI deve essere presente tra gli "URI di reindirizzamento autorizzati" nella Google Cloud Console:</p>
-                <div className="flex items-center gap-2">
-                  <code className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded break-all block flex-1" data-testid="gsc-redirect-uri">{redirectUri}</code>
-                  <Button variant="outline" size="sm" onClick={() => {navigator.clipboard.writeText(redirectUri); toast.success('URI copiato!');}}>
+              <div className="p-6 bg-slate-50 rounded-2xl border border-[#f1f3f6] space-y-3">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Informazioni per lo Sviluppatore</p>
+                <div className="flex items-center gap-3">
+                  <code className="text-[10px] font-mono font-bold text-indigo-500 bg-white px-3 py-2 rounded-lg border border-[#f1f3f6] flex-1 truncate" data-testid="gsc-redirect-uri">{redirectUri}</code>
+                  <Button variant="ghost" size="sm" className="text-[10px] font-bold uppercase tracking-widest text-slate-400" onClick={() => {navigator.clipboard.writeText(redirectUri); toast.success('Copiato!');}}>
                     Copia
                   </Button>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Se ricevi errore "redirect_uri_mismatch", verifica che questo URI sia registrato esattamente nella tua Google Cloud Console {'>'} Credenziali {'>'} Client OAuth 2.0
+                <p className="text-[10px] text-slate-300 font-medium italic">
+                  Assicurati che questo URI sia registrato nella Google Cloud Console.
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
-      ) : (
-        /* Connected Status Bar */
-        <Card className="border-emerald-200 bg-emerald-50/50">
-          <CardContent className="py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              <div>
-                <p className="font-medium text-sm text-slate-900">Connesso a Google Search Console</p>
-                <p className="text-xs text-slate-500">{siteUrl}</p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={disconnectGoogle}
-              className="text-red-600 border-red-200 hover:bg-red-50"
-              data-testid="gsc-disconnect-btn"
-            >
-              <Unlink className="w-4 h-4 mr-2" />Disconnetti
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      ) : null}
 
       {/* Data Section */}
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+          <Loader2 className="w-5 h-5 animate-spin text-slate-200" />
         </div>
       ) : data ? (
         <>
+          {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <MousePointerClick className="w-4 h-4 text-blue-600" />
-                  <span className="text-xs text-slate-500">Click totali</span>
+            {[
+              { label: 'Click', value: data.totals?.total_clicks?.toLocaleString(), icon: MousePointerClick, color: 'text-blue-500', testid: 'gsc-total-clicks' },
+              { label: 'Impressioni', value: data.totals?.total_impressions?.toLocaleString(), icon: Eye, color: 'text-indigo-500', testid: 'gsc-total-impressions' },
+              { label: 'CTR Medio', value: `${data.totals?.avg_ctr}%`, icon: TrendingUp, color: 'text-emerald-500', testid: 'gsc-avg-ctr' },
+              { label: 'Pos. Media', value: data.totals?.avg_position, icon: Target, color: 'text-amber-500', testid: 'gsc-avg-position' }
+            ].map((stat) => (
+              <div key={stat.label} className="bg-white border border-[#f1f3f6] rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                    <p className="text-[9px] uppercase font-bold tracking-[0.2em] text-slate-300">{stat.label}</p>
+                    <stat.icon className={`w-3.5 h-3.5 ${stat.color} opacity-40`} />
                 </div>
-                <p className="text-2xl font-bold text-slate-900 font-['Manrope']" data-testid="gsc-total-clicks">{data.totals?.total_clicks?.toLocaleString()}</p>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Eye className="w-4 h-4 text-purple-600" />
-                  <span className="text-xs text-slate-500">Impressioni</span>
-                </div>
-                <p className="text-2xl font-bold text-slate-900 font-['Manrope']" data-testid="gsc-total-impressions">{data.totals?.total_impressions?.toLocaleString()}</p>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="w-4 h-4 text-emerald-600" />
-                  <span className="text-xs text-slate-500">CTR medio</span>
-                </div>
-                <p className="text-2xl font-bold text-slate-900 font-['Manrope']" data-testid="gsc-avg-ctr">{data.totals?.avg_ctr}%</p>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Target className="w-4 h-4 text-orange-600" />
-                  <span className="text-xs text-slate-500">Posizione media</span>
-                </div>
-                <p className="text-2xl font-bold text-slate-900 font-['Manrope']" data-testid="gsc-avg-position">{data.totals?.avg_position}</p>
-              </CardContent>
-            </Card>
+                <p className="text-xl font-bold tracking-tight text-slate-900" data-testid={stat.testid}>{stat.value}</p>
+              </div>
+            ))}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-slate-200">
-              <CardHeader>
-                <CardTitle>Top Keyword</CardTitle>
-                <CardDescription>{data.keywords?.length} keyword posizionate</CardDescription>
+            {/* Keywords */}
+            <Card className="border-[#f1f3f6] shadow-sm rounded-2xl overflow-hidden bg-white">
+              <CardHeader className="p-6 border-b border-[#f1f3f6]">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle className="text-sm font-bold">Top Keyword</CardTitle>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{data.keywords?.length || 0} Query trovate</p>
+                    </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[400px]">
-                  <table className="w-full text-sm">
-                    <thead className="border-b border-slate-200">
-                      <tr className="text-slate-500 text-xs">
-                        <th className="text-left py-2 px-1">Keyword</th>
-                        <th className="text-right py-2 px-1">Click</th>
-                        <th className="text-right py-2 px-1">Impr.</th>
-                        <th className="text-right py-2 px-1">CTR</th>
-                        <th className="text-right py-2 px-1">Pos.</th>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[450px]">
+                  <table className="w-full">
+                    <thead className="bg-slate-50 border-b border-[#f1f3f6] sticky top-0 z-10">
+                      <tr className="text-left">
+                        <th className="py-3 px-6 text-[9px] uppercase font-bold tracking-widest text-slate-400">Keyword</th>
+                        <th className="py-3 px-6 text-right text-[9px] uppercase font-bold tracking-widest text-slate-400">Click</th>
+                        <th className="py-3 px-6 text-right text-[9px] uppercase font-bold tracking-widest text-slate-400">Pos.</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-[#f1f3f6]">
                       {(data.keywords || []).map((kw, i) => (
-                        <tr key={i} className="border-b border-slate-50 hover:bg-slate-50" data-testid={`gsc-kw-row-${i}`}>
-                          <td className="py-2 px-1 font-medium text-slate-900 truncate max-w-[200px]">{kw.keyword}</td>
-                          <td className="py-2 px-1 text-right text-blue-600 font-medium">{kw.clicks}</td>
-                          <td className="py-2 px-1 text-right text-slate-500">{kw.impressions.toLocaleString()}</td>
-                          <td className="py-2 px-1 text-right text-slate-600">{kw.ctr}%</td>
-                          <td className="py-2 px-1 text-right">
-                            <Badge variant={kw.position <= 3 ? 'default' : kw.position <= 10 ? 'secondary' : 'outline'}
-                              className={`text-xs ${kw.position <= 3 ? 'bg-emerald-600' : ''}`}>
-                              {kw.position}
-                            </Badge>
+                        <tr key={i} className="hover:bg-slate-50/50 transition-colors" data-testid={`gsc-kw-row-${i}`}>
+                          <td className="py-3 px-6">
+                            <p className="text-xs font-bold text-slate-900 tracking-tight truncate max-w-[200px]">{kw.keyword}</p>
+                            <p className="text-[10px] text-slate-400 font-medium">{kw.impressions.toLocaleString()} IMPR.</p>
+                          </td>
+                          <td className="py-3 px-6 text-right">
+                            <span className="text-[11px] font-bold text-blue-500 tracking-tight">{kw.clicks}</span>
+                          </td>
+                          <td className="py-3 px-6 text-right">
+                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${
+                               kw.position <= 3 ? 'bg-emerald-50 text-emerald-600' : 
+                               kw.position <= 10 ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-400'
+                             }`}>
+                               {kw.position}
+                             </span>
                           </td>
                         </tr>
                       ))}
@@ -419,38 +373,44 @@ export const GscPage = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200">
-              <CardHeader>
-                <CardTitle>Top Pagine</CardTitle>
-                <CardDescription>{data.pages?.length} pagine con traffico</CardDescription>
+            {/* Pages */}
+            <Card className="border-[#f1f3f6] shadow-sm rounded-2xl overflow-hidden bg-white">
+              <CardHeader className="p-6 border-b border-[#f1f3f6]">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle className="text-sm font-bold">Top Pagine</CardTitle>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{data.pages?.length || 0} URL attivi</p>
+                    </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[400px]">
-                  <table className="w-full text-sm">
-                    <thead className="border-b border-slate-200">
-                      <tr className="text-slate-500 text-xs">
-                        <th className="text-left py-2 px-1">Pagina</th>
-                        <th className="text-right py-2 px-1">Click</th>
-                        <th className="text-right py-2 px-1">CTR</th>
-                        <th className="text-right py-2 px-1">Pos.</th>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[450px]">
+                  <table className="w-full">
+                    <thead className="bg-slate-50 border-b border-[#f1f3f6] sticky top-0 z-10">
+                      <tr className="text-left">
+                        <th className="py-3 px-6 text-[9px] uppercase font-bold tracking-widest text-slate-400">Path</th>
+                        <th className="py-3 px-6 text-right text-[9px] uppercase font-bold tracking-widest text-slate-400">Click</th>
+                        <th className="py-3 px-6 text-right text-[9px] uppercase font-bold tracking-widest text-slate-400">Pos.</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-[#f1f3f6]">
                       {(data.pages || []).map((pg, i) => (
-                        <tr key={i} className="border-b border-slate-50 hover:bg-slate-50" data-testid={`gsc-page-row-${i}`}>
-                          <td className="py-2 px-1 truncate max-w-[250px]">
-                            <a href={pg.page} target="_blank" rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline flex items-center gap-1">
-                              {pg.page.replace(/https?:\/\/[^/]+/, '').slice(0, 40) || '/'}
-                              <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                            </a>
+                        <tr key={i} className="hover:bg-slate-50/50 transition-colors" data-testid={`gsc-page-row-${i}`}>
+                          <td className="py-3 px-6">
+                            <div className="flex items-center gap-2">
+                                <a href={pg.page} target="_blank" rel="noopener noreferrer"
+                                className="text-xs font-bold text-slate-900 tracking-tight hover:text-blue-500 transition-colors truncate max-w-[200px]">
+                                {pg.page.replace(/https?:\/\/[^/]+/, '') || '/'}
+                                </a>
+                                <ExternalLink className="w-2.5 h-2.5 text-slate-300" />
+                            </div>
+                            <p className="text-[10px] text-slate-400 font-medium">{pg.ctr}% CTR</p>
                           </td>
-                          <td className="py-2 px-1 text-right text-blue-600 font-medium">{pg.clicks}</td>
-                          <td className="py-2 px-1 text-right text-slate-600">{pg.ctr}%</td>
-                          <td className="py-2 px-1 text-right">
-                            <Badge variant={pg.position <= 10 ? 'secondary' : 'outline'} className="text-xs">
-                              {pg.position}
-                            </Badge>
+                          <td className="py-3 px-6 text-right">
+                             <span className="text-[11px] font-bold text-blue-500 tracking-tight">{pg.clicks}</span>
+                          </td>
+                          <td className="py-3 px-6 text-right">
+                             <span className="text-[10px] font-bold text-slate-400">{pg.position}</span>
                           </td>
                         </tr>
                       ))}
@@ -465,3 +425,5 @@ export const GscPage = () => {
     </div>
   );
 };
+
+export default GscPage;

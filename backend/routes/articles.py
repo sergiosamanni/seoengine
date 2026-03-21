@@ -1,3 +1,4 @@
+import os
 """Article generation, publishing, and job management routes."""
 import uuid
 import asyncio
@@ -12,7 +13,10 @@ from auth import get_current_user, require_admin, ADMIN_MASTER_PASSWORD
 from models import (ArticleGenerate, ArticlePublish, ArticleResponse, SimpleGenerateRequest,
                     VerifyPasswordRequest, UpdateAdvancedPromptRequest, SerpScrapingRequest)
 from helpers import (build_system_prompt, generate_seo_metadata, generate_with_llm,
-                     publish_to_wordpress, log_activity, LLM_PROVIDERS)
+                     generate_with_rotation,
+                     publish_to_wordpress, log_activity, LLM_PROVIDERS, 
+                     update_wordpress_post, generate_internal_link_update,
+                     get_internal_linking_context)
 
 logger = logging.getLogger("server")
 router = APIRouter()
@@ -105,9 +109,7 @@ async def generate_articles(request: ArticleGenerate, current_user: dict = Depen
         last_error = None
         for attempt in range(3):
             try:
-                content = await generate_with_llm(provider, llm_config["api_key"],
-                    llm_config.get("modello", "gpt-4-turbo-preview"), llm_config.get("temperatura", 0.7),
-                    system_prompt, titolo_formatted)
+                content = await generate_with_rotation(llm_config, system_prompt, titolo_formatted)
                 break
             except Exception as e:
                 last_error = e
@@ -183,7 +185,7 @@ async def generate_and_publish(request: dict, current_user: dict = Depends(get_c
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client_doc:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
-    config = client_doc.get("configuration", {})
+    config = client_doc.get("configuration") or {}
     llm_config = config.get("llm", {}) or config.get("openai", {})
     if not llm_config.get("api_key"):
         raise HTTPException(status_code=400, detail="API Key LLM non configurata.")
@@ -214,7 +216,16 @@ async def _generate_and_publish_batch(job_id, client_id, combinations, publish_t
     wp_config = config.get("wordpress", {})
     ct_map = {"articolo": "articolo_blog", "landing_page": "landing_page", "pillar_page": "pillar_page"}
     content_type_prompt = ct_map.get(content_type, "articolo_blog")
-    system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, content_type_prompt, brief)
+    
+    # Fetch internal linking context (DB + Sitemap)
+    # Using first combo service as a broad hint for the batch
+    hint_kw = combinations[0].get("servizio", "") if combinations else ""
+    existing_published = await get_internal_linking_context(client_id, config, hint_kw)
+    
+    if not existing_published:
+        await log_activity(client_id, "article_generate", "info", {"message": "Nessun articolo o sitemap link trovato per il linking interno."})
+    
+    system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, content_type_prompt, brief, existing_published)
     results = []
     for idx, combo in enumerate(combinations):
         titolo_formatted = f"{combo['servizio']} {combo['tipo']} a {combo['citta']}".title()
@@ -223,9 +234,7 @@ async def _generate_and_publish_batch(job_id, client_id, combinations, publish_t
         gen_error = None
         for attempt in range(3):
             try:
-                content = await generate_with_llm(provider, llm_config["api_key"],
-                    llm_config.get("modello", "gpt-4-turbo-preview"), llm_config.get("temperatura", 0.7),
-                    system_prompt, titolo_formatted)
+                content = await generate_with_rotation(llm_config, system_prompt, titolo_formatted)
                 break
             except Exception as e:
                 gen_error = str(e)
@@ -242,6 +251,13 @@ async def _generate_and_publish_batch(job_id, client_id, combinations, publish_t
             article_result["generation_error"] = gen_error
             await log_activity(client_id, "article_generate", "failed", {"titolo": titolo_formatted, "error": gen_error})
         else:
+            # Check for internal links
+            has_links = "<a " in content
+            num_suggested = len(existing_published) if 'existing_published' in locals() else 0
+            if not has_links and num_suggested > 0:
+                await log_activity(client_id, "article_generate", "warning", {"titolo": titolo_formatted, "message": f"ATTENZIONE: L'AI ha ignorato {num_suggested} suggerimenti di link interni."})
+            elif has_links:
+                await log_activity(client_id, "article_generate", "info", {"titolo": titolo_formatted, "message": "L'AI ha inserito link interni correttamente (ALMENO 3)."})
             import re as re_mod
             meta_match = re_mod.search(r'<!--\s*META_DESCRIPTION:\s*(.+?)\s*-->', content)
             llm_meta_desc = meta_match.group(1).strip() if meta_match else None
@@ -272,6 +288,12 @@ async def _generate_and_publish_batch(job_id, client_id, combinations, publish_t
                     article_result["wordpress_post_id"] = wp_result["post_id"]
                     article_result["wordpress_link"] = wp_result.get("link")
                     await log_activity(client_id, "wordpress_publish", "success", {"titolo": titolo_formatted, "post_id": wp_result["post_id"]})
+                    
+                    # Trigger internal linking update to existing articles
+                    await _process_internal_links_post_publish(
+                        client_id, provider, llm_config["api_key"], llm_config.get("modello", "gpt-4-turbo-preview"), llm_config.get("temperatura", 0.7),
+                        article_id, titolo_formatted, seo_metadata.get("focus_keyword", ""), wp_result.get("link", ""), wp_config, wp_type
+                    )
                 except Exception as e:
                     await db.articles.update_one({"id": article_id}, {"$set": {"stato": "publish_failed", "publish_error": str(e)}})
                     article_result["publish_status"] = "failed"
@@ -291,6 +313,107 @@ async def _generate_and_publish_batch(job_id, client_id, combinations, publish_t
                      "published_ok": pub_ok}, "finished_at": datetime.now(timezone.utc).isoformat()}})
 
 
+# ============== IMAGE IMPORT ==============
+
+@router.post("/articles/generate-topic-image")
+async def generate_topic_image(body: dict, current_user: dict = Depends(get_current_user)):
+    client_id = body.get("client_id")
+    title = body.get("title")
+    branding = body.get("branding", {})
+    
+    logger.info(f"Generating topic image for client {client_id}, title: {title}")
+    
+    if not client_id or not title:
+        raise HTTPException(status_code=400, detail="client_id e title richiesti")
+        
+    client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+        
+    config = client_doc.get("configuration") or {}
+    llm_key = (config.get("llm", {}) or config.get("openai", {})).get("api_key")
+    
+    from agents.image import ImageAgent
+    from helpers import generate_image_with_fallback
+    
+    agent = ImageAgent(client_id=client_id, llm_config=config.get("llm", {}) or config.get("openai", {}))
+    crafted_prompt = await agent.craft_prompt(title, branding)
+    logger.info(f"Crafted AI prompt: {crafted_prompt[:100]}...")
+    
+    try:
+        user_id = current_user.get("user_id", "admin")
+        together_key = config.get("together_api_key") or os.environ.get("TOGETHER_API_KEY")
+        result = await generate_image_with_fallback(crafted_prompt, user_id, openai_key=llm_key, together_key=together_key)
+        
+        # Use an absolute URL for the image
+        token = body.get("token") or ""
+        base_url = os.environ.get('BACKEND_URL', 'http://localhost:8000')
+        img_url = f"{base_url}/api/uploads/files/{result['id']}?auth={token}"
+        
+        logger.info(f"Image generated successfully: {img_url}")
+        return {
+            "id": result["id"],
+            "url": img_url,
+            "crafted_prompt": crafted_prompt
+        }
+    except Exception as e:
+        logger.error(f"Image generation error details: {str(e)}")
+        # If it's an OpenAI error, it might be about the prompt or key
+        detail = str(e)
+        if "policy" in detail.lower():
+            detail = "L'IA ha rifiutato questo prompt per motivi di policy. Prova a modificarlo."
+        raise HTTPException(status_code=500, detail=detail)
+
+
+@router.post("/articles/import-external-image")
+async def import_external_image(request: dict, current_user: dict = Depends(get_current_user)):
+    url = request.get("url")
+    if not url:
+        raise HTTPException(status_code=400, detail="URL mancante")
+    
+    import httpx
+    import uuid
+    from datetime import datetime, timezone
+    from storage import put_object, APP_NAME
+    
+    try:
+        async with httpx.AsyncClient(timeout=15) as client_http:
+            resp = await client_http.get(url)
+            if resp.status_code != 200:
+                raise Exception(f"Errore HTTP {resp.status_code} dal server remoto")
+            data = resp.content
+            
+        ext = url.split("?")[0].split(".")[-1].lower()
+        if ext not in ["png", "jpg", "jpeg", "webp", "gif"]:
+            ext = "jpg"
+            
+        file_id = str(uuid.uuid4())
+        user_id = current_user.get("user_id", "admin")
+        path = f"{APP_NAME}/uploads/{user_id}/{file_id}.{ext}"
+        content_type = f"image/{ext}"
+        
+        result = put_object(path, data, content_type)
+        
+        doc = {
+            "id": file_id,
+            "storage_path": result["path"],
+            "original_filename": f"external_{file_id}.{ext}",
+            "content_type": content_type,
+            "size": len(data),
+            "user_id": user_id,
+            "is_deleted": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.files.insert_one(doc)
+        
+        return {"id": file_id, "url": f"/api/uploads/files/{file_id}"}
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Error importing external image: {e}\n{error_trace}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ============== SIMPLIFIED GENERATION ==============
 
 @router.post("/articles/simple-generate")
@@ -307,7 +430,7 @@ async def simple_generate_article(request: SimpleGenerateRequest, current_user: 
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client_doc:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
-    config = client_doc.get("configuration", {})
+    config = client_doc.get("configuration") or {}
     llm_config = config.get("llm", {}) or config.get("openai", {})
     if not llm_config.get("api_key"):
         raise HTTPException(status_code=400, detail="API Key LLM non configurata. Contatta l'amministratore.")
@@ -319,8 +442,15 @@ async def simple_generate_article(request: SimpleGenerateRequest, current_user: 
     kb = config.get("knowledge_base", {})
     ct_map = {"articolo": "articolo_blog", "landing_page": "landing_page", "pillar_page": "pillar_page"}
     content_type_prompt = ct_map.get(request.content_type, "articolo_blog")
+    
+    # Fetch internal linking context (DB + Sitemap)
+    existing_published = await get_internal_linking_context(client_id, config, request.keyword)
+    
+    if not existing_published:
+        await log_activity(client_id, "article_generate", "info", {"message": "Nessun articolo o sitemap link trovato per il linking interno."})
+        
     system_prompt = build_system_prompt(kb, config.get("tono_e_stile", {}), config.get("seo", {}),
-        client_doc["nome"], config.get("advanced_prompt", {}), config.get("content_strategy", {}), content_type_prompt, brief_override)
+        client_doc["nome"], config.get("advanced_prompt", {}), config.get("content_strategy", {}), content_type_prompt, brief_override, existing_published)
 
     # Append GSC and SERP context to the system prompt
     extra_context = []
@@ -353,11 +483,11 @@ async def simple_generate_article(request: SimpleGenerateRequest, current_user: 
         "total": 1, "completed": 0, "results": [], "created_at": datetime.now(timezone.utc).isoformat()})
     asyncio.create_task(_run_simple_generate(job_id, client_id, request.keyword, request.topic,
         request.publish_to_wordpress, system_prompt, llm_config, wp_config, kb, combo, titolo_suggerito,
-        request.content_type, request.image_ids or []))
+        request.content_type, request.image_ids or [], existing_published))
     return {"job_id": job_id, "status": "running", "keyword": request.keyword}
 
 
-async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp, system_prompt, llm_config, wp_config, kb, combo, titolo_suggerito="", content_type="articolo", image_ids=None):
+async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp, system_prompt, llm_config, wp_config, kb, combo, titolo_suggerito="", content_type="articolo", image_ids=None, existing_published=None):
     provider = llm_config.get("provider", "openai")
     titolo = titolo_suggerito or keyword.strip()
     await log_activity(client_id, "article_generate", "running", {"titolo": titolo, "step": "generazione"})
@@ -367,9 +497,7 @@ async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp,
         for attempt in range(3):
             try:
                 user_prompt = f"{titolo}\n\nArgomento specifico: {topic}" if topic else titolo
-                content = await generate_with_llm(provider, llm_config["api_key"],
-                    llm_config.get("modello", "gpt-4-turbo-preview"), llm_config.get("temperatura", 0.7),
-                    system_prompt, user_prompt)
+                content = await generate_with_rotation(llm_config, system_prompt, user_prompt)
                 break
             except Exception as e:
                 gen_error = str(e)
@@ -389,6 +517,13 @@ async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp,
             result["generation_error"] = gen_error
             await log_activity(client_id, "article_generate", "failed", {"titolo": titolo, "error": gen_error})
         else:
+            # Check for internal links
+            has_links = "<a " in content
+            num_suggested = len(existing_published) if existing_published else 0
+            if not has_links and num_suggested > 0:
+                await log_activity(client_id, "article_generate", "warning", {"titolo": titolo, "message": f"ATTENZIONE: L'AI ha ignorato {num_suggested} suggerimenti di link interni."})
+            elif has_links:
+                await log_activity(client_id, "article_generate", "info", {"titolo": titolo, "message": "L'AI ha inserito link interni correttamente (ALMENO 3)."})
             # Extract LLM-generated meta description if present
             import re as re_mod
             meta_match = re_mod.search(r'<!--\s*META_DESCRIPTION:\s*(.+?)\s*-->', content)
@@ -421,6 +556,12 @@ async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp,
                     result["publish_status"] = "success"
                     result["wordpress_link"] = wp_result.get("link")
                     await log_activity(client_id, "wordpress_publish", "success", {"titolo": titolo, "post_id": wp_result["post_id"], "link": wp_result.get("link")})
+                    
+                    # Trigger internal linking update to existing articles
+                    await _process_internal_links_post_publish(
+                        client_id, provider, llm_config["api_key"], llm_config.get("modello", "gpt-4-turbo-preview"), llm_config.get("temperatura", 0.7),
+                        article_id, titolo, seo_metadata.get("focus_keyword", ""), wp_result.get("link", ""), wp_config, wp_type
+                    )
                 except Exception as e:
                     await db.articles.update_one({"id": article_id}, {"$set": {"stato": "publish_failed", "publish_error": str(e)}})
                     result["publish_status"] = "failed"
@@ -437,6 +578,64 @@ async def _run_simple_generate(job_id, client_id, keyword, topic, publish_to_wp,
         await db.jobs.update_one({"id": job_id}, {"$set": {"status": "failed",
             "finished_at": datetime.now(timezone.utc).isoformat(), "error": str(e)}})
         await log_activity(client_id, "article_generate", "failed", {"titolo": titolo, "error": f"Errore fatale: {str(e)}"})
+
+
+async def _process_internal_links_post_publish(client_id: str, provider: str, api_key: str, model: str, temperature: float,
+                                               new_article_id: str, new_title: str, new_keyword: str, new_url: str,
+                                               wp_config: dict, wp_type: str):
+    """Fetches old articles and appends an internal link to the newly published article."""
+    try:
+        # Find up to 4 recent articles to update (exclude the new one)
+        cursor = db.articles.find({
+            "client_id": client_id, 
+            "stato": "published", 
+            "wordpress_post_id": {"$ne": None}, 
+            "id": {"$ne": new_article_id}
+        }).sort("published_at", -1).limit(4)
+        
+        async for old_article in cursor:
+            old_id = old_article["id"]
+            old_title = old_article["titolo"]
+            old_content = old_article.get("contenuto_html") or old_article.get("contenuto", "")
+            wp_post_id = old_article["wordpress_post_id"]
+            
+            # Genera il paragrafo
+            new_paragraph = await generate_internal_link_update(
+                provider, api_key, model, temperature,
+                old_title, old_content, new_title, new_keyword, new_url
+            )
+            
+            if new_paragraph and "<a href=" in new_paragraph:
+                updated_content = old_content + "\n\n" + new_paragraph
+                
+                # Pubblica su wp
+                success = await update_wordpress_post(
+                    url=wp_config.get("url_api"),
+                    username=wp_config.get("utente"),
+                    password=wp_config.get("password_applicazione"),
+                    post_id=wp_post_id,
+                    content=updated_content,
+                    wp_type=wp_type
+                )
+                
+                if success:
+                    await db.articles.update_one(
+                        {"id": old_id},
+                        {"$set": {"contenuto_html": updated_content, "contenuto": updated_content}}
+                    )
+                    await log_activity(client_id, "internal_linking", "success", {
+                        "source_article": old_title,
+                        "target_article": new_title,
+                        "message": f"Aggiunto link a '{new_title}' nell'articolo '{old_title}'"
+                    })
+                else:
+                    await log_activity(client_id, "internal_linking", "failed", {
+                        "source_article": old_title,
+                        "error": "Aggiornamento WordPress fallito"
+                    })
+    except Exception as e:
+        logger.error(f"Error in _process_internal_links_post_publish: {e}")
+        await log_activity(client_id, "internal_linking", "failed", {"error": str(e)})
 
 
 # ============== JOBS ==============
@@ -562,6 +761,74 @@ async def update_advanced_prompt(client_id: str, request: UpdateAdvancedPromptRe
 
 # ============== SERP ==============
 
+@router.post("/serp/images")
+async def serp_images(request: dict, current_user: dict = Depends(get_current_user)):
+    keyword = request.get("keyword", "").strip()
+    if not keyword:
+        raise HTTPException(status_code=400, detail="Keyword obbligatoria")
+    max_results = min(request.get("max_results", 12), 50)  # cap at 50
+    
+    try:
+        from duckduckgo_search import DDGS
+        import httpx as _httpx
+        
+        with DDGS() as ddgs:
+            results = list(ddgs.images(
+                keywords=keyword,
+                region="wt-wt",
+                safesearch="moderate",
+                size="Large",
+                max_results=max_results + 5  # Fetch a few extra in case some fail
+            ))
+        
+        async def get_file_size(url: str, w: int, h: int) -> int:
+            """Try to get real file size via HEAD request, fallback to dimension estimate."""
+            try:
+                async with _httpx.AsyncClient(timeout=3.0, follow_redirects=True) as c:
+                    r = await c.head(url, headers={"User-Agent": "Mozilla/5.0"})
+                    cl = r.headers.get("content-length")
+                    if cl and cl.isdigit():
+                        return max(1, int(cl) // 1024)
+            except Exception:
+                pass
+            return max(10, int(w * h * 0.0002))  # dimension-based estimate
+        
+        # Fetch sizes concurrently for all results
+        import asyncio as _asyncio
+        formatted_results = []
+        for r in results[:max_results]:
+            w = r.get("width", 800)
+            h = r.get("height", 600)
+            img_url = r.get("image", "")
+            if img_url:
+                formatted_results.append({
+                    "image": img_url,
+                    "url": img_url,
+                    "thumbnail": r.get("thumbnail"),
+                    "title": r.get("title", ""),
+                    "source": r.get("source", ""),
+                    "width": int(w) if w else 0,
+                    "height": int(h) if h else 0,
+                    "weight_kb": None  # Will be filled below
+                })
+        
+        # Concurrent size fetching (up to 8 at a time)
+        sem = _asyncio.Semaphore(8)
+        async def fetch_with_sem(item):
+            async with sem:
+                kb = await get_file_size(item["image"], item["width"], item["height"])
+                item["weight_kb"] = kb
+        
+        await _asyncio.gather(*[fetch_with_sem(item) for item in formatted_results])
+        
+        return {"keyword": keyword, "results": formatted_results, "total": len(formatted_results)}
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Image search failed: {e}")
+        return {"keyword": keyword, "results": [], "error": str(e)}
+
+
+
 @router.post("/serp/search")
 async def serp_search(request: dict, current_user: dict = Depends(get_current_user)):
     from helpers import scrape_google_serp
@@ -674,3 +941,283 @@ async def save_and_generate(client_id: str, session_name: str = "", notes: str =
             "keywords_saved": {"servizi": len(keywords.get("servizi", [])), "citta": len(keywords.get("citta_e_zone", [])),
                                "tipi": len(keywords.get("tipi_o_qualificatori", []))},
             "combinations_ready": generated_count}
+
+
+# ============== EDITORIAL PLAN ==============
+
+@router.get("/editorial-plan/{client_id}")
+async def get_editorial_plan(client_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    plan = await db.editorial_plans.find_one({"client_id": client_id}, {"_id": 0})
+    if not plan:
+        return None
+    return plan
+
+
+@router.post("/generate-plan/{client_id}")
+async def generate_editorial_plan(client_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+        
+    client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+        
+    config = client_doc.get("configuration") or {}
+    llm_config = config.get("llm", {}) or config.get("openai", {})
+    
+    from agents.strategist import StrategistAgent
+    strategist = StrategistAgent(client_id=client_id, llm_config=llm_config)
+    
+    kb_data = config.get("knowledge_base", {})
+    gsc_data = {} 
+    target_keywords = config.get("keyword_combinations", {}).get("servizi", [])
+    
+    existing_articles = await db.articles.find({"client_id": client_id}, {"titolo": 1, "_id": 0}).to_list(200)
+    existing_topics = [a.get("titolo") for a in existing_articles if a.get("titolo")]
+    
+    # Also fetch titles from Sitemap to avoid duplicates
+    sitemap_url = config.get("seo", {}).get("sitemap_url") or config.get("knowledge_base", {}).get("sitemap_url")
+    if sitemap_url:
+        try:
+            from helpers import get_sitemap_links
+            sitemap_links = await get_sitemap_links(sitemap_url)
+            for l in sitemap_links:
+                if l.get("titolo") and l["titolo"] not in existing_topics:
+                    existing_topics.append(l["titolo"])
+        except Exception as e:
+            logger.warning(f"Could not fetch sitemap for existing topics check: {e}")
+    
+    topics = await strategist.generate_plan(
+        gsc_data=gsc_data, 
+        kb_data=kb_data, 
+        target_keywords=target_keywords, 
+        existing_topics=existing_topics,
+        num_topics=10
+    )
+    
+    plan_doc = {
+        "client_id": client_id,
+        "topics": topics,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.editorial_plans.update_one(
+        {"client_id": client_id},
+        {"$set": plan_doc},
+        upsert=True
+    )
+    
+    return plan_doc
+
+
+@router.post("/articles/batch-plan")
+async def batch_plan(request: dict, current_user: dict = Depends(get_current_user)):
+    client_id = request.get("client_id")
+    if not client_id:
+        raise HTTPException(status_code=400, detail="client_id richiesto")
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    config = client_doc.get("configuration") or {}
+    
+    topics = request.get("topics", [])
+    publish_to_wp = request.get("publish_to_wordpress", False)
+    content_type = request.get("content_type", "articolo")
+    generate_cover = request.get("generate_cover", False)
+    
+    if not topics:
+        raise HTTPException(status_code=400, detail="Nessun topic fornito")
+
+    job_id = str(uuid.uuid4())
+    job_doc = {"id": job_id, "client_id": client_id, "status": "running",
+               "total": len(topics), "completed": 0, "results": [],
+               "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.jobs.insert_one(job_doc)
+    
+    asyncio.create_task(_run_batch_plan(job_id, client_id, topics, publish_to_wp, content_type, config, generate_cover, client_doc))
+    return {"job_id": job_id, "status": "running", "total": len(topics)}
+
+
+async def _run_batch_plan(job_id, client_id, topics, publish_to_wp, content_type, config, generate_cover, client_doc):
+    llm_config = config.get("llm", {}) or config.get("openai", {})
+    wp_config = config.get("wordpress", {})
+    provider = llm_config.get("provider", "openai")
+    kb = config.get("knowledge_base", {})
+
+    results = []
+    
+    from helpers import build_system_prompt, get_internal_linking_context
+    ct_map = {"articolo": "articolo_blog", "landing_page": "landing_page", "pillar_page": "pillar_page"}
+    content_type_prompt = ct_map.get(content_type, "articolo_blog")
+    existing_published = await get_internal_linking_context(client_id, config, "")
+    
+    for idx, topic in enumerate(topics):
+        titolo = topic.get("titolo", "Articolo")
+        keyword = topic.get("keyword", "")
+        objective = topic.get("funnel", "TOFU")
+        await log_activity(client_id, "batch_plan_generate", "running", {"titolo": titolo, "step": f"{idx+1}/{len(topics)}"})
+        
+        # Build prompt dynamically per topic so it incorporates new internal links
+        system_prompt = build_system_prompt(kb, config.get("tono_e_stile", {}), config.get("seo", {}),
+            client_doc["nome"], config.get("advanced_prompt", {}), config.get("content_strategy", {}), content_type_prompt, {}, existing_published)
+            
+        try:
+            content = None
+            gen_error = None
+            for attempt in range(3):
+                try:
+                    user_prompt = f"{titolo}\n\nObiettivo: {objective}\nMotivo: {topic.get('motivo', '')}"
+                    content = await generate_with_rotation(llm_config, system_prompt, user_prompt)
+                    break
+                except Exception as e:
+                    gen_error = str(e)
+                    if attempt < 2:
+                        await asyncio.sleep(2 ** attempt)
+            
+            article_id = str(uuid.uuid4())
+            now = datetime.now(timezone.utc).isoformat()
+            result = {"id": article_id, "titolo": titolo, "generation_status": "pending", "publish_status": "pending"}
+            if not content:
+                await db.articles.insert_one({"id": article_id, "client_id": client_id, "titolo": titolo,
+                    "contenuto": f"Errore: {gen_error}", "contenuto_html": f"<p>Errore: {gen_error}</p>",
+                    "keyword_principale": keyword, "meta_description": "",
+                    "stato": "failed", "wordpress_post_id": None,
+                    "created_at": now, "published_at": None, "combination": {}})
+                result["generation_status"] = "failed"
+                result["generation_error"] = gen_error
+            else:
+                import re as re_mod
+                meta_match = re_mod.search(r'<!--\s*META_DESCRIPTION:\s*(.+?)\s*-->', content)
+                llm_meta_desc = meta_match.group(1).strip() if meta_match else None
+                if meta_match:
+                    content = content[:meta_match.start()].rstrip() + content[meta_match.end():]
+                combo = {"servizio": keyword, "tipo": objective, "citta": kb.get("citta_principale", "")}
+                seo_metadata = generate_seo_metadata(titolo, content, kb, combo)
+                if llm_meta_desc and len(llm_meta_desc) >= 80:
+                    seo_metadata["meta_description"] = _truncate_meta_desc(llm_meta_desc)
+                
+                # AUTO-IMAGE GENERATION
+                featured_image_ids = []
+                if generate_cover:
+                    try:
+                        from agents.image import ImageAgent
+                        from helpers import generate_image_with_fallback
+                        branding = config.get("tono_e_stile", {})
+                        img_agent = ImageAgent(client_id=client_id, llm_config=llm_config)
+                        crafted_img_prompt = await img_agent.craft_prompt(titolo, branding)
+                        together_key = config.get("together_api_key") or os.environ.get("TOGETHER_API_KEY")
+                        img_res = await generate_image_with_fallback(
+                            crafted_img_prompt, "admin",
+                            openai_key=llm_config.get("api_key"),
+                            together_key=together_key
+                        )
+                        if img_res and img_res.get("id"):
+                            featured_image_ids.append(img_res["id"])
+                            result["image_id"] = img_res["id"]
+                            logger.info(f"Auto-generated image for batch article '{titolo}': {img_res['id']} via {img_res.get('provider', '?')}")
+                    except Exception as img_e:
+                        logger.warning(f"Failed to auto-generate image for batch article '{titolo}': {img_e}")
+
+
+                await db.articles.insert_one({"id": article_id, "client_id": client_id, "titolo": titolo,
+                    "contenuto": content, "contenuto_html": content, "keyword_principale": keyword,
+                    "meta_description": seo_metadata.get("meta_description", ""),
+                    "image_ids": featured_image_ids,
+                    "stato": "generated", "wordpress_post_id": None, "created_at": now,
+                    "published_at": None, "combination": combo, "seo_metadata": seo_metadata})
+                result["generation_status"] = "success"
+                
+                if publish_to_wp and wp_config.get("url_api") and wp_config.get("utente"):
+                    try:
+                        wp_type = "page" if content_type in ("landing_page", "pillar_page") else "post"
+                        wp_result = await publish_to_wordpress(url=wp_config["url_api"], username=wp_config["utente"],
+                            password=wp_config["password_applicazione"], title=titolo, content=content,
+                            wp_status=wp_config.get("stato_pubblicazione", "draft"), seo_metadata=seo_metadata,
+                            tags=seo_metadata.get("tags", []), wp_type=wp_type,
+                            image_ids=featured_image_ids, schedule_date=topic.get("scheduled_date"))
+                        await db.articles.update_one({"id": article_id}, {"$set": {"stato": "published",
+                            "wordpress_post_id": str(wp_result["post_id"]), "wordpress_link": wp_result.get("link"),
+                            "published_at": datetime.now(timezone.utc).isoformat()}})
+                        result["publish_status"] = "success"
+                        result["wordpress_link"] = wp_result.get("link")
+                        
+                        if wp_result.get("link"):
+                            new_article_info = {
+                                "url": wp_result.get("link"),
+                                "titolo": titolo,
+                                "keyword": keyword
+                            }
+                            existing_published.append(new_article_info)
+                            
+                            # BACK-LINKING: Link OLD articles to this NEW one
+                            try:
+                                # Find 1-2 old articles to update
+                                cursor = db.articles.find({
+                                    "client_id": client_id,
+                                    "stato": "published",
+                                    "id": {"$ne": article_id},
+                                    "wordpress_post_id": {"$ne": None}
+                                }).sort("published_at", -1).limit(2)
+                                
+                                async for old_article in cursor:
+                                    old_id = old_article["id"]
+                                    old_title = old_article["titolo"]
+                                    old_content = old_article.get("contenuto_html") or old_article.get("contenuto", "")
+                                    old_wp_id = old_article["wordpress_post_id"]
+                                    
+                                    # Generate new paragraph with link
+                                    from helpers import generate_internal_link_update, update_wordpress_post
+                                    new_para = await generate_internal_link_update(
+                                        provider, llm_config.get("api_key"), llm_config.get("model", "gpt-4o"), 
+                                        llm_config.get("temperature", 0.7),
+                                        old_title, old_content, titolo, keyword, wp_result["link"]
+                                    )
+                                    
+                                    if new_para and "<a href=" in new_para:
+                                        updated_old_content = old_content + "\n\n" + new_para
+                                        # Update on WordPress
+                                        up_ok = await update_wordpress_post(
+                                            url=wp_config.get("url_api"),
+                                            username=wp_config.get("utente"),
+                                            password=wp_config.get("password_applicazione"),
+                                            post_id=old_wp_id,
+                                            content=updated_old_content,
+                                            wp_type=wp_type
+                                        )
+                                        if up_ok:
+                                            await db.articles.update_one({"id": old_id}, {"$set": {"contenuto_html": updated_old_content, "contenuto": updated_old_content}})
+                                            logger.info(f"Back-linked '{old_title}' to new article '{titolo}'")
+                            except Exception as ble:
+                                logger.warning(f"Back-linking failed for article {titolo}: {ble}")
+                            
+                    except Exception as e:
+                        result["publish_status"] = "failed"
+                        result["publish_error"] = str(e)
+                else:
+                    result["publish_status"] = "skipped"
+            
+            results.append(result)
+            await db.jobs.update_one({"id": job_id}, {"$set": {"completed": idx + 1, "results": results}})
+        except Exception as e:
+            logger.error(f"Error processing topic {titolo}: {e}")
+            
+    # CLEANUP: Remove successfully generated topics from the editorial plan
+    if gen_ok > 0:
+        successful_titles = [r["titolo"] for r in results if r["generation_status"] == "success"]
+        if successful_titles:
+            await db.editorial_plans.update_one(
+                {"client_id": client_id},
+                {"$pull": {"topics": {"titolo": {"$in": successful_titles}}}}
+            )
+            logger.info(f"Cleaned up {gen_ok} topics from editorial plan for client {client_id}")
+
+    await db.jobs.update_one({"id": job_id}, {"$set": {
+        "status": "completed", "completed": len(results), "results": results,
+        "summary": {"total": len(results), "generated_ok": gen_ok, "generated_failed": len(results) - gen_ok,
+                     "published_ok": pub_ok}, "finished_at": datetime.now(timezone.utc).isoformat()}})
+

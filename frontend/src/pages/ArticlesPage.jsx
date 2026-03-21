@@ -205,309 +205,318 @@ export const ArticlesPage = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 font-['Manrope'] tracking-tight">
-            {isAdmin ? 'Tutti gli Articoli' : 'Storico Articoli'}
-          </h1>
-          <p className="text-slate-500 mt-1">
-            {filteredArticles.length} articoli trovati
-          </p>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-none">Archivio Articoli</h1>
+          <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-widest font-semibold">Gestione e Revisione Contenuti</p>
         </div>
 
-        {selectedArticles.length > 0 && (
-          <Button
-            onClick={handlePublish}
-            className="bg-orange-500 hover:bg-orange-600"
-            disabled={publishing}
-            data-testid="publish-selected-btn"
-          >
-            {publishing ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Pubblicazione...
-              </>
-            ) : (
-              <>
-                <Upload className="w-4 h-4 mr-2" />
-                Pubblica {selectedArticles.length} Articoli
-              </>
+        <div className="flex items-center gap-3">
+            <div className="bg-white border border-[#f1f3f6] rounded-lg px-3 py-1.5 shadow-sm flex items-center gap-2">
+                <FileText className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-xs font-bold text-slate-600 tracking-tight">{filteredArticles.length}</span>
+            </div>
+            {selectedArticles.length > 0 && (
+                <Button
+                    onClick={handlePublish}
+                    className="bg-slate-900 h-10 px-6 rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-slate-200"
+                    disabled={publishing}
+                    data-testid="publish-selected-btn"
+                >
+                    {publishing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                        <>
+                            <Upload className="w-3.5 h-3.5 mr-2" />
+                            Pubblica ({selectedArticles.length})
+                        </>
+                    )}
+                </Button>
             )}
+        </div>
+      </div>
+
+      {/* Filters - Minimal & Compact */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="md:col-span-2 relative group text-slate-400 focus-within:text-slate-900">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 transition-colors" />
+          <Input
+            placeholder="Cerca per titolo..."
+            className="pl-9 h-10 border-[#f1f3f6] bg-white rounded-xl text-xs font-medium focus:ring-0 focus:border-slate-300 transition-all shadow-sm"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            data-testid="article-search-input"
+          />
+        </div>
+        
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-10 border-[#f1f3f6] bg-white rounded-xl text-xs font-bold shadow-sm" data-testid="status-filter-select">
+            <div className="flex items-center gap-2">
+                <Filter className="w-3 h-3 text-slate-300" />
+                <SelectValue placeholder="Stato" />
+            </div>
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-[#f1f3f6]">
+            <SelectItem value="all" className="text-xs font-medium">Tutti gli stati</SelectItem>
+            <SelectItem value="generated" className="text-xs font-medium">Generati</SelectItem>
+            <SelectItem value="published" className="text-xs font-medium">Pubblicati</SelectItem>
+            <SelectItem value="failed" className="text-xs font-medium">Errori</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {isAdmin ? (
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="h-10 border-[#f1f3f6] bg-white rounded-xl text-xs font-bold shadow-sm" data-testid="client-filter-select">
+              <SelectValue placeholder="Cliente" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[200px] rounded-xl border-[#f1f3f6]">
+              <SelectItem value="all" className="text-xs font-medium">Tutti i clienti</SelectItem>
+              {clients.map((c) => (
+                <SelectItem key={c.id} value={c.id} className="text-xs font-medium">{c.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+           <Button
+            variant="ghost"
+            onClick={selectAllGenerated}
+            className="h-10 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl px-4 border border-[#f1f3f6] bg-white shadow-sm"
+            data-testid="select-all-generated-btn"
+          >
+            Seleziona Generati
           </Button>
         )}
       </div>
 
-      {/* Filters */}
-      <Card className="border-slate-200">
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                placeholder="Cerca per titolo..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                data-testid="article-search-input"
-              />
-            </div>
-            
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]" data-testid="status-filter-select">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Stato" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutti gli stati</SelectItem>
-                <SelectItem value="generated">Generati</SelectItem>
-                <SelectItem value="published">Pubblicati</SelectItem>
-                <SelectItem value="failed">Errori</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {isAdmin && (
-              <Select value={clientFilter} onValueChange={setClientFilter}>
-                <SelectTrigger className="w-[200px]" data-testid="client-filter-select">
-                  <SelectValue placeholder="Cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutti i clienti</SelectItem>
-                  {clients.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            <Button
-              variant="outline"
-              onClick={selectAllGenerated}
-              data-testid="select-all-generated-btn"
-            >
-              Seleziona Generati
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Articles Table */}
-      <Card className="border-slate-200" data-testid="articles-table-card">
+      {/* Articles List */}
+      <Card className="border-[#f1f3f6] shadow-sm rounded-2xl overflow-hidden bg-white" data-testid="articles-table-card">
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+            <div className="flex items-center justify-center py-24">
+              <Loader2 className="w-5 h-5 animate-spin text-slate-200" />
             </div>
           ) : filteredArticles.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-slate-500">Nessun articolo trovato</p>
+            <div className="text-center py-24">
+                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <FileText className="w-8 h-8 text-slate-200" />
+                </div>
+                <p className="text-[10px] uppercase font-bold tracking-widest text-slate-300">Nessun articolo trovato</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50">
-                  <TableHead className="w-[50px]"></TableHead>
-                  <TableHead className="font-semibold">Titolo</TableHead>
-                  {isAdmin && <TableHead className="font-semibold">Cliente</TableHead>}
-                  <TableHead className="font-semibold">Stato</TableHead>
-                  <TableHead className="font-semibold">Data</TableHead>
-                  <TableHead className="font-semibold text-right">Azioni</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <div className="w-full">
+              <div className="bg-slate-50/50 border-b border-[#f1f3f6] flex items-center text-[9px] uppercase font-bold tracking-widest text-slate-400 px-6 py-2.5">
+                  <div className="w-10"></div>
+                  <span className="flex-1">Titolo Articolo</span>
+                  {isAdmin && <span className="w-32 px-2">Cliente</span>}
+                  <span className="w-24 px-2">Stato</span>
+                  <span className="w-32 px-2">Data Generazione</span>
+                  <span className="w-16 text-right">Azioni</span>
+              </div>
+              <div className="divide-y divide-[#f1f3f6]">
                 {filteredArticles.map((article) => (
-                  <TableRow 
-                    key={article.id}
-                    className="hover:bg-slate-50"
-                    data-testid={`article-row-${article.id}`}
-                  >
-                    <TableCell>
+                  <div key={article.id} className="flex items-center group px-6 py-3.5 hover:bg-slate-50/30 transition-colors" data-testid={`article-row-${article.id}`}>
+                    <div className="w-10">
                       {article.stato === 'generated' && (
                         <Checkbox
                           checked={selectedArticles.includes(article.id)}
                           onCheckedChange={() => toggleArticle(article.id)}
+                          className="rounded-md border-[#f1f3f6] w-4 h-4 data-[state=checked]:bg-slate-900 data-[state=checked]:border-slate-900"
                         />
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="max-w-md">
-                        <p className="font-medium text-slate-900 truncate">{article.titolo}</p>
+                    </div>
+                    <div className="flex-1 min-w-0 pr-4">
+                        <p className="text-xs font-bold text-slate-900 tracking-tight group-hover:text-blue-500 transition-colors truncate">{article.titolo}</p>
                         {article.wordpress_post_id && (
-                          <span className="text-xs text-slate-500 font-mono">
-                            WP ID: {article.wordpress_post_id}
-                          </span>
+                          <div className="flex items-center gap-1.5 mt-0.5 opacity-40">
+                             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tight italic">ID: {article.wordpress_post_id}</span>
+                          </div>
                         )}
-                      </div>
-                    </TableCell>
+                    </div>
                     {isAdmin && (
-                      <TableCell>
-                        <span className="text-slate-600">
+                      <div className="w-32 px-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight truncate block">
                           {clients.find(c => c.id === article.client_id)?.nome || article.client_id}
                         </span>
-                      </TableCell>
+                      </div>
                     )}
-                    <TableCell>
-                      {getStatusBadge(article.stato)}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-slate-600 text-sm">
-                        {formatDate(article.created_at)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
+                    <div className="w-24 px-2">
+                      {article.stato === 'generated' ? (
+                          <div className="flex items-center gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600">Generato</span>
+                          </div>
+                      ) : article.stato === 'published' ? (
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Online</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-red-500">Errore</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="w-32 px-2 text-center">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                          {formatDate(article.created_at)}
+                        </span>
+                    </div>
+                    <div className="w-16 shrink-0 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" data-testid={`article-actions-${article.id}`}>
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-slate-900 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all border border-transparent hover:border-[#f1f3f6]" data-testid={`article-actions-${article.id}`}>
                             <MoreHorizontal className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => loadArticlePreview(article.id)}>
-                            <Eye className="w-4 h-4 mr-2" />
+                        <DropdownMenuContent align="end" className="rounded-xl border border-[#f1f3f6] shadow-xl p-1.5 min-w-[180px]">
+                          <DropdownMenuItem className="rounded-lg text-xs font-semibold p-2" onClick={() => loadArticlePreview(article.id)}>
+                            <Eye className="w-3.5 h-3.5 mr-2 text-slate-400" />
                             Anteprima
                           </DropdownMenuItem>
                           {article.wordpress_post_id && (
-                            <DropdownMenuItem asChild>
+                            <DropdownMenuItem className="rounded-lg text-xs font-semibold p-2" asChild>
                               <a 
                                 href={`${clients.find(c => c.id === article.client_id)?.sito_web || '#'}/wp-admin/post.php?post=${article.wordpress_post_id}&action=edit`}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                className="flex items-center"
                               >
-                                <ExternalLink className="w-4 h-4 mr-2" />
+                                <ExternalLink className="w-3.5 h-3.5 mr-2 text-slate-400" />
                                 Apri in WordPress
                               </a>
                             </DropdownMenuItem>
                           )}
+                          <div className="h-px bg-[#f1f3f6] my-1.5 mx-1" />
                           <DropdownMenuItem 
                             onClick={() => handleDelete(article.id)}
-                            className="text-red-600 focus:text-red-600"
+                            className="rounded-lg text-xs font-semibold p-2 text-red-500 focus:text-red-600 focus:bg-red-50"
                           >
-                            <Trash2 className="w-4 h-4 mr-2" />
+                            <Trash2 className="w-3.5 h-3.5 mr-2" />
                             Elimina
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Article Preview Modal */}
+      {/* Article Preview Modal - Premium Style */}
       {(previewArticle || previewLoading) && (
         <div 
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300"
           onClick={() => { setPreviewArticle(null); setPreviewLoading(false); }}
         >
           <Card 
-            className="w-full max-w-4xl max-h-[90vh] overflow-hidden"
+            className="w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-3xl border-[#f1f3f6] shadow-2xl bg-white flex flex-col"
             onClick={(e) => e.stopPropagation()}
             data-testid="article-preview-modal"
           >
             {previewLoading ? (
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+              <div className="flex items-center justify-center h-96">
+                <Loader2 className="w-8 h-8 animate-spin text-slate-200" />
               </div>
             ) : previewArticle && (
               <>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-xl">{previewArticle.titolo}</CardTitle>
-                <CardDescription className="flex items-center gap-2 mt-1">
-                  {getStatusBadge(previewArticle.stato)}
-                  <span>{formatDate(previewArticle.created_at)}</span>
-                </CardDescription>
+            <CardHeader className="p-8 bg-slate-50 border-b border-[#f1f3f6] flex flex-row items-start justify-between">
+              <div className="flex-1 min-w-0 pr-8">
+                <CardTitle className="text-xl font-bold text-slate-900 tracking-tight leading-snug">{previewArticle.titolo}</CardTitle>
+                <div className="flex items-center gap-3 mt-3">
+                    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg border ${
+                        previewArticle.stato === 'published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                    }`}>
+                        <div className={`w-1 h-1 rounded-full ${previewArticle.stato === 'published' ? 'bg-emerald-600' : 'bg-amber-600'}`} />
+                        <span className="text-[9px] font-bold uppercase tracking-widest leading-none">{previewArticle.stato}</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{formatDate(previewArticle.created_at)}</span>
+                </div>
               </div>
-              <Button variant="outline" onClick={() => { setPreviewArticle(null); setPreviewLoading(false); }} data-testid="close-preview-btn">
-                Chiudi
+              <Button variant="ghost" size="icon" className="text-slate-300 hover:text-slate-900 rounded-full h-8 w-8" onClick={() => { setPreviewArticle(null); setPreviewLoading(false); }} data-testid="close-preview-btn">
+                <Trash2 className="w-4 h-4 rotate-45" />
               </Button>
             </CardHeader>
-            <CardContent>
-              {/* SEO Metadata Section */}
-              {previewArticle.seo_metadata && (
-                <div className="mb-4 p-4 bg-slate-50 rounded-lg space-y-3" data-testid="seo-metadata-section">
-                  <h4 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
-                    <Search className="w-4 h-4 text-slate-500" />
-                    Metadati SEO
-                  </h4>
-                  {previewArticle.seo_metadata.meta_description && (
-                    <div data-testid="seo-meta-description">
-                      <span className="font-medium text-sm text-slate-700">Meta Description:</span>
-                      <p className="text-sm text-slate-600 mt-0.5 bg-white p-2 rounded border border-slate-200">
-                        {previewArticle.seo_metadata.meta_description}
-                      </p>
+            <ScrollArea className="flex-1">
+                <CardContent className="p-8 space-y-8">
+                {/* SEO Metadata Section - Compact Cards */}
+                {previewArticle.seo_metadata && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="seo-metadata-section">
+                        <div className="bg-slate-50 border border-[#f1f3f6] p-5 rounded-2xl flex flex-col gap-3">
+                            <h4 className="text-[10px] uppercase font-bold tracking-[0.2em] text-slate-400 inline-flex items-center gap-2">
+                                <Search className="w-3.5 h-3.5" />
+                                Metadati SEO
+                            </h4>
+                            {previewArticle.seo_metadata.meta_description && (
+                                <div data-testid="seo-meta-description">
+                                    <p className="text-[11px] font-semibold text-slate-900 leading-relaxed italic border-l-2 border-indigo-200 pl-3">
+                                        "{previewArticle.seo_metadata.meta_description}"
+                                    </p>
+                                </div>
+                            )}
+                            <div className="flex flex-wrap gap-2 pt-2">
+                                {previewArticle.seo_metadata.focus_keyword && (
+                                    <span className="text-[9px] font-bold text-indigo-500 bg-white border border-indigo-100 px-2 py-1 rounded-lg uppercase tracking-widest">{previewArticle.seo_metadata.focus_keyword}</span>
+                                )}
+                                {previewArticle.seo_metadata.slug && (
+                                    <span className="text-[9px] font-bold text-slate-400 bg-white border border-[#f1f3f6] px-2 py-1 rounded-lg uppercase tracking-widest">/{previewArticle.seo_metadata.slug}</span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 border border-[#f1f3f6] p-5 rounded-2xl flex flex-col gap-4">
+                            {previewArticle.seo_metadata.tags && previewArticle.seo_metadata.tags.length > 0 && (
+                                <div data-testid="seo-tags">
+                                    <p className="text-[9px] uppercase font-bold tracking-widest text-slate-300 mb-2">TAGS</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {previewArticle.seo_metadata.tags.map((tag, i) => (
+                                            <span key={i} className="text-[9px] font-bold bg-white text-slate-500 border border-[#f1f3f6] px-2 py-0.5 rounded-md">{tag}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {previewArticle.seo_metadata.categories && previewArticle.seo_metadata.categories.length > 0 && (
+                                <div data-testid="seo-categories">
+                                    <p className="text-[9px] uppercase font-bold tracking-widest text-slate-300 mb-2">CATEGORIES</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {previewArticle.seo_metadata.categories.map((cat, i) => (
+                                            <span key={i} className="text-[9px] font-bold bg-white text-emerald-500 border border-emerald-100 px-2 py-0.5 rounded-md">{cat}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                  )}
-                  {previewArticle.seo_metadata.focus_keyword && (
-                    <div data-testid="seo-focus-keyword">
-                      <span className="font-medium text-sm text-slate-700">Focus Keyword:</span>
-                      <Badge className="ml-2 bg-blue-50 text-blue-700 border-blue-200">{previewArticle.seo_metadata.focus_keyword}</Badge>
+                )}
+                
+                {/* WordPress Link */}
+                {previewArticle.wordpress_link && (
+                    <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center justify-between" data-testid="wordpress-link-section">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-emerald-500 shadow-sm">
+                                <ExternalLink className="w-4 h-4" />
+                            </div>
+                            <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-widest">Articolo Online</span>
+                        </div>
+                        <a href={previewArticle.wordpress_link} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-emerald-600 bg-white px-4 py-2 rounded-lg border border-emerald-100 shadow-sm hover:bg-emerald-50 transition-colors uppercase tracking-widest">
+                            Visualizza Sito
+                        </a>
                     </div>
-                  )}
-                  {previewArticle.seo_metadata.tags && previewArticle.seo_metadata.tags.length > 0 && (
-                    <div data-testid="seo-tags">
-                      <span className="font-medium text-sm text-slate-700">Tags:</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {previewArticle.seo_metadata.tags.map((tag, i) => (
-                          <Badge key={i} variant="outline" className="text-xs">{tag}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {previewArticle.seo_metadata.categories && previewArticle.seo_metadata.categories.length > 0 && (
-                    <div data-testid="seo-categories">
-                      <span className="font-medium text-sm text-slate-700">Categorie:</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {previewArticle.seo_metadata.categories.map((cat, i) => (
-                          <Badge key={i} className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">{cat}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {previewArticle.seo_metadata.slug && (
-                    <div data-testid="seo-slug">
-                      <span className="font-medium text-sm text-slate-700">Slug:</span>
-                      <span className="text-sm text-slate-600 font-mono ml-2">/{previewArticle.seo_metadata.slug}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* WordPress Link if published */}
-              {previewArticle.wordpress_link && (
-                <div className="mb-4 p-3 bg-emerald-50 rounded-lg flex items-center justify-between" data-testid="wordpress-link-section">
-                  <span className="text-sm text-emerald-700">Pubblicato su WordPress</span>
-                  <a 
-                    href={previewArticle.wordpress_link} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sm text-emerald-600 hover:underline flex items-center gap-1"
-                  >
-                    Visualizza <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              )}
-              
-              {/* Publish Error if failed */}
-              {previewArticle.publish_error && (
-                <div className="mb-4 p-3 bg-red-50 rounded-lg" data-testid="publish-error-section">
-                  <p className="text-sm text-red-700 font-medium">Errore pubblicazione:</p>
-                  <p className="text-sm text-red-600">{previewArticle.publish_error}</p>
-                </div>
-              )}
-              
-              <ScrollArea className="h-[50vh]">
+                )}
+                
+                {/* Content Preview */}
                 <div 
-                  className="article-preview prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: previewArticle.contenuto }}
-                  data-testid="article-content-preview"
+                    className="article-preview prose prose-slate prose-sm max-w-none prose-headings:text-slate-900 prose-headings:font-bold prose-p:text-slate-600 prose-p:leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: previewArticle.contenuto }}
+                    data-testid="article-content-preview"
                 />
-              </ScrollArea>
-            </CardContent>
+                </CardContent>
+            </ScrollArea>
               </>
             )}
           </Card>

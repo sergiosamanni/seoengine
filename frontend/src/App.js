@@ -5,11 +5,9 @@ import { Toaster } from './components/ui/sonner';
 import { DashboardLayout } from './components/DashboardLayout';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
-import { ConfigurationPage } from './pages/ConfigurationPage';
 import { GeneratorPage } from './pages/GeneratorPage';
 import { ActivityLogPage } from './pages/ActivityLogPage';
 import { UsersPage } from './pages/UsersPage';
-import { GscPage } from './pages/GscPage';
 import './App.css';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -29,11 +27,11 @@ function AppRoutes() {
       {/* Admin: Unified Dashboard (stats + clients) */}
       <Route path="/dashboard" element={<ProtectedRoute adminOnly><DashboardPage /></ProtectedRoute>} />
 
-      {/* Admin: Client detail pages */}
+      {/* Admin: Client detail pages (Unified) */}
       <Route path="/clients/:clientId" element={<ProtectedRoute adminOnly><GeneratorPage /></ProtectedRoute>} />
-      <Route path="/clients/:clientId/config" element={<ProtectedRoute adminOnly><ConfigurationPage /></ProtectedRoute>} />
+      <Route path="/clients/:clientId/config" element={<ProtectedRoute adminOnly><GeneratorPage /></ProtectedRoute>} />
       <Route path="/clients/:clientId/generate" element={<ProtectedRoute adminOnly><GeneratorPage /></ProtectedRoute>} />
-      <Route path="/clients/:clientId/gsc" element={<ProtectedRoute adminOnly><GscPage /></ProtectedRoute>} />
+      <Route path="/clients/:clientId/gsc" element={<ProtectedRoute adminOnly><GeneratorPage /></ProtectedRoute>} />
 
       {/* Admin: Users management */}
       <Route path="/users" element={<ProtectedRoute adminOnly><UsersPage /></ProtectedRoute>} />
@@ -43,8 +41,8 @@ function AppRoutes() {
 
       {/* Client: Generate */}
       <Route path="/generate" element={<ProtectedRoute><GeneratorPage /></ProtectedRoute>} />
-      <Route path="/config" element={<ProtectedRoute><ConfigurationPage /></ProtectedRoute>} />
-      <Route path="/configuration" element={<ProtectedRoute><ConfigurationPage /></ProtectedRoute>} />
+      <Route path="/config" element={<ProtectedRoute><GeneratorPage /></ProtectedRoute>} />
+      <Route path="/configuration" element={<ProtectedRoute><GeneratorPage /></ProtectedRoute>} />
 
       {/* Redirects */}
       <Route path="/clients" element={<Navigate to="/dashboard" replace />} />
