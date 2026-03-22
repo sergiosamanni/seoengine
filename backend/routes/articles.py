@@ -956,6 +956,14 @@ async def get_editorial_plan(client_id: str, current_user: dict = Depends(get_cu
     return plan
 
 
+@router.delete("/editorial-plan/{client_id}")
+async def delete_editorial_plan(client_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    await db.editorial_plans.delete_one({"client_id": client_id})
+    return {"message": "Piano editoriale eliminato"}
+
+
 @router.post("/generate-plan/{client_id}")
 async def generate_editorial_plan(client_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
@@ -998,6 +1006,19 @@ async def generate_editorial_plan(client_id: str, current_user: dict = Depends(g
         num_topics=10
     )
     
+    # Fetch a stock image preview for each topic using the image_search_query
+    from helpers import web_search_images
+    for topic in topics:
+        query = topic.get("image_search_query") or topic.get("titolo", "")
+        if query:
+            try:
+                imgs = await web_search_images(query, max_results=3)
+                if imgs:
+                    topic["stock_image_url"] = imgs[0].get("image") or imgs[0].get("url") or ""
+                    topic["stock_image_thumb"] = imgs[0].get("thumbnail") or topic["stock_image_url"]
+            except Exception as img_e:
+                logger.warning(f"Could not fetch stock image for topic '{query}': {img_e}")
+    
     plan_doc = {
         "client_id": client_id,
         "topics": topics,
@@ -1011,6 +1032,7 @@ async def generate_editorial_plan(client_id: str, current_user: dict = Depends(g
     )
     
     return plan_doc
+
 
 
 @router.post("/articles/batch-plan")
@@ -1060,6 +1082,7 @@ async def _run_batch_plan(job_id, client_id, topics, publish_to_wp, content_type
         titolo = topic.get("titolo", "Articolo")
         keyword = topic.get("keyword", "")
         objective = topic.get("funnel", "TOFU")
+        outline = topic.get("outline", [])
         await log_activity(client_id, "batch_plan_generate", "running", {"titolo": titolo, "step": f"{idx+1}/{len(topics)}"})
         
         # Build prompt dynamically per topic so it incorporates new internal links
@@ -1071,7 +1094,11 @@ async def _run_batch_plan(job_id, client_id, topics, publish_to_wp, content_type
             gen_error = None
             for attempt in range(3):
                 try:
-                    user_prompt = f"{titolo}\n\nObiettivo: {objective}\nMotivo: {topic.get('motivo', '')}"
+                    outline_text = ""
+                    if outline:
+                        outline_text = "\n\nSEGUI QUESTO OUTLINE:\n" + "\n".join([f"- {o.get('type','h2').upper()}: {o.get('text','')}" for o in outline])
+                    
+                    user_prompt = f"{titolo}\n\nObiettivo: {objective}\nMotivo: {topic.get('motivo', '')}{outline_text}"
                     content = await generate_with_rotation(llm_config, system_prompt, user_prompt)
                     break
                 except Exception as e:
@@ -1101,9 +1128,24 @@ async def _run_batch_plan(job_id, client_id, topics, publish_to_wp, content_type
                 if llm_meta_desc and len(llm_meta_desc) >= 80:
                     seo_metadata["meta_description"] = _truncate_meta_desc(llm_meta_desc)
                 
-                # AUTO-IMAGE GENERATION
+                # AUTO-IMAGE HANDLING (Stock or AI)
                 featured_image_ids = []
-                if generate_cover:
+                image_url = topic.get("image_url") or topic.get("stock_image_url")
+                
+                if image_url:
+                    # If we already have a stock image or user-selected URL, we use it
+                    try:
+                        from routes.uploads import upload_from_url
+                        upload_res = await upload_from_url(image_url, client_id, "admin")
+                        if upload_res and upload_res.get("id"):
+                            featured_image_ids.append(upload_res["id"])
+                            result["image_id"] = upload_res["id"]
+                            logger.info(f"Using stock image for batch article '{titolo}': {image_url}")
+                    except Exception as upload_e:
+                        logger.warning(f"Failed to upload stock image for batch article '{titolo}': {upload_e}")
+
+                if not featured_image_ids and generate_cover:
+                    # Fallback to AI generation if requested and no stock/selected image
                     try:
                         from agents.image import ImageAgent
                         from helpers import generate_image_with_fallback
@@ -1119,10 +1161,9 @@ async def _run_batch_plan(job_id, client_id, topics, publish_to_wp, content_type
                         if img_res and img_res.get("id"):
                             featured_image_ids.append(img_res["id"])
                             result["image_id"] = img_res["id"]
-                            logger.info(f"Auto-generated image for batch article '{titolo}': {img_res['id']} via {img_res.get('provider', '?')}")
+                            logger.info(f"Auto-generated AI image for batch article '{titolo}'")
                     except Exception as img_e:
-                        logger.warning(f"Failed to auto-generate image for batch article '{titolo}': {img_e}")
-
+                        logger.warning(f"Failed to auto-generate AI image for batch article '{titolo}': {img_e}")
 
                 await db.articles.insert_one({"id": article_id, "client_id": client_id, "titolo": titolo,
                     "contenuto": content, "contenuto_html": content, "keyword_principale": keyword,

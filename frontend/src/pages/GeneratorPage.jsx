@@ -89,6 +89,26 @@ export const GeneratorPage = () => {
     fetch();
   }, [effectiveClientId, searchParams]);
 
+  const addToEditorialQueue = (keyword) => {
+    if (!client) return;
+    const currentQueue = client.configuration?.editorial_queue || [];
+    if (!currentQueue.includes(keyword)) {
+      const newQueue = [...currentQueue, keyword];
+      
+      const newConfig = { ...client.configuration, editorial_queue: newQueue };
+      // Update local client state
+      setClient({ ...client, configuration: newConfig });
+      
+      // Update backend silently
+      axios.put(`${API}/clients/${effectiveClientId}/configuration`, newConfig, { headers: getAuthHeaders() })
+        .catch(e => console.error("Error saving queue", e));
+        
+      toast.success("Articolo/Azione aggiunta con successo", { description: "Puoi trovarlo nel Piano Editoriale (Genera Contenuti)." });
+    } else {
+      toast.info("Elemento già presente in coda.");
+    }
+  };
+
   const handleSaveConfig = async () => {
     setSaving(true);
     try {
@@ -192,12 +212,12 @@ export const GeneratorPage = () => {
 
         {/* TAB: GSC DATA */}
         <TabsContent value="gsc" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <GscDataTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} />
+            <GscDataTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} addToQueue={addToEditorialQueue} />
         </TabsContent>
 
         {/* TAB: FRESHNESS */}
         <TabsContent value="freshness" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <FreshnessTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} />
+            <FreshnessTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} addToQueue={addToEditorialQueue} />
         </TabsContent>
 
         {/* TAB: CONFIGURATION */}

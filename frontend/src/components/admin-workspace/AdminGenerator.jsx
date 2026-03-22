@@ -101,6 +101,10 @@ const AdminGenerator = ({
     const [refining, setRefining] = useState(false);
     const [recentArticles, setRecentArticles] = useState([]);
     const [activePlanImageIndex, setActivePlanImageIndex] = useState(null);
+    const [recentSidebarOpen, setRecentSidebarOpen] = useState(true);
+    const [expandedOutlines, setExpandedOutlines] = useState({});
+    const [deletingPlan, setDeletingPlan] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const config = client?.configuration || {};
     const llmConfig = config.llm || config.openai || {};
@@ -175,6 +179,32 @@ const AdminGenerator = ({
             setPlanGenerating(false);
         }
     };
+
+    const handleDeletePlan = () => {
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDeletePlan = async () => {
+        setDeletingPlan(true);
+        try {
+            await axios.delete(`${API}/editorial-plan/${effectiveClientId}`, { headers: getAuthHeaders() });
+            setPlan(null);
+            setSelectedPlanTopics([]);
+            toast.success("Piano editoriale eliminato con successo.");
+            setShowDeleteConfirm(false);
+        } catch (e) {
+            toast.error("Errore durante l'eliminazione del piano.");
+            console.error(e);
+        } finally {
+            setDeletingPlan(false);
+        }
+    };
+
+    const toggleOutline = (idx) => {
+        setExpandedOutlines(prev => ({ ...prev, [idx]: !prev[idx] }));
+    };
+
+
 
     const addTargetKeyword = () => {
         if (!newPlanKeyword.trim()) return;
@@ -436,6 +466,7 @@ const AdminGenerator = ({
                 ...config,
                 content_strategy: contentStrategy,
                 keyword_combinations: keywords,
+                editorial_queue: targetKeywords,
                 advanced_prompt: { ...config.advanced_prompt, secondo_livello_prompt: advancedPrompt }
             }, { headers: getAuthHeaders() });
         } catch (e) { /* silent */ }
@@ -915,7 +946,7 @@ const AdminGenerator = ({
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                                 {/* Colonna Sinistra: Configurazione Articolo */}
                                 <div className="lg:col-span-7 space-y-6">
-                                    <Card className="border-slate-200 shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden border-t-4 border-t-orange-500">
+                                    <Card className="border-slate-200 shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
                                         <CardHeader className="pb-2">
                                             <CardTitle className="text-lg font-black text-slate-800 flex items-center gap-2 uppercase tracking-tight">
                                                 <PenTool className="w-5 h-5 text-orange-500" /> Dati Articolo
@@ -1069,7 +1100,7 @@ const AdminGenerator = ({
                                     <Button 
                                         onClick={() => handleSingleGenerate('articolo')} 
                                         disabled={singleGenerating} 
-                                        className="w-full h-16 bg-gradient-to-r from-slate-900 to-slate-800 hover:to-orange-600 shadow-xl border-0 text-white rounded-2xl group transition-all duration-500"
+                                        className="w-full h-12 bg-gradient-to-r from-slate-900 to-slate-800 hover:to-orange-600 shadow-xl border-0 text-white rounded-2xl group transition-all duration-500"
                                     >
                                         <div className="flex items-center justify-center w-full relative">
                                             {singleGenerating ? (
@@ -1077,7 +1108,7 @@ const AdminGenerator = ({
                                             ) : (
                                                 <Zap className="w-6 h-6 mr-3 text-amber-400 group-hover:scale-125 transition-transform" />
                                             )}
-                                            <span className="text-lg font-black tracking-tight uppercase">
+                                            <span className="text-sm font-black tracking-tight uppercase">
                                                 {singleGenerating ? 'Generazione in corso...' : 'Avvia Generazione'}
                                             </span>
                                         </div>
@@ -1335,14 +1366,25 @@ const AdminGenerator = ({
                                         {plan?.topics?.length > 0 ? "Rigenera Piano" : "Crea Strategia"}
                                     </Button>
                                     {plan?.topics?.length > 0 && (
-                                        <Button
-                                            onClick={handleBatchPlanGenerate}
-                                            disabled={generating || selectedPlanTopics.length === 0}
-                                            className="h-10 bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-100"
-                                        >
-                                            {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
-                                            Pubblica Selezionati ({selectedPlanTopics.length})
-                                        </Button>
+                                        <>
+                                            <Button 
+                                                variant="outline"
+                                                onClick={handleDeletePlan} 
+                                                disabled={deletingPlan} 
+                                                className="h-10 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                            >
+                                                {deletingPlan ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                                                Elimina Piano
+                                            </Button>
+                                            <Button
+                                                onClick={handleBatchPlanGenerate}
+                                                disabled={generating || selectedPlanTopics.length === 0}
+                                                className="h-10 bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-100"
+                                            >
+                                                {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+                                                Pubblica Selezionati ({selectedPlanTopics.length})
+                                            </Button>
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -1368,8 +1410,19 @@ const AdminGenerator = ({
                                     <p className="text-slate-500 font-medium animate-pulse text-sm">L'AI sta analizzando i dati del sito...</p>
                                 </div>
                             ) : plan?.topics?.length > 0 ? (
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                    <div className="lg:col-span-9 space-y-8">
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
+                                    {/* Sidebar Toggle Button (Sticky) */}
+                                    <Button 
+                                        variant="outline" 
+                                        size="icon" 
+                                        onClick={() => setRecentSidebarOpen(!recentSidebarOpen)}
+                                        className={`hidden lg:flex absolute -right-4 top-0 z-20 h-8 w-8 rounded-full border shadow-sm bg-white transition-transform duration-300 ${recentSidebarOpen ? '' : 'rotate-180'}`}
+                                        title={recentSidebarOpen ? "Chiudi Sidebar" : "Apri Sidebar"}
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </Button>
+
+                                    <div className={`${recentSidebarOpen ? 'lg:col-span-9' : 'lg:col-span-12'} space-y-8 transition-all duration-500`}>
                                         {/* Strategy Summary Stats */}
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                                             {[
@@ -1447,8 +1500,12 @@ const AdminGenerator = ({
 
                                                                         {/* Image */}
                                                                         <div className="relative w-24 bg-slate-100 flex-shrink-0 border-r border-slate-100 overflow-hidden group/img">
-                                                                            {(item.image_url || resultMatch?.image_url) ? (
-                                                                                <img src={resultMatch?.image_url || item.image_url} alt="Cover" className="w-full h-full object-cover transition-transform group-hover/img:scale-110" />
+                                                                            {(item.image_url || resultMatch?.image_url || item.stock_image_url) ? (
+                                                                                <img 
+                                                                                    src={resultMatch?.image_url || item.image_url || item.stock_image_url} 
+                                                                                    alt="Cover" 
+                                                                                    className="w-full h-full object-cover transition-transform group-hover/img:scale-110" 
+                                                                                />
                                                                             ) : (
                                                                                 <div className="w-full h-full flex items-center justify-center text-slate-300">
                                                                                     {isGenerating ? <Loader2 className="w-6 h-6 animate-spin" /> : <ImageIcon className="w-6 h-6" />}
@@ -1510,7 +1567,35 @@ const AdminGenerator = ({
                                                                                     )}
                                                                                 </div>
                                                                                 <h4 className={`text-sm font-bold leading-snug transition-colors ${isPublished ? 'text-slate-500' : 'text-slate-900 group-hover:text-indigo-600'}`}>{item.titolo}</h4>
-                                                                                <p className="text-[11px] text-slate-500 italic line-clamp-1 mt-0.5">{item.motivo}</p>
+                                                                                <div className="flex items-center justify-between mt-1">
+                                                                                    <p className="text-[11px] text-slate-500 italic line-clamp-1 flex-1">{item.motivo}</p>
+                                                                                    {item.outline && item.outline.length > 0 && (
+                                                                                        <Button 
+                                                                                            variant="ghost" 
+                                                                                            size="sm" 
+                                                                                            onClick={(e) => { e.stopPropagation(); toggleOutline(globalIndex); }}
+                                                                                            className="h-5 px-1.5 text-[9px] hover:bg-slate-100 text-slate-400 gap-1"
+                                                                                        >
+                                                                                            {expandedOutlines[globalIndex] ? 'Nascondi Outline' : 'Vedi Outline SEO'}
+                                                                                            {expandedOutlines[globalIndex] ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+                                                                                        </Button>
+                                                                                    )}
+                                                                                </div>
+                                                                                {expandedOutlines[globalIndex] && item.outline && (
+                                                                                    <div className="mt-3 p-2 bg-slate-100 rounded-lg border border-slate-200 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                                                        <p className="text-[9px] font-black text-slate-400 mb-2 uppercase tracking-tight">Struttura Ottimizzata:</p>
+                                                                                        <div className="space-y-1.5">
+                                                                                            {item.outline.map((o, oi) => (
+                                                                                                <div key={oi} className="flex items-start gap-2">
+                                                                                                    <Badge variant="outline" className={`text-[8px] h-3.5 px-1 shrink-0 ${o.type === 'h1' ? 'bg-indigo-600 text-white border-indigo-600' : o.type === 'h2' ? 'bg-slate-700 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                                                                                                        {o.type.toUpperCase()}
+                                                                                                    </Badge>
+                                                                                                    <span className="text-[10px] text-slate-700 leading-tight">{o.text}</span>
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
                                                                             </div>
                                                                         </div>
 
@@ -1557,53 +1642,98 @@ const AdminGenerator = ({
                                                 </div>
                                             </div>
                                         ))}
-                                    </div>
+                                    </div> {/* Fine lg:col-span-9/12 */}
 
-                                    <div className="lg:col-span-3 space-y-6">
-                                        <Card className="border-slate-200 shadow-sm sticky top-6">
-                                            <CardHeader className="p-4 pb-2">
-                                                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                                    <TrendingUp className="w-4 h-4 text-emerald-500" /> Recentemente Live
-                                                </CardTitle>
-                                                <CardDescription className="text-[10px]">Ultimi contenuti pubblicati nel sito</CardDescription>
-                                            </CardHeader>
-                                            <CardContent className="p-4 pt-2">
-                                                <ScrollArea className="h-[600px] pr-3">
-                                                    <div className="space-y-4">
-                                                        {recentArticles.length > 0 ? recentArticles.map((art) => (
-                                                            <div key={art.id} className="relative pl-3 border-l-2 border-slate-100 pb-1 group cursor-default">
-                                                                <div className="absolute -left-[5px] top-0 w-2 h-2 rounded-full bg-slate-200 group-hover:bg-indigo-400 transition-colors" />
-                                                                <h4 className="text-[11px] font-bold text-slate-800 line-clamp-2 leading-tight">{art.titolo}</h4>
-                                                                <div className="flex items-center gap-2 mt-1">
-                                                                    <span className="text-[9px] font-medium text-slate-400">
-                                                                        {art.published_at ? new Date(art.published_at).toLocaleDateString() : 'Draft'}
-                                                                    </span>
-                                                                    <Badge className={`text-[8px] h-3.5 px-1 font-bold ${art.stato === 'published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-400'}`} variant="outline">
-                                                                        {art.stato}
-                                                                    </Badge>
+                                    {recentSidebarOpen && (
+                                        <div className="lg:col-span-3 space-y-6 animate-in slide-in-from-right-4 duration-500">
+                                            <Card className="border-slate-200 shadow-sm sticky top-6">
+                                                <CardHeader className="p-4 pb-2">
+                                                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                                        <TrendingUp className="w-4 h-4 text-emerald-500" /> Recentemente Live
+                                                    </CardTitle>
+                                                    <CardDescription className="text-[10px]">Ultimi contenuti pubblicati nel sito</CardDescription>
+                                                </CardHeader>
+                                                <CardContent className="p-4 pt-2">
+                                                    <ScrollArea className="h-[600px] pr-3">
+                                                        <div className="space-y-4">
+                                                            {recentArticles.length > 0 ? recentArticles.map((art) => (
+                                                                <div key={art.id} className="relative pl-3 border-l-2 border-slate-100 pb-1 group cursor-default">
+                                                                    <div className="absolute -left-[5px] top-0 w-2 h-2 rounded-full bg-slate-200 group-hover:bg-indigo-400 transition-colors" />
+                                                                    <h4 className="text-[11px] font-bold text-slate-800 line-clamp-2 leading-tight">{art.titolo}</h4>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <span className="text-[9px] font-medium text-slate-400">
+                                                                            {art.published_at ? new Date(art.published_at).toLocaleDateString() : 'Draft'}
+                                                                        </span>
+                                                                        <Badge className={`text-[8px] h-3.5 px-1 font-bold ${art.stato === 'published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-400'}`} variant="outline">
+                                                                            {art.stato}
+                                                                        </Badge>
+                                                                    </div>
+                                                                    {art.wordpress_link && (
+                                                                        <a href={art.wordpress_link} target="_blank" className="text-[9px] text-indigo-500 hover:underline flex items-center gap-0.5 mt-1">
+                                                                            Link Post <ExternalLink className="w-2 h-2" />
+                                                                        </a>
+                                                                    )}
                                                                 </div>
-                                                                {art.wordpress_link && (
-                                                                    <a href={art.wordpress_link} target="_blank" className="text-[9px] text-indigo-500 hover:underline flex items-center gap-0.5 mt-1">
-                                                                        Link Post <ExternalLink className="w-2 h-2" />
-                                                                    </a>
-                                                                )}
-                                                            </div>
-                                                        )) : (
-                                                            <div className="flex flex-col items-center justify-center py-10 opacity-40">
-                                                                <FileText className="w-8 h-8 mb-2" />
-                                                                <p className="text-[10px] font-medium">Nessun articolo trovato</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </ScrollArea>
-                                            </CardContent>
-                                        </Card>
+                                                            )) : (
+                                                                <div className="flex flex-col items-center justify-center py-10 opacity-40">
+                                                                    <FileText className="w-8 h-8 mb-2" />
+                                                                    <p className="text-[10px] font-medium">Nessun articolo trovato</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </ScrollArea>
+                                                </CardContent>
+                                            </Card>
 
-                                        {activePlanImageIndex !== null && (
-                                            <Card className="border-orange-200 bg-orange-50/30 overflow-hidden shadow-lg animate-in slide-in-from-right-4 duration-300">
+                                            {activePlanImageIndex !== null && (
+                                                <Card className="border-orange-200 bg-orange-50/30 overflow-hidden shadow-lg animate-in slide-in-from-right-4 duration-300">
+                                                    <CardHeader className="p-3 border-b border-orange-100 bg-white">
+                                                        <div className="flex items-center justify-between">
+                                                            <CardTitle className="text-xs font-bold text-orange-700">Immagine Articolo</CardTitle>
+                                                            <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-orange-100 text-orange-400" onClick={() => setActivePlanImageIndex(null)}><X className="w-3.5 h-3.5" /></Button>
+                                                        </div>
+                                                    </CardHeader>
+                                                    <CardContent className="p-3 bg-white space-y-2">
+                                                        <div className="flex gap-1 mb-2">
+                                                            <Input 
+                                                                className="h-8 text-[11px] border-orange-100 focus-visible:ring-orange-500" 
+                                                                value={imgSearchQuery} 
+                                                                onChange={(e) => setImgSearchQuery(e.target.value)}
+                                                                onKeyDown={(e) => e.key === 'Enter' && handleImageSearch(12)}
+                                                                placeholder="Cerca foto..."
+                                                            />
+                                                            <Button size="icon" className="h-8 w-8 bg-orange-500 hover:bg-orange-600" onClick={() => handleImageSearch(12)}>
+                                                                {searchingImages ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                                                            </Button>
+                                                        </div>
+
+                                                        {imgSearchResults.length > 0 && (
+                                                            <p className="text-[9px] text-slate-400 mb-1">{imgSearchResults.length} trovate</p>
+                                                        )}
+                                                        <ScrollArea className="h-[300px]">
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                {imgSearchResults.map((img, i) => (
+                                                                    <div key={i} className="cursor-pointer group relative rounded-lg overflow-hidden border border-slate-100 shadow-sm" onClick={() => importExternalImage(img.image)}>
+                                                                        <img src={img.thumbnail} className="w-full aspect-square object-cover" loading="lazy" />
+                                                                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                                                            <ImagePlus className="w-5 h-5 text-white" />
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </ScrollArea>
+                                                    </CardContent>
+                                                </Card>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {!recentSidebarOpen && activePlanImageIndex !== null && (
+                                        <div className="lg:col-span-3 space-y-6 animate-in slide-in-from-right-4 duration-500">
+                                             <Card className="border-orange-200 bg-orange-50/30 overflow-hidden shadow-lg sticky top-6">
                                                 <CardHeader className="p-3 border-b border-orange-100 bg-white">
                                                     <div className="flex items-center justify-between">
-                                                        <CardTitle className="text-xs font-bold text-orange-700">Seleziona Immagine per l'Articolo</CardTitle>
+                                                        <CardTitle className="text-xs font-bold text-orange-700">Immagine Articolo</CardTitle>
                                                         <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-orange-100 text-orange-400" onClick={() => setActivePlanImageIndex(null)}><X className="w-3.5 h-3.5" /></Button>
                                                     </div>
                                                 </CardHeader>
@@ -1620,46 +1750,19 @@ const AdminGenerator = ({
                                                             {searchingImages ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
                                                         </Button>
                                                     </div>
-
-                                                    {imgSearchResults.length > 0 && (
-                                                        <p className="text-[9px] text-slate-400 mb-1">{imgSearchResults.length} trovate · clicca per usare l'immagine</p>
-                                                    )}
-                                                    <ScrollArea className="h-[380px]">
+                                                    <ScrollArea className="h-[300px]">
                                                         <div className="grid grid-cols-2 gap-2">
                                                             {imgSearchResults.map((img, i) => (
                                                                 <div key={i} className="cursor-pointer group relative rounded-lg overflow-hidden border border-slate-100 shadow-sm" onClick={() => importExternalImage(img.image)}>
-                                                                    <img src={img.thumbnail} className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy" alt={img.title || ""} />
-                                                                    <div className="absolute inset-0 bg-orange-500/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                                                                        <ImagePlus className="w-6 h-6 text-white drop-shadow-md" />
-                                                                    </div>
-                                                                    <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                        <p className="text-[8px] text-white text-center">
-                                                                            {img.width && img.height ? `${img.width}×${img.height}` : ''}{img.weight_kb ? ` · ${img.weight_kb}KB` : ''}
-                                                                        </p>
-                                                                    </div>
+                                                                    <img src={img.thumbnail} className="w-full aspect-square object-cover" loading="lazy" />
                                                                 </div>
                                                             ))}
                                                         </div>
-                                                        {imgSearchResults.length > 0 && (
-                                                            <div className="pt-2 pb-1 text-center">
-                                                                <Button variant="outline" size="sm" onClick={() => handleImageSearch(imgSearchResults.length + 10)} disabled={searchingImages} className="text-[10px] h-7">
-                                                                    {searchingImages ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Plus className="w-3 h-3 mr-1" />}
-                                                                    Carica altre 10
-                                                                </Button>
-                                                            </div>
-                                                        )}
-                                                        {imgSearchResults.length === 0 && (
-                                                            <div className="flex flex-col items-center justify-center h-32 text-slate-400">
-                                                                <Search className="w-6 h-6 mb-2 opacity-40" />
-                                                                <p className="text-[10px]">Cerca un'immagine per questo articolo</p>
-                                                            </div>
-                                                        )}
                                                     </ScrollArea>
                                                 </CardContent>
                                             </Card>
-                                        )}
-
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center py-24 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-200/5 transition-colors hover:bg-slate-200/10">
@@ -1678,7 +1781,6 @@ const AdminGenerator = ({
                             )}
                         </div>
                     )}
-
                 </div>
             )}
 
@@ -1730,6 +1832,42 @@ const AdminGenerator = ({
                                     .article-full-preview img { max-width: 100%; height: auto; border-radius: 8px; }
                                 `}} />
                                 <div className="prose prose-slate max-w-none px-8 py-12" dangerouslySetInnerHTML={{ __html: fullPreview.contenuto }} />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+            {/* Confirmation Modal for Delete Plan */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+                    <Card className="w-full max-w-md shadow-2xl border-none overflow-hidden rounded-3xl animate-in zoom-in-95 duration-200">
+                        <CardHeader className="bg-red-50 text-red-600 py-6 text-center border-b border-red-100">
+                            <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                                <AlertTriangle className="w-8 h-8 text-red-600" />
+                            </div>
+                            <CardTitle className="text-xl font-black uppercase tracking-tight">Zona Pericolo</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-8 text-center bg-white">
+                            <p className="text-slate-600 mb-8 font-medium">
+                                Stai per eliminare definitivamente l'intero **Piano Editoriale** attuale. 
+                                <br/><span className="text-xs text-red-500 font-bold uppercase mt-2 block">Questa azione non è reversibile!</span>
+                            </p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="h-12 rounded-xl font-bold border-slate-200 hover:bg-slate-50"
+                                >
+                                    Annulla
+                                </Button>
+                                <Button 
+                                    disabled={deletingPlan}
+                                    onClick={confirmDeletePlan}
+                                    className="h-12 rounded-xl font-bold bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200"
+                                >
+                                    {deletingPlan ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                                    Sì, Elimina Piano
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>

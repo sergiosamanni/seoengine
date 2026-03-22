@@ -150,11 +150,19 @@ async def remove_site_from_client(client_id: str, request: dict, current_user: d
 async def scrape_website_for_kb(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
-    url_home = request.get("url_home", "").strip()
-    url_chi_siamo = request.get("url_chi_siamo", "").strip()
-    url_contatti = request.get("url_contatti", "").strip()
     
-    urls = [u for u in [url_home, url_chi_siamo, url_contatti] if u]
+    # Support both new 'urls' list and legacy single fields
+    urls_input = request.get("urls", [])
+    if isinstance(urls_input, str):
+        urls_input = [urls_input]
+        
+    if not urls_input:
+        single_url = request.get("url") or request.get("url_home") or request.get("url_chi_siamo") or request.get("url_contatti")
+        if single_url:
+            urls_input = [single_url]
+    
+    urls = [u.strip() for u in urls_input if u and isinstance(u, str) and u.strip()]
+    
     if not urls:
         raise HTTPException(status_code=400, detail="Almeno un URL è obbligatorio")
     

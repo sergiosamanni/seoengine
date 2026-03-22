@@ -13,10 +13,11 @@ class StrategistAgent(BaseAgent):
     async def generate_plan(self, gsc_data: dict, kb_data: dict, target_keywords: list = None, existing_topics: list = None, num_topics: int = 10) -> list:
         """
         Generates a list of suggested topics/titles based on GSC, KB, and Target Keywords.
+        Each topic includes an SEO-optimized outline and an image search query for the cover.
         """
         await self.log("running", {"topics_requested": num_topics})
         
-        system_prompt = f"""Sei un SEO Strategist esperto. Il tuo compito è analizzare i dati di Google Search Console (GSC) 
+        system_prompt = f"""Sei un SEO Strategist e Content Architect esperto. Il tuo compito è analizzare i dati di Google Search Console (GSC) 
 e la Knowledge Base (KB) di un cliente per proporre un piano editoriale di {num_topics} articoli.
 
 Obiettivo: Massimizzare il traffico organico e l'autorevolezza del sito, dando PRIORITÀ alle Keyword Target fornite dal cliente.
@@ -34,7 +35,10 @@ Regole:
 - Identifica anche keyword con "Impressioni elevate ma basso CTR" dai dati GSC.
 - Identifica lacune di contenuto basandoti sulla KB.
 - Assicurati che i titoli siano accattivanti e in linea con il brand.
-- Rispondi ESCLUSIVAMENTE con un JSON valido nel seguente formato:
+- Per ogni articolo, genera un OUTLINE SEO ottimizzato (H1, H2, H3) con logica di silos tematici.
+- Per ogni articolo, includi una query di ricerca immagine in inglese per trovare una foto di stock adatta.
+
+Rispondi ESCLUSIVAMENTE con un JSON valido nel seguente formato:
 {{
   "plan": [
     {{
@@ -42,7 +46,16 @@ Regole:
       "keyword": "Keyword principale",
       "topic": "Nome del cluster tematico (es. Noleggio Elettrico, Fiscalità, Manutenzione)",
       "funnel": "TOFU/MOFU/BOFU",
-      "motivo": "Perché hai scelto questo tema basandoti sui dati o sulle keyword target?"
+      "motivo": "Perché hai scelto questo tema basandoti sui dati o sulle keyword target?",
+      "image_search_query": "Query in inglese per cercare immagine di stock (es. 'car rental business man city')",
+      "outline": [
+        {{"type": "h1", "text": "Titolo H1 SEO ottimizzato"}},
+        {{"type": "h2", "text": "Prima sezione principale"}},
+        {{"type": "h3", "text": "Sottosezione opzionale"}},
+        {{"type": "h2", "text": "Seconda sezione principale"}},
+        {{"type": "h2", "text": "FAQ – Domande Frequenti (OBBLIGATORIO)"}},
+        {{"type": "h2", "text": "Conclusione"}}
+      ]
     }}
   ]
 }}

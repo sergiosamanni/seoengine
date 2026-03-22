@@ -16,9 +16,22 @@ const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/a
 export const KnowledgeBaseTab = ({ knowledge, setKnowledge, isAdmin, effectiveClientId, getAuthHeaders }) => {
   const [newPuntoInteresse, setNewPuntoInteresse] = React.useState('');
   const [newPuntoForza, setNewPuntoForza] = React.useState('');
-  const [scrapeUrl, setScrapeUrl] = React.useState('');
+  const [scrapeUrls, setScrapeUrls] = React.useState([]);
+  const [currentUrl, setCurrentUrl] = React.useState('');
   const [scraping, setScraping] = React.useState(false);
   const [scrapeResult, setScrapeResult] = React.useState(null);
+
+  const addUrl = () => {
+    const trimmed = currentUrl.trim();
+    if (trimmed && !scrapeUrls.includes(trimmed)) {
+      setScrapeUrls([...scrapeUrls, trimmed]);
+      setCurrentUrl('');
+    }
+  };
+
+  const removeUrl = (url) => {
+    setScrapeUrls(scrapeUrls.filter(u => u !== url));
+  };
 
   const addToList = (field, value, setValue) => {
     const trimmedValue = value.trim();
@@ -35,12 +48,21 @@ export const KnowledgeBaseTab = ({ knowledge, setKnowledge, isAdmin, effectiveCl
   };
 
   const handleScrapeWebsite = async () => {
-    if (!scrapeUrl.trim()) { toast.error('Inserisci un URL'); return; }
+    const finalUrls = [...scrapeUrls];
+    if (currentUrl.trim() && !finalUrls.includes(currentUrl.trim())) {
+      finalUrls.push(currentUrl.trim());
+    }
+
+    if (finalUrls.length === 0) { 
+      toast.error('Inserisci almeno un URL'); 
+      return; 
+    }
+
     setScraping(true);
     setScrapeResult(null);
     try {
       const res = await axios.post(`${API}/clients/${effectiveClientId}/scrape-website`, {
-        url: scrapeUrl
+        urls: finalUrls
       }, { headers: getAuthHeaders() });
       setScrapeResult(res.data);
       toast.success(`Sito analizzato: ${res.data.pagine_analizzate?.length || 0} pagine`);
@@ -86,17 +108,33 @@ export const KnowledgeBaseTab = ({ knowledge, setKnowledge, isAdmin, effectiveCl
           <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Input
-                value={scrapeUrl}
-                onChange={(e) => setScrapeUrl(e.target.value)}
-                placeholder="https://www.example.com"
+                value={currentUrl}
+                onChange={(e) => setCurrentUrl(e.target.value)}
+                placeholder="Es: https://www.example.com/chi-siamo"
                 disabled={scraping}
-                data-testid="scrape-url-input"
+                onKeyDown={(e) => e.key === 'Enter' && addUrl()}
               />
-              <Button onClick={handleScrapeWebsite} disabled={scraping} className="bg-blue-600 hover:bg-blue-700 whitespace-nowrap" data-testid="scrape-btn">
+              <Button variant="outline" size="icon" onClick={addUrl} disabled={scraping}>
+                <Plus className="w-4 h-4" />
+              </Button>
+              <Button onClick={handleScrapeWebsite} disabled={scraping} className="bg-blue-600 hover:bg-blue-700 whitespace-nowrap">
                 {scraping ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-                {scraping ? 'Analisi...' : 'Analizza sito'}
+                {scraping ? 'Analisi...' : 'Analizza tutto'}
               </Button>
             </div>
+            
+            {scrapeUrls.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {scrapeUrls.map((u, i) => (
+                  <Badge key={i} variant="secondary" className="pl-2 pr-1 py-1 bg-blue-50 text-blue-700 border-blue-100">
+                    <span className="max-w-[200px] truncate">{u}</span>
+                    <button onClick={() => removeUrl(u)} className="ml-1 p-0.5 hover:bg-blue-200 rounded-full transition-colors">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
             {scrapeResult && (
               <div className="p-4 bg-white rounded-lg border border-blue-200 space-y-3">
                 <div className="flex items-center justify-between">

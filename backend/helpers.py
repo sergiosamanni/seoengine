@@ -1482,3 +1482,32 @@ async def get_internal_linking_context(client_id: str, config: dict, target_keyw
     results = [x[1] for x in scored[:15]]
     logger.info(f"Internal linking context for '{target_keyword}': {len(results)} links found (DB: {len(db_links)}, Sitemap: {len(sitemap_links)}).")
     return results
+
+
+async def web_search_images(keyword: str, max_results: int = 5) -> list:
+    """Search for images using DuckDuckGo. Returns a list of {image, thumbnail, url} dicts."""
+    try:
+        from duckduckgo_search import DDGS
+        with DDGS() as ddgs:
+            results = list(ddgs.images(
+                keywords=keyword,
+                region="wt-wt",
+                safesearch="moderate",
+                size="Large",
+                max_results=max_results + 3
+            ))
+        formatted = []
+        for r in results[:max_results]:
+            formatted.append({
+                "image": r.get("image", ""),
+                "thumbnail": r.get("thumbnail", r.get("image", "")),
+                "url": r.get("url", ""),
+                "title": r.get("title", ""),
+                "width": r.get("width", 0),
+                "height": r.get("height", 0),
+            })
+        return formatted
+    except Exception as e:
+        logger.warning(f"web_search_images error for '{keyword}': {e}")
+        return []
+

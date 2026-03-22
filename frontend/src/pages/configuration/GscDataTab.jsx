@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
-export const GscDataTab = ({ clientId, getAuthHeaders, client }) => {
+export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => {
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState(null);
     const [days, setDays] = useState('28');
@@ -51,9 +51,9 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client }) => {
     }, [clientId, days]);
 
     const handleApplySuggestion = (sugg) => {
-        // Here we could directly push the article to the queue/generation endpoint
-        // MVP: show a toast
-        toast.info(`Configurato nel generatore: ${sugg.title}. Action: ${sugg.type}`, { description: sugg.reason });
+        if(addToQueue) {
+            addToQueue(`[STRATEGIA] ${sugg.keyword} - ${sugg.title}`);
+        }
     };
 
     const requestAiStrategy = async () => {
@@ -91,7 +91,7 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client }) => {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900 font-['Manrope'] pr-4 tracking-tight">Performance di Ricerca</h3>
+                  <h3 className="text-xl font-bold text-slate-900 pr-4 tracking-tight">Performance di Ricerca</h3>
                   <p className="text-sm text-slate-500">{client?.nome} — Dati organici reali da Google</p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -167,7 +167,7 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client }) => {
                                   <s.icon className={`w-4 h-4 ${s.color}`} />
                                   <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{s.label}</span>
                                 </div>
-                                <p className="text-2xl font-bold text-slate-900 font-['Manrope']">{s.value?.toLocaleString()}</p>
+                                <p className="text-2xl font-bold text-slate-900">{s.value?.toLocaleString()}</p>
                               </CardContent>
                             </Card>
                         ))}
