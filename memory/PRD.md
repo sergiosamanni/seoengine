@@ -11,7 +11,7 @@ Applicazione web full-stack per la SEO programmatica. Genera articoli SEO ottimi
 - **SERP**: DuckDuckGo Lite con retry logic
 - **WordPress**: Pubblicazione via REST API (post + pagine), formato Gutenberg blocks
 - **GSC**: OAuth 2.0 per dati Google Search Console
-- **Object Storage**: Emergent Object Storage per upload immagini
+- **Object Storage**: SEO Engine Object Storage per upload immagini (S3 compatibile)
 
 ## Core Features (Implemented)
 1. Multi-Tenant: Ruoli Admin e Cliente

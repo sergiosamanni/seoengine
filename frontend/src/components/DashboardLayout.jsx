@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import {
-  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X
+  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X, Camera, BookOpen, Globe
 } from 'lucide-react';
 
 export const DashboardLayout = ({ children }) => {
@@ -16,14 +16,35 @@ export const DashboardLayout = ({ children }) => {
   const handleLogout = () => { logout(); navigate('/login'); };
 
   const adminNav = [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { label: 'Clienti', icon: Globe, path: '/clients' },
     { label: 'Utenti', icon: Users, path: '/users' },
-    { label: 'Activity Log', icon: Activity, path: '/activity-log' },
   ];
+  const bottomNav = isAdmin ? [
+    { label: 'Activity Log', icon: Activity, path: '/activity-log' },
+    { label: 'Guida', icon: BookOpen, path: '/guide' },
+  ] : [];
+
   const clientNav = [
-    { label: 'Genera', icon: FileText, path: '/generate' },
+    { label: 'I miei Clienti', icon: Globe, path: '/clients' },
+    { label: 'Genera da testo', icon: FileText, path: '/generate', mode: 'text' },
+    { label: 'Genera da foto', icon: Camera, path: '/generate', mode: 'photo' },
   ];
   const navItems = isAdmin ? adminNav : clientNav;
+
+  const renderNavLink = (item, isSmall = false) => {
+    const searchParams = new URLSearchParams(location.search);
+    const isActive = (location.pathname === item.path && (!item.mode || searchParams.get('mode') === item.mode));
+    return (
+      <Link key={item.path + (item.mode || '')}
+        to={item.mode ? `${item.path}?mode=${item.mode}` : item.path}
+        onClick={() => setSidebarOpen(false)}
+        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all ${isSmall ? 'text-xs' : 'text-sm'} ${isActive ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+        data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}>
+        <item.icon className={isSmall ? "w-3.5 h-3.5" : "w-4.5 h-4.5"} />
+        {item.label}
+      </Link>
+    );
+  };
 
   return (
     <div className="flex h-screen bg-slate-50">
@@ -46,21 +67,17 @@ export const DashboardLayout = ({ children }) => {
 
         <ScrollArea className="flex-1 px-3 py-4">
           <nav className="space-y-1">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.path ||
-                (item.path === '/dashboard' && location.pathname.startsWith('/clients'));
-              return (
-                <Link key={item.path} to={item.path}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-                  data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}>
-                  <item.icon className="w-4.5 h-4.5" />
-                  {item.label}
-                </Link>
-              );
-            })}
+            {navItems.map((item) => renderNavLink(item))}
           </nav>
         </ScrollArea>
+
+        {bottomNav.length > 0 && (
+          <div className="px-3 py-2 border-t border-slate-800/50">
+            <nav className="space-y-0.5">
+              {bottomNav.map((item) => renderNavLink(item, true))}
+            </nav>
+          </div>
+        )}
 
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 mb-3 px-1">

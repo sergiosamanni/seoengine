@@ -13,6 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
+import { Checkbox } from '../components/ui/checkbox';
+import { ScrollArea } from '../components/ui/scroll-area';
 import {
   Dialog,
   DialogContent,
@@ -53,7 +55,7 @@ export const UsersPage = () => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all'); // all, unassigned, assigned
   const [assignDialog, setAssignDialog] = useState(null); // user to assign
-  const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedClientIds, setSelectedClientIds] = useState([]);
   const [assigning, setAssigning] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(null);
 
@@ -82,34 +84,42 @@ export const UsersPage = () => {
     return client?.nome || '—';
   };
 
-  const assignUser = async () => {
-    if (!assignDialog || !selectedClientId) return;
+  const updateClients = async () => {
+    if (!assignDialog) return;
     setAssigning(true);
     try {
-      await axios.post(`${API}/users/assign-client`, {
+      await axios.post(`${API}/users/assign-clients`, {
         user_id: assignDialog.id,
-        client_id: selectedClientId
+        client_ids: selectedClientIds
       }, { headers: getAuthHeaders() });
-      toast.success(`${assignDialog.name} assegnato a ${getClientName(selectedClientId)}`);
+      toast.success('Associazioni aggiornate');
       setAssignDialog(null);
-      setSelectedClientId('');
+      setSelectedClientIds([]);
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Errore assegnazione');
+      toast.error(error.response?.data?.detail || 'Errore');
     } finally {
       setAssigning(false);
     }
   };
 
-  const unassignUser = async (user) => {
+  const toggleClientSelection = (clientId) => {
+    setSelectedClientIds(prev =>
+      prev.includes(clientId)
+        ? prev.filter(id => id !== clientId)
+        : [...prev, clientId]
+    );
+  };
+
+  const unassignAll = async (user) => {
     try {
-      await axios.post(`${API}/users/unassign-client`, {
+      await axios.post(`${API}/users/unassign-clients`, {
         user_id: user.id
       }, { headers: getAuthHeaders() });
-      toast.success(`${user.name} rimosso dal cliente`);
+      toast.success('Tutte le associazioni rimosse');
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Errore');
+      toast.error('Errore');
     }
   };
 
@@ -131,12 +141,12 @@ export const UsersPage = () => {
       u.email.toLowerCase().includes(search.toLowerCase());
     const matchesFilter =
       filter === 'all' ||
-      (filter === 'unassigned' && !u.client_id) ||
-      (filter === 'assigned' && !!u.client_id);
+      (filter === 'unassigned' && (!u.client_ids || u.client_ids.length === 0)) ||
+      (filter === 'assigned' && u.client_ids && u.client_ids.length > 0);
     return matchesSearch && matchesFilter;
   });
 
-  const unassignedCount = users.filter(u => u.role === 'client' && !u.client_id).length;
+  const unassignedCount = users.filter(u => u.role === 'client' && (!u.client_ids || u.client_ids.length === 0)).length;
 
   if (loading) {
     return (
@@ -217,11 +227,11 @@ export const UsersPage = () => {
               filteredUsers.map(user => (
                 <div key={user.id} className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors" data-testid={`user-row-${user.id}`}>
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${user.role === 'admin' ? 'bg-slate-900' : user.client_id ? 'bg-emerald-100' : 'bg-amber-100'}`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${user.role === 'admin' ? 'bg-slate-900' : (user.client_ids && user.client_ids.length > 0) ? 'bg-emerald-100' : 'bg-amber-100'}`}>
                       {user.role === 'admin' ? (
                         <Shield className="w-5 h-5 text-white" />
                       ) : (
-                        <User className={`w-5 h-5 ${user.client_id ? 'text-emerald-700' : 'text-amber-700'}`} />
+                        <User className={`w-5 h-5 ${(user.client_ids && user.client_ids.length > 0) ? 'text-emerald-700' : 'text-amber-700'}`} />
                       )}
                     </div>
                     <div>
@@ -238,13 +248,16 @@ export const UsersPage = () => {
 
                     {/* Assignment status */}
                     {user.role !== 'admin' && (
-                      user.client_id ? (
-                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs" data-testid={`user-assigned-${user.id}`}>
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          {getClientName(user.client_id)}
-                        </Badge>
+                      (user.client_ids && user.client_ids.length > 0) ? (
+                        <div className="flex flex-wrap gap-1 max-w-[200px] justify-end">
+                          {user.client_ids.map(cid => (
+                            <Badge key={cid} className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] px-1.5 py-0">
+                              {getClientName(cid)}
+                            </Badge>
+                          ))}
+                        </div>
                       ) : (
-                        <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs" data-testid={`user-unassigned-${user.id}`}>
+                        <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
                           <AlertTriangle className="w-3 h-3 mr-1" />
                           Non assegnato
                         </Badge>
@@ -260,14 +273,14 @@ export const UsersPage = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => { setAssignDialog(user); setSelectedClientId(user.client_id || ''); }}>
+                          <DropdownMenuItem onClick={() => { setAssignDialog(user); setSelectedClientIds(user.client_ids || []); }}>
                             <Link2 className="w-4 h-4 mr-2" />
-                            {user.client_id ? 'Cambia cliente' : 'Assegna a cliente'}
+                            Gestisci clienti
                           </DropdownMenuItem>
-                          {user.client_id && (
-                            <DropdownMenuItem onClick={() => unassignUser(user)}>
+                          {user.client_ids && user.client_ids.length > 0 && (
+                            <DropdownMenuItem onClick={() => unassignAll(user)}>
                               <Unlink className="w-4 h-4 mr-2" />
-                              Rimuovi associazione
+                              Scollega tutto
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onClick={() => setDeleteDialog(user)} className="text-red-600">
@@ -286,34 +299,47 @@ export const UsersPage = () => {
       </Card>
 
       {/* Assign Dialog */}
-      <Dialog open={!!assignDialog} onOpenChange={(open) => { if (!open) { setAssignDialog(null); setSelectedClientId(''); } }}>
-        <DialogContent>
+      <Dialog open={!!assignDialog} onOpenChange={(open) => { if (!open) { setAssignDialog(null); setSelectedClientIds([]); } }}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Assegna a Cliente</DialogTitle>
+            <DialogTitle>Gestisci Clienti</DialogTitle>
             <DialogDescription>
-              Associa <strong>{assignDialog?.name}</strong> ({assignDialog?.email}) a un cliente esistente.
+              Seleziona quali clienti può gestire <strong>{assignDialog?.name}</strong>.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-3">
-            <Label>Seleziona Cliente</Label>
-            <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-              <SelectTrigger data-testid="assign-client-select">
-                <SelectValue placeholder="Scegli un cliente..." />
-              </SelectTrigger>
-              <SelectContent>
+          <div className="py-4">
+            <Label className="mb-3 block text-xs uppercase tracking-wider text-slate-400 font-bold">Clienti disponibili</Label>
+            <ScrollArea className="h-[300px] border rounded-lg p-2 bg-slate-50/50">
+              <div className="space-y-2">
                 {clients.map(c => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.nome} — {c.sito_web}
-                  </SelectItem>
+                  <div key={c.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${selectedClientIds.includes(c.id) ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-transparent hover:border-slate-200'}`}
+                    onClick={() => toggleClientSelection(c.id)}>
+                    <Checkbox
+                      id={`client-${c.id}`}
+                      checked={selectedClientIds.includes(c.id)}
+                      onCheckedChange={() => toggleClientSelection(c.id)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <label htmlFor={`client-${c.id}`} className="text-sm font-bold text-slate-900 block cursor-pointer truncate">
+                        {c.nome}
+                      </label>
+                      <p className="text-[10px] text-slate-500 truncate italic">
+                        {c.sito_web.replace('https://', '')}
+                      </p>
+                    </div>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            </ScrollArea>
+            <p className="mt-3 text-[10px] text-slate-400 text-center">
+              L'utente avrà accesso a tutti i dati e gli strumenti per i clienti selezionati.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAssignDialog(null)}>Annulla</Button>
-            <Button onClick={assignUser} disabled={!selectedClientId || assigning} className="bg-slate-900" data-testid="assign-confirm-btn">
-              {assigning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Link2 className="w-4 h-4 mr-2" />}
-              Assegna
+            <Button onClick={updateClients} disabled={assigning} className="bg-slate-900 min-w-[100px]">
+              {assigning ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salva'}
             </Button>
           </DialogFooter>
         </DialogContent>

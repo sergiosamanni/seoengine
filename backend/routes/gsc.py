@@ -35,37 +35,63 @@ def _require_gsc_credentials():
 
 @router.post("/clients/{client_id}/gsc-config")
 async def save_gsc_config(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Solo admin")
-    gsc_config = {
-        "site_url": request.get("site_url", ""),
-        "enabled": request.get("enabled", True),
-        "connected": False,
-        "tokens": None
-    }
-    await db.clients.update_one({"id": client_id}, {"$set": {"configuration.gsc": gsc_config}})
-    return {"message": "URL sito GSC salvato"}
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    # Get existing config or create new
+    client_doc = await db.clients.find_one({"id": client_id}, {"configuration": 1})
+    full_config = client_doc.get("configuration") or {}
+    current_gsc = full_config.get("gsc") or {}
+    
+    # Update only provided fields
+    if "site_url" in request:
+        current_gsc["site_url"] = request["site_url"]
+    if "enabled" in request:
+        current_gsc["enabled"] = request["enabled"]
+    if "oauth_client_id" in request:
+        current_gsc["oauth_client_id"] = request["oauth_client_id"]
+    if "oauth_client_secret" in request:
+        current_gsc["oauth_client_secret"] = request["oauth_client_secret"]
+    
+    # Reset connection if credentials change
+    if "oauth_client_id" in request or "oauth_client_secret" in request:
+        current_gsc["connected"] = False
+        current_gsc["tokens"] = None
+
+    full_config["gsc"] = current_gsc
+    await db.clients.update_one({"id": client_id}, {"$set": {"configuration": full_config}})
+    return {"message": "Configurazione GSC salvata"}
 
 
 @router.get("/gsc/authorize/{client_id}")
 async def gsc_authorize(client_id: str, request: Request, redirect_uri: str = Query(None), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Solo admin")
-    _require_gsc_credentials()
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client_doc:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    gsc_config = (client_doc.get("configuration") or {}).get("gsc") or {}
+    # Use client credentials if available, otherwise global
+    c_id = gsc_config.get("oauth_client_id") or GSC_OAUTH_CLIENT_ID
+    c_secret = gsc_config.get("oauth_client_secret") or GSC_OAUTH_CLIENT_SECRET
+    
+    if not c_id or not c_secret:
+        raise HTTPException(status_code=400, detail="Credenziali OAuth GSC non configurate.")
+
     # Use frontend-provided redirect_uri, or derive from request
     if redirect_uri:
         final_redirect_uri = redirect_uri
     else:
         base = str(request.base_url).rstrip('/')
         final_redirect_uri = _get_gsc_redirect_uri(base)
+    
     from google_auth_oauthlib.flow import Flow
     client_config = {
         "web": {
-            "client_id": GSC_OAUTH_CLIENT_ID,
-            "client_secret": GSC_OAUTH_CLIENT_SECRET,
+            "client_id": c_id,
+            "client_secret": c_secret,
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
             "redirect_uris": [final_redirect_uri]
@@ -84,7 +110,6 @@ async def gsc_authorize(client_id: str, request: Request, redirect_uri: str = Qu
 @router.get("/gsc/callback")
 async def gsc_callback(code: str, state: str):
     from starlette.responses import RedirectResponse
-    _require_gsc_credentials()
     state_doc = await db.gsc_states.find_one({"state": state})
     if not state_doc:
         raise HTTPException(status_code=400, detail="State non valido o scaduto")
@@ -93,11 +118,16 @@ async def gsc_callback(code: str, state: str):
     saved_redirect_uri = state_doc.get("redirect_uri")
     await db.gsc_states.delete_one({"state": state})
     redirect_uri = saved_redirect_uri or _get_gsc_redirect_uri()
+    client_doc = await db.clients.find_one({"id": client_id}, {"configuration.gsc": 1})
+    gsc_config = (client_doc.get("configuration") or {} or {}).get("gsc", {}) or {}
+    c_id = gsc_config.get("oauth_client_id") or GSC_OAUTH_CLIENT_ID
+    c_secret = gsc_config.get("oauth_client_secret") or GSC_OAUTH_CLIENT_SECRET
+
     from google_auth_oauthlib.flow import Flow
     client_config = {
         "web": {
-            "client_id": GSC_OAUTH_CLIENT_ID,
-            "client_secret": GSC_OAUTH_CLIENT_SECRET,
+            "client_id": c_id,
+            "client_secret": c_secret,
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
             "redirect_uris": [redirect_uri]
@@ -131,8 +161,8 @@ async def gsc_callback(code: str, state: str):
 
 @router.post("/clients/{client_id}/gsc-disconnect")
 async def gsc_disconnect(client_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Solo admin")
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     await db.clients.update_one(
         {"id": client_id},
         {"$set": {"configuration.gsc.tokens": None, "configuration.gsc.connected": False}}
@@ -158,7 +188,7 @@ async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depe
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client_doc:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
-    gsc_config = client_doc.get("configuration", {}).get("gsc", {})
+    gsc_config = (client_doc.get("configuration") or {}).get("gsc") or {}
     tokens = gsc_config.get("tokens")
     if not tokens or not gsc_config.get("connected"):
         raise HTTPException(status_code=400, detail="Google Search Console non connesso.")
@@ -188,26 +218,112 @@ async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depe
         service = build("searchconsole", "v1", credentials=creds)
         end_date = datetime.now(timezone.utc).date()
         start_date = end_date - timedelta(days=days)
-        kw_response = service.searchanalytics().query(
-            siteUrl=site_url,
-            body={"startDate": start_date.isoformat(), "endDate": end_date.isoformat(),
-                  "dimensions": ["query"], "rowLimit": 50}
-        ).execute()
-        pages_response = service.searchanalytics().query(
-            siteUrl=site_url,
-            body={"startDate": start_date.isoformat(), "endDate": end_date.isoformat(),
-                  "dimensions": ["page"], "rowLimit": 30}
-        ).execute()
-        keywords = [{"keyword": row["keys"][0], "clicks": row.get("clicks", 0),
-                      "impressions": row.get("impressions", 0),
-                      "ctr": round(row.get("ctr", 0) * 100, 2),
-                      "position": round(row.get("position", 0), 1)}
-                     for row in kw_response.get("rows", [])]
-        pages = [{"page": row["keys"][0], "clicks": row.get("clicks", 0),
-                   "impressions": row.get("impressions", 0),
-                   "ctr": round(row.get("ctr", 0) * 100, 2),
-                   "position": round(row.get("position", 0), 1)}
-                  for row in pages_response.get("rows", [])]
+        import time
+        start_t = time.time()
+        
+        # Helper to find correct siteUrl property if exact match fails
+        async def get_valid_site_url(target_url):
+            try:
+                sites_resp = service.sites().list().execute()
+                site_list = [s['siteUrl'] for s in sites_resp.get('siteEntry', [])]
+                logger.info(f"Available GSC sites for discovery: {site_list}")
+                
+                # Normalize target
+                def normalize_url(u):
+                    return u.lower().replace("https://", "").replace("http://", "").replace("sc-domain:", "").replace("www.", "").strip("/")
+ 
+                clean_target = normalize_url(target_url)
+                
+                # Try exact/substring normalization matches
+                for s in site_list:
+                    if normalize_url(s) == clean_target:
+                        logger.info(f"Auto-discovered better match for GSC property: {s} (target was {target_url})")
+                        return s
+                
+                # If target is listed in the account exactly, use it (sometimes list doesn't report everything if it's new)
+                if target_url in site_list:
+                    return target_url
+
+                # If the property we have is missing the slash, try with slash
+                if target_url.startswith("http") and not target_url.endswith("/"):
+                    if (target_url + "/") in site_list:
+                        return target_url + "/"
+
+                # Last desperation: if it's missing but it's clearly a permission issue,
+                # let's return None and raise a descriptive 400 later.
+                if target_url not in site_list:
+                    return None # Signal mismatch
+
+                return target_url
+            except Exception as e:
+                logger.warning(f"Could not list GSC sites to discover best match: {e}")
+                return target_url
+
+        # Initial check/discovery
+        effective_site_url = await get_valid_site_url(site_url)
+        if not effective_site_url:
+            # Let's try listing sites one more time to show them in the error
+            try:
+                sites_resp = service.sites().list().execute()
+                avail = [s['siteUrl'] for s in sites_resp.get('siteEntry', [])]
+                avail_str = ", ".join(avail[:10])
+                if len(avail) > 10: avail_str += "..."
+                raise HTTPException(status_code=400, detail=f"Errore GSC: La proprietà '{site_url}' non è presente in questo account Google. SITI TROVATI: {avail_str}. Verifica di aver autorizzato l'account corretto.")
+            except:
+                raise HTTPException(status_code=400, detail=f"Errore GSC: Proprietà '{site_url}' non trovata o permessi mancanti.")
+
+        # We try 1000 keywords and 500 pages. 
+        # If it fails, we catch the exception and try a much smaller set as fallback.
+        try:
+            logger.info(f"Primary GSC query for {effective_site_url} (KW: 1000, Pages: 500)")
+            kw_response = service.searchanalytics().query(
+                siteUrl=effective_site_url,
+                body={"startDate": start_date.isoformat(), "endDate": end_date.isoformat(),
+                      "dimensions": ["query"], "rowLimit": 1000}
+            ).execute()
+            pages_response = service.searchanalytics().query(
+                siteUrl=effective_site_url,
+                body={"startDate": start_date.isoformat(), "endDate": end_date.isoformat(),
+                      "dimensions": ["page"], "rowLimit": 500}
+            ).execute()
+        except Exception as e:
+            logger.warning(f"GSC Primary query failed, attempting emergency fallback (100 rows): {e}")
+            kw_response = service.searchanalytics().query(
+                siteUrl=effective_site_url,
+                body={"startDate": start_date.isoformat(), "endDate": end_date.isoformat(),
+                      "dimensions": ["query"], "rowLimit": 100}
+            ).execute()
+            pages_response = service.searchanalytics().query(
+                siteUrl=effective_site_url,
+                body={"startDate": start_date.isoformat(), "endDate": end_date.isoformat(),
+                      "dimensions": ["page"], "rowLimit": 50}
+            ).execute()
+
+        total_time = time.time() - start_t
+        logger.info(f"GSC queries completed in {total_time:.2f}s")
+        
+        keywords = []
+        for row in kw_response.get("rows", []):
+            if not row.get("keys"): continue
+            keywords.append({
+                "keyword": row["keys"][0],
+                "clicks": row.get("clicks") or 0,
+                "impressions": row.get("impressions") or 0,
+                "ctr": round((row.get("ctr") or 0) * 100, 2),
+                "position": round(row.get("position") or 0, 1)
+            })
+
+        pages = []
+        for row in pages_response.get("rows", []):
+            if not row.get("keys"): continue
+            pages.append({
+                "page": row["keys"][0],
+                "clicks": row.get("clicks") or 0,
+                "impressions": row.get("impressions") or 0,
+                "ctr": round((row.get("ctr") or 0) * 100, 2),
+                "position": round(row.get("position") or 0, 1)
+            })
+
         return {
             "period": {"start": start_date.isoformat(), "end": end_date.isoformat()},
             "keywords": keywords, "pages": pages,
@@ -218,12 +334,50 @@ async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depe
                 "avg_position": round(sum(k["position"] for k in keywords) / max(len(keywords), 1), 1)
             }
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"GSC Error for client {client_id}: {str(e)}\n{error_trace}")
         error_msg = str(e)
         if "invalid_grant" in error_msg or "Token has been expired" in error_msg:
             await db.clients.update_one(
                 {"id": client_id},
                 {"$set": {"configuration.gsc.connected": False, "configuration.gsc.tokens": None}}
             )
+            # Use 401 for token issues
             raise HTTPException(status_code=401, detail="Token GSC scaduto. Riconnetti con Google.")
+        
+        # Check for specific site-not-found errors which often happen with misconfigured site_urls
+        if "site not found" in error_msg.lower() or "permission" in error_msg.lower():
+            raise HTTPException(status_code=400, detail=f"Errore GSC: Proprietà o permessi mancanti per l'URL {site_url}. Verifica che l'utente Google abbia accesso a questa proprietà e che l'URL in config sia IDENTICO a quello in GSC console (inclusi protocollo e slash finale).")
+            
         raise HTTPException(status_code=500, detail=f"Errore GSC: {error_msg}")
+
+
+@router.get("/clients/{client_id}/gsc-status")
+async def get_client_gsc_status(client_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    """Status endpoint specifically for a client property (used by GscConnectionTab.jsx)."""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+        
+    client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+        
+    gsc_config = (client_doc.get("configuration") or {}).get("gsc") or {}
+    
+    base = str(request.base_url).rstrip('/')
+    redirect_uri = _get_gsc_redirect_uri(base)
+    
+    has_client_creds = bool(gsc_config.get("oauth_client_id") and gsc_config.get("oauth_client_secret"))
+
+    return {
+        "configured": bool(has_client_creds or (GSC_OAUTH_CLIENT_ID and GSC_OAUTH_CLIENT_SECRET)),
+        "connected": bool(gsc_config.get("connected") and gsc_config.get("tokens")),
+        "site_url": gsc_config.get("site_url", ""),
+        "oauth_client_id_set": bool(has_client_creds or GSC_OAUTH_CLIENT_ID), # System-wide or Per-client
+        "redirect_uri": redirect_uri,
+        "has_per_client_credentials": has_client_creds
+    }

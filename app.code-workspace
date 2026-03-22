@@ -1,8 +1,28 @@
 {
 	"folders": [
 		{
+			"name": "Project Root",
 			"path": "."
+		},
+		{
+			"name": "Backend - Python/FastAPI",
+			"path": "backend"
+		},
+		{
+			"name": "Frontend - React/JS",
+			"path": "frontend"
+		},
+		{
+			"name": "Agents - Instructions",
+			"path": ".agent/agents"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"files.exclude": {
+			"**/venv": true,
+			"**/node_modules": true,
+			"**/.pyc": true
+		},
+		"editor.formatOnSave": true
+	}
 }

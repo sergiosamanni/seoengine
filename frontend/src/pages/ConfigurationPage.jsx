@@ -38,9 +38,10 @@ export const ConfigurationPage = () => {
   const [knowledge, setKnowledge] = useState({
     descrizione_attivita: '', storia_brand: '', citta_principale: '', regione: '',
     descrizione_geografica: '', punti_di_interesse_locali: [], punti_di_forza: [],
-    pubblico_target_primario: '', pubblico_target_secondario: '', call_to_action_principale: ''
+    pubblico_target_primario: '', pubblico_target_secondario: '', call_to_action_principale: '',
+    url_home: '', url_chi_siamo: '', url_contatti: ''
   });
-  const [apify, setApify] = useState({ enabled: false, api_key: '', actor_id: 'apify/google-search-scraper' });
+
 
   const effectiveClientId = isAdmin ? clientId : user?.client_id;
 
@@ -60,7 +61,7 @@ export const ConfigurationPage = () => {
         if (config.seo) setSeo(config.seo);
         if (config.tono_e_stile) setTono(config.tono_e_stile);
         if (config.knowledge_base) setKnowledge(config.knowledge_base);
-        if (config.apify) setApify(config.apify);
+
       } catch (error) {
         toast.error('Errore nel caricamento della configurazione');
       } finally {
@@ -74,7 +75,7 @@ export const ConfigurationPage = () => {
     setSaving(true);
     try {
       await axios.put(`${API}/clients/${effectiveClientId}/configuration`, {
-        wordpress, llm, openai: llm, apify, seo,
+        wordpress, llm, openai: llm, seo,
         tono_e_stile: tono, knowledge_base: knowledge
       }, { headers: getAuthHeaders() });
       toast.success('Configurazione salvata');
@@ -130,7 +131,7 @@ export const ConfigurationPage = () => {
         </TabsList>
 
         <TabsContent value="api" className="mt-6">
-          <ApiKeysTab llm={llm} setLlm={setLlm} wordpress={wordpress} setWordpress={setWordpress} apify={apify} setApify={setApify} />
+          <ApiKeysTab llm={llm} setLlm={setLlm} wordpress={wordpress} setWordpress={setWordpress} />
         </TabsContent>
         <TabsContent value="knowledge" className="mt-6">
           <KnowledgeBaseTab knowledge={knowledge} setKnowledge={setKnowledge} isAdmin={isAdmin} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />

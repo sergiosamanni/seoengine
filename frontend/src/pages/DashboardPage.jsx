@@ -20,6 +20,12 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '../components/ui/accordion';
+import {
   Plus, Search, MoreHorizontal, Edit, Trash2, ExternalLink, Settings, PenTool,
   BarChart3, Globe, X, FileText, Users, TrendingUp, Loader2
 } from 'lucide-react';
@@ -41,6 +47,14 @@ const SETTORI = [
   { value: 'altro', label: 'Altro' },
 ];
 
+const AGENZIE = [
+  { value: 'Lead-IA', label: 'Lead-IA' },
+  { value: 'Freedom', label: 'Freedom' },
+  { value: 'Aibrid', label: 'Aibrid' },
+  { value: 'personali', label: 'Personali' },
+  { value: 'diretto', label: 'Diretto / Altro' },
+];
+
 export const DashboardPage = () => {
   const { getAuthHeaders, isAdmin, user } = useAuth();
   const navigate = useNavigate();
@@ -50,7 +64,7 @@ export const DashboardPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
-  const [formData, setFormData] = useState({ nome: '', settore: 'altro', sito_web: '', siti_web: [], attivo: true });
+  const [formData, setFormData] = useState({ nome: '', settore: 'altro', agenzia: 'diretto', sito_web: '', siti_web: [], attivo: true });
   const [newSiteInput, setNewSiteInput] = useState('');
 
   useEffect(() => {
@@ -98,7 +112,7 @@ export const DashboardPage = () => {
       }
       setIsDialogOpen(false);
       setEditingClient(null);
-      setFormData({ nome: '', settore: 'altro', sito_web: '', siti_web: [], attivo: true });
+      setFormData({ nome: '', settore: 'altro', agenzia: 'diretto', sito_web: '', siti_web: [], attivo: true });
       setNewSiteInput('');
       fetchClients();
     } catch (error) {
@@ -118,7 +132,7 @@ export const DashboardPage = () => {
   const openEditDialog = (client) => {
     setEditingClient(client);
     setFormData({
-      nome: client.nome, settore: client.settore, sito_web: client.sito_web,
+      nome: client.nome, settore: client.settore, agenzia: client.agenzia || 'diretto', sito_web: client.sito_web,
       siti_web: client.siti_web || [client.sito_web].filter(Boolean), attivo: client.attivo
     });
     setNewSiteInput('');
@@ -167,7 +181,7 @@ export const DashboardPage = () => {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
-          if (!open) { setEditingClient(null); setFormData({ nome: '', settore: 'altro', sito_web: '', siti_web: [], attivo: true }); setNewSiteInput(''); }
+          if (!open) { setEditingClient(null); setFormData({ nome: '', settore: 'altro', agenzia: 'diretto', sito_web: '', siti_web: [], attivo: true }); setNewSiteInput(''); }
         }}>
           <DialogTrigger asChild>
             <Button className="bg-slate-900 hover:bg-slate-800" data-testid="new-client-btn">
@@ -191,6 +205,13 @@ export const DashboardPage = () => {
                   <Select value={formData.settore} onValueChange={(v) => setFormData({ ...formData, settore: v })}>
                     <SelectTrigger data-testid="client-settore-select"><SelectValue /></SelectTrigger>
                     <SelectContent>{SETTORI.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Agenzia / Gruppo</Label>
+                  <Select value={formData.agenzia} onValueChange={(v) => setFormData({ ...formData, agenzia: v })}>
+                    <SelectTrigger data-testid="client-agenzia-select"><SelectValue /></SelectTrigger>
+                    <SelectContent>{AGENZIE.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -233,74 +254,141 @@ export const DashboardPage = () => {
         </Dialog>
       </div>
 
-      {/* Clients Table */}
-      <Card className="border-slate-200" data-testid="clients-table-card">
-        <CardContent className="p-0">
-          {filteredClients.length === 0 ? (
+      {/* Clients Table Grouped by Agency */}
+      {filteredClients.length === 0 ? (
+        <Card className="border-slate-200">
+          <CardContent className="p-0">
             <div className="text-center py-16">
               <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
               <p className="text-slate-500">{searchQuery ? 'Nessun cliente trovato' : 'Nessun cliente. Crea il primo!'}</p>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50">
-                  <TableHead className="font-semibold">Cliente</TableHead>
-                  <TableHead className="font-semibold">Settore</TableHead>
-                  <TableHead className="font-semibold">Articoli</TableHead>
-                  <TableHead className="font-semibold">Stato</TableHead>
-                  <TableHead className="font-semibold text-right">Azioni</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredClients.map((client) => (
-                  <TableRow key={client.id} className="hover:bg-slate-50 cursor-pointer" data-testid={`client-row-${client.id}`}
-                    onClick={() => navigate(`/clients/${client.id}`)}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
-                          <span className="text-sm font-semibold text-slate-600">{client.nome?.charAt(0).toUpperCase()}</span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-slate-900">{client.nome}</p>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm text-blue-600">{client.sito_web}</span>
-                            {(client.siti_web?.length || 0) > 1 && (
-                              <Badge variant="outline" className="text-xs px-1.5 py-0 h-5">+{client.siti_web.length - 1} siti</Badge>
-                            )}
-                          </div>
-                        </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Accordion type="multiple" defaultValue={AGENZIE.map(a => a.value)} className="space-y-4">
+          {AGENZIE.map((agenzia) => {
+            const agencyClients = filteredClients.filter(c => {
+               const clientAgency = (c.agenzia || 'diretto').toLowerCase();
+               return clientAgency === agenzia.value.toLowerCase();
+            });
+
+            if (agencyClients.length === 0) return null;
+
+            return (
+              <AccordionItem key={agenzia.value} value={agenzia.value} className="border-none">
+                <AccordionTrigger className="hover:no-underline py-0 mb-4 [&[data-state=open]>div]:rounded-b-none">
+                  <div className={`w-full flex items-center justify-between p-4 rounded-xl border shadow-sm transition-all ${agenzia.value === 'Lead-IA' ? 'bg-indigo-50/50 border-indigo-100' :
+                    agenzia.value === 'Freedom' ? 'bg-emerald-50/50 border-emerald-100' :
+                      agenzia.value === 'Aibrid' ? 'bg-amber-50/50 border-amber-100' :
+                        'bg-white border-slate-200'
+                    }`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm ${agenzia.value === 'Lead-IA' ? 'bg-indigo-100 text-indigo-600 border-indigo-200' :
+                        agenzia.value === 'Freedom' ? 'bg-emerald-100 text-emerald-600 border-emerald-200' :
+                          agenzia.value === 'Aibrid' ? 'bg-amber-100 text-amber-600 border-amber-200' :
+                            'bg-slate-50 border-slate-200 text-slate-600'
+                        }`}>
+                        <Globe className="w-5 h-5" />
                       </div>
-                    </TableCell>
-                    <TableCell><span className="text-slate-600">{SETTORI.find(s => s.value === client.settore)?.label || client.settore}</span></TableCell>
-                    <TableCell><span className="font-mono text-slate-900">{client.totale_articoli || 0}</span></TableCell>
-                    <TableCell>
-                      <Badge variant={client.attivo ? "default" : "secondary"}
-                        className={client.attivo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-600"}>
-                        {client.attivo ? 'Attivo' : 'Inattivo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" data-testid={`client-actions-${client.id}`}><MoreHorizontal className="w-4 h-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}`)}><PenTool className="w-4 h-4 mr-2" />Genera Articoli</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}/config`)}><Settings className="w-4 h-4 mr-2" />Configurazione</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}/gsc`)}><BarChart3 className="w-4 h-4 mr-2" />Google Search Console</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEditDialog(client)}><Edit className="w-4 h-4 mr-2" />Modifica</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-red-600 focus:text-red-600"><Trash2 className="w-4 h-4 mr-2" />Elimina</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                      <div className="text-left">
+                        <h2 className="text-lg font-bold text-slate-900 font-['Manrope']">
+                          {agenzia.label}
+                        </h2>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                          {agencyClients.length} {agencyClients.length === 1 ? 'cliente' : 'clienti'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                
+                <AccordionContent>
+                  <Card className="border-slate-200 overflow-hidden shadow-sm">
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="font-semibold">Cliente</TableHead>
+                            <TableHead className="font-semibold">Settore</TableHead>
+                            <TableHead className="font-semibold">Articoli</TableHead>
+                            <TableHead className="font-semibold">Stato</TableHead>
+                            <TableHead className="font-semibold text-right">Azioni</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {agencyClients.map((client) => (
+                            <TableRow key={client.id} className="hover:bg-slate-50 cursor-pointer" data-testid={`client-row-${client.id}`}
+                              onClick={() => navigate(`/clients/${client.id}`)}>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm shadow-sm transition-colors ${agenzia.value === 'Lead-IA' ? 'bg-indigo-50 text-indigo-600' :
+                                    agenzia.value === 'Freedom' ? 'bg-emerald-50 text-emerald-600' :
+                                      agenzia.value === 'Aibrid' ? 'bg-amber-50 text-amber-600' :
+                                        'bg-slate-100 text-slate-600'
+                                    }`}>
+                                    {client.nome?.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-slate-900">{client.nome}</p>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <a
+                                        href={client.sito_web}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-blue-600 hover:underline flex items-center gap-1 font-medium"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {client.sito_web.replace('https://', '').replace(/\/$/, '')}
+                                        <ExternalLink className="w-2.5 h-2.5" />
+                                      </a>
+                                      {(client.siti_web?.length || 0) > 1 && (
+                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-slate-200 text-slate-500 bg-white">
+                                          +{client.siti_web.length - 1} siti
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell><span className="text-slate-600">{SETTORI.find(s => s.value === client.settore)?.label || client.settore}</span></TableCell>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-slate-900">{client.totale_articoli || 0}</span>
+                                  <span className="text-[10px] text-slate-400 font-medium">generati</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={client.attivo ? "default" : "secondary"}
+                                  className={client.attivo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-600"}>
+                                  {client.attivo ? 'Attivo' : 'Inattivo'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" data-testid={`client-actions-${client.id}`}><MoreHorizontal className="w-4 h-4" /></Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}`)}><PenTool className="w-4 h-4 mr-2" />Genera Articoli</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}/config`)}><Settings className="w-4 h-4 mr-2" />Configurazione</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}/gsc`)}><BarChart3 className="w-4 h-4 mr-2" />Google Search Console</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => openEditDialog(client)}><Edit className="w-4 h-4 mr-2" />Modifica</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-red-600 focus:text-red-600"><Trash2 className="w-4 h-4 mr-2" />Elimina</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
+      )}
     </div>
   );
 };

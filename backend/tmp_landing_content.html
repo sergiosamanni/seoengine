@@ -1,0 +1,138 @@
+```html
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --color-primary:    #F6C900;
+    --color-secondary:  #383838;
+    --color-accent:     #FF4400;
+    --color-bg:         #FFFFFF;
+    --color-bg-alt:     #F5F5F5;
+    --color-text:       #222222;
+    --color-text-light: #666666;
+    --font-heading:     'Inter', sans-serif;
+    --font-body:        'Inter', sans-serif;
+    --radius:           8px;
+    --shadow:           0 4px 24px rgba(0,0,0,0.08);
+    --max-width:        1200px;
+    --spacing-section:  80px;
+  }
+  body { font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); line-height: 1.6; }
+  h1, h2, h3, h4 { font-family: var(--font-heading); line-height: 1.2; font-weight: 700; }
+  h1 { font-size: clamp(2.5rem, 6vw, 4rem); margin-bottom: 24px; }
+  h2 { font-size: clamp(1.8rem, 4vw, 2.8rem); margin-bottom: 32px; }
+  h3 { font-size: 1.5rem; margin-bottom: 16px; }
+  p  { font-size: 1.1rem; color: var(--color-text-light); max-width: 65ch; margin-bottom: 24px; }
+  .lp-container { max-width: var(--max-width); margin: 0 auto; padding: 0 24px; }
+  .lp-section   { padding: var(--spacing-section) 0; }
+  .lp-grid-2    { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+  .lp-grid-3    { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+  .lp-flex      { display: flex; align-items: center; gap: 16px; }
+  .lp-center    { text-align: center; }
+  .lp-center p  { margin: 0 auto 32px auto; }
+  img { max-width: 100%; height: auto; display: block; border-radius: var(--radius); }
+  .lp-btn { display: inline-block; padding: 16px 40px; border-radius: var(--radius); font-weight: 600; font-size: 1.1rem; text-decoration: none; cursor: pointer; transition: all 0.2s ease; border: none; }
+  .lp-btn-primary   { background: var(--color-primary); color: #fff; }
+  .lp-btn-primary:hover   { filter: brightness(1.1); transform: translateY(-2px); }
+  .lp-card { background: var(--color-bg-alt); border-radius: var(--radius); padding: 40px; box-shadow: var(--shadow); }
+  .lp-hero { background: var(--color-bg-alt); padding: calc(var(--spacing-section) * 2) 0; }
+  details { background: var(--color-bg-alt); border-radius: var(--radius); padding: 24px; margin-bottom: 16px; cursor: pointer; border: 1px solid #eee; }
+  details > summary { font-weight: 600; font-size: 1.1rem; list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::after { content: "+"; float: right; font-size: 1.5rem; font-weight: 400; }
+  details[open] > summary::after { content: "-"; }
+  details[open] { padding-bottom: 32px; }
+  details p { margin-top: 16px; }
+  @media (max-width: 768px) {
+    .lp-grid-2, .lp-grid-3 { grid-template-columns: 1fr; }
+    :root { --spacing-section: 60px; }
+    h1 { font-size: 2.5rem; }
+  }
+</style>
+
+<div class="premium-landing-v4">
+  <!-- HERO SECTION -->
+  <section class="lp-hero">
+    <div class="lp-container lp-grid-2">
+      <div>
+        <h1>Noleggio carrello elevatore a lungo termine: l'investimento intelligente per la tua produttività</h1>
+        <p>Rendi prevedibile il tuo costo operativo e liberati da manutenzione, riparazioni e obsolescenza. Scegli il piano flessibile su misura per il tuo cantiere o magazzino, con attrezzature premium e assistenza dedicata 24/7.</p>
+        <a href="#cta-finale" class="lp-btn lp-btn-primary">Richiedi un preventivo personalizzato</a>
+      </div>
+      <div>
+        <img src="https://images.unsplash.com/photo-1566462602386-9b8e2c3b16c5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Carrello elevatore professionale in opera in un magazzino moderno">
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES SECTION -->
+  <section class="lp-section">
+    <div class="lp-container">
+      <h2 class="lp-center">Perché le aziende leader scelgono il nostro noleggio a lungo termine</h2>
+      <div class="lp-grid-3">
+        <div class="lp-card">
+          <h3>🚀 Attrezzature Top di Gamma</h3>
+          <p>Collaboriamo esclusivamente con i migliori marchi (JLG, Genie, Haulotte, Platform Basket, Fronteq). Macchinari ad alte prestazioni, affidabili e all'avanguardia per garantirti il massimo dell'efficienza.</p>
+        </div>
+        <div class="lp-card">
+          <h3>🔧 Assistenza Totale</h3>
+          <p>Consulenza tecnica personalizzata e assistenza rapida ed efficace, anche direttamente in cantiere. La manutenzione è sempre nostra responsabilità. Servizio post-noleggio dedicato.</p>
+        </div>
+        <div class="lp-card">
+          <h3>📈 Logistica Senza Pensieri</h3>
+          <p>Preventivi rapidi, trasporto e pronta consegna. Sedi operative multiple (Forlì, Ravenna, Melfi) per una copertura nazionale e un supporto sempre vicino a te.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTENT SECTION -->
+  <section class="lp-section" style="background-color: var(--color-bg-alt);">
+    <div class="lp-container lp-grid-2">
+      <div>
+        <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Operatore che utilizza una piattaforma aerea in un cantiere edile">
+      </div>
+      <div>
+        <h2>Più di un semplice noleggio, una partnership strategica</h2>
+        <p><strong>UN Rent S.r.l.</strong> è specializzata nel noleggio di attrezzature per il sollevamento e l'accesso in quota. Offriamo soluzioni integrate per cantieri e aziende: piattaforme aeree (semoventi, articolate, elettriche, diesel, ragno), sollevatori telescopici (fissi e rotativi) e, naturalmente, <strong>carrelli elevatori diesel per noleggi a lungo termine</strong>.</p>
+        <p>Il nostro modello ti permette di convertire un costo capitale imprevedibile (acquisto, manutenzione, fermi macchina) in un canale operativo fisso e scalabile. Hai la flessibilità di adeguare la flotta alle esigenze del progetto senza immobilizzare capitale.</p>
+        <a href="#cta-finale" class="lp-btn lp-btn-primary">Parla con un nostro esperto</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ SECTION -->
+  <section class="lp-section">
+    <div class="lp-container">
+      <h2 class="lp-center">Domande Frequenti sul Noleggio a Lungo Termine</h2>
+      <div style="max-width: 800px; margin: 0 auto;">
+        <details>
+          <summary>Quali sono i vantaggi del noleggio a lungo termine rispetto all'acquisto?</summary>
+          <p>Il noleggio a lungo termine ti libera dall'investimento iniziale, dai costi di manutenzione straordinaria, dall'obsolescenza tecnologica e dai problemi di rivendita. Tutto è incluso in un canale mensile fisso, migliorando il tuo cash flow e la pianificazione di budget.</p>
+        </details>
+        <details>
+          <summary>Posso modificare il contratto durante il periodo di noleggio?</summary>
+          <p>Assolutamente sì. I nostri piani sono concepiti per essere flessibili. In base alle tue esigenze di cantiere, possiamo valutare insieme l'upgrade o il downgrade dell'attrezzatura, o aggiungere macchinari supplementari.</p>
+        </details>
+        <details>
+          <summary>Chi si occupa della manutenzione e delle eventuali riparazioni?</summary>
+          <p>Noi. La manutenzione ordinaria e straordinaria, le riparazioni e le sostituzioni di parti usurate sono completamente a nostro carico. In caso di guasto, interveniamo rapidamente per minimizzare i tuoi fermi produttivi.</p>
+        </details>
+        <details>
+          <summary>Fornite anche la formazione per gli operatori?</summary>
+          <p>Sì. Offriamo servizi di formazione continua per il nostro personale e per i nostri clienti. Possiamo formare i tuoi operatori all'uso sicuro ed efficiente delle attrezzature noleggiate, nel rispetto delle normative vigenti.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA SECTION -->
+  <section id="cta-finale" class="lp-section lp-center" style="background-color: var(--color-secondary); color: #fff;">
+    <div class="lp-container">
+      <h2 style="color: #fff;">Pronto a ottimizzare i costi e potenziare la tua operatività?</h2>
+      <p style="color: rgba(255,255,255,0.9);">Invia la tua richiesta. Un nostro consulente ti contatterà entro 2 ore lavorative per definire insieme il piano di noleggio a lungo termine perfetto per le tue esigenze.</p>
+      <a href="tel:+39000000000" class="lp-btn lp-btn-primary" style="background-color: var(--color-primary); color: var(--color-secondary); font-size: 1.2rem; padding: 20px 50px;">📞 Chiamaci Ora +39 000 000000</a>
+      <p style="margin-top: 24px; color: rgba(255,255,255,0.7);">Oppure <a href="mailto:info@azienda.it" style="color: var(--color-primary); text-decoration: underline;">scrivi a info@azienda.it</a></p>
+    </div>
+  </section>
+</div>
+```

@@ -10,6 +10,8 @@ import { GeneratorPage } from './pages/GeneratorPage';
 import { ActivityLogPage } from './pages/ActivityLogPage';
 import { UsersPage } from './pages/UsersPage';
 import { GscPage } from './pages/GscPage';
+import { ClientWorkspace } from './pages/ClientWorkspace';
+import { GuidePage } from './pages/GuidePage';
 import './App.css';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -24,19 +26,26 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to={isAdmin ? "/dashboard" : "/generate"} replace /> : <LoginPage />} />
+      <Route path="/login" element={user ? <Navigate to={isAdmin ? "/clients" : "/generate"} replace /> : <LoginPage />} />
 
       {/* Admin: Unified Dashboard (stats + clients) */}
-      <Route path="/dashboard" element={<ProtectedRoute adminOnly><DashboardPage /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<Navigate to="/clients" replace />} />
+      <Route path="/clients" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
 
-      {/* Admin: Client detail pages */}
-      <Route path="/clients/:clientId" element={<ProtectedRoute adminOnly><GeneratorPage /></ProtectedRoute>} />
-      <Route path="/clients/:clientId/config" element={<ProtectedRoute adminOnly><ConfigurationPage /></ProtectedRoute>} />
-      <Route path="/clients/:clientId/generate" element={<ProtectedRoute adminOnly><GeneratorPage /></ProtectedRoute>} />
-      <Route path="/clients/:clientId/gsc" element={<ProtectedRoute adminOnly><GscPage /></ProtectedRoute>} />
+      {/* Admin/Client: Client detail pages (Unified Workspace) */}
+      <Route path="/clients/:clientId" element={<ProtectedRoute><ClientWorkspace /></ProtectedRoute>} />
+      <Route path="/clients/:clientId/workspace" element={<ProtectedRoute><ClientWorkspace /></ProtectedRoute>} />
+
+      {/* Legacy Admin: compatibility redirects or temporary access */}
+      <Route path="/clients/:clientId/config" element={<ProtectedRoute><ConfigurationPage /></ProtectedRoute>} />
+      <Route path="/clients/:clientId/generate" element={<ProtectedRoute><GeneratorPage /></ProtectedRoute>} />
+      <Route path="/clients/:clientId/gsc" element={<ProtectedRoute><GscPage /></ProtectedRoute>} />
 
       {/* Admin: Users management */}
       <Route path="/users" element={<ProtectedRoute adminOnly><UsersPage /></ProtectedRoute>} />
+
+      {/* Admin: Guide */}
+      <Route path="/guide" element={<ProtectedRoute adminOnly><GuidePage /></ProtectedRoute>} />
 
       {/* Shared: Activity Log */}
       <Route path="/activity-log" element={<ProtectedRoute><ActivityLogPage /></ProtectedRoute>} />
@@ -47,9 +56,8 @@ function AppRoutes() {
       <Route path="/configuration" element={<ProtectedRoute><ConfigurationPage /></ProtectedRoute>} />
 
       {/* Redirects */}
-      <Route path="/clients" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/articles" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/" element={<Navigate to={user ? (isAdmin ? "/dashboard" : "/generate") : "/login"} replace />} />
+      <Route path="/articles" element={<Navigate to="/clients" replace />} />
+      <Route path="/" element={<Navigate to={user ? (isAdmin ? "/clients" : "/generate") : "/login"} replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

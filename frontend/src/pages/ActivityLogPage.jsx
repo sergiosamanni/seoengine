@@ -91,133 +91,140 @@ export const ActivityLogPage = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 font-['Manrope'] tracking-tight">Activity Log</h1>
-          <p className="text-slate-500 mt-1">Monitora generazioni e pubblicazioni</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center">
+            <Activity className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 font-['Manrope'] tracking-tight">Activity Log</h1>
+            <p className="text-xs text-slate-500">Monitoraggio real-time delle operazioni</p>
+          </div>
         </div>
-        <Button variant="outline" onClick={fetchData} disabled={loading} data-testid="refresh-logs-btn">
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />Aggiorna
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={fetchData} disabled={loading} className="h-9 px-3 text-slate-500">
+            <RefreshCw className={`w-3.5 h-3.5 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Aggiorna
+          </Button>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-slate-200">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-slate-900 font-['Manrope']">{stats.total}</p>
-            <p className="text-xs text-slate-500 mt-1">Operazioni totali</p>
-          </CardContent>
-        </Card>
-        <Card className="border-emerald-200 bg-emerald-50">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-emerald-700 font-['Manrope']">{stats.success}</p>
-            <p className="text-xs text-emerald-600 mt-1">Successi</p>
-          </CardContent>
-        </Card>
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-red-700 font-['Manrope']">{stats.failed}</p>
-            <p className="text-xs text-red-600 mt-1">Errori</p>
-          </CardContent>
-        </Card>
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-blue-700 font-['Manrope']">{stats.wpPublished}</p>
-            <p className="text-xs text-blue-600 mt-1">Pubblicati WP</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'Totali', value: stats.total, color: 'slate' },
+          { label: 'Successi', value: stats.success, color: 'emerald' },
+          { label: 'Errori', value: stats.failed, color: 'red' },
+          { label: 'WP', value: stats.wpPublished, color: 'blue' }
+        ].map((s) => (
+          <div key={s.label} className="bg-white border border-slate-200 rounded-xl p-3 flex flex-col items-center justify-center shadow-sm">
+            <span className="text-xl font-bold font-['Manrope'] text-slate-900">{s.value}</span>
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">{s.label}</span>
+          </div>
+        ))}
       </div>
 
-      {/* Filters */}
-      <Card className="border-slate-200">
-        <CardContent className="p-4 flex flex-wrap gap-4 items-center">
-          <Filter className="w-4 h-4 text-slate-500" />
-          <Select value={filterClient} onValueChange={setFilterClient}>
-            <SelectTrigger className="w-[200px]" data-testid="filter-client">
-              <SelectValue placeholder="Filtra per cliente" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutti i clienti</SelectItem>
-              {clients.map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterAction} onValueChange={setFilterAction}>
-            <SelectTrigger className="w-[200px]" data-testid="filter-action">
-              <SelectValue placeholder="Filtra per azione" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutte le azioni</SelectItem>
-              <SelectItem value="article_generate">Generazione</SelectItem>
-              <SelectItem value="wordpress_publish">Pubblicazione WP</SelectItem>
-              <SelectItem value="batch_start">Avvio batch</SelectItem>
-              <SelectItem value="batch_complete">Batch completato</SelectItem>
-            </SelectContent>
-          </Select>
-          <Badge variant="secondary" className="ml-auto">{filteredLogs.length} risultati</Badge>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <Select value={filterClient} onValueChange={setFilterClient}>
+          <SelectTrigger className="h-8 w-fit min-w-[140px] text-xs bg-white border-slate-200">
+            <SelectValue placeholder="Cliente" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all text-xs">Tutti i clienti</SelectItem>
+            {clients.map(c => <SelectItem key={c.id} value={c.id} className="text-xs">{c.nome}</SelectItem>)}
+          </SelectContent>
+        </Select>
 
-      {/* Log List */}
-      <Card className="border-slate-200" data-testid="activity-log-list">
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-            </div>
-          ) : filteredLogs.length === 0 ? (
-            <div className="text-center py-16">
-              <Activity className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500">Nessuna attivita' registrata</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {filteredLogs.map((log, i) => (
-                <div key={log.id || i} className="px-6 py-4 hover:bg-slate-50 transition-colors" data-testid={`activity-row-${i}`}>
-                  <div className="flex items-start gap-4">
-                    <div className="mt-0.5">{getStatusIcon(log.status)}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm text-slate-900">
-                          {ACTION_LABELS[log.action] || log.action}
+        <Select value={filterAction} onValueChange={setFilterAction}>
+          <SelectTrigger className="h-8 w-fit min-w-[140px] text-xs bg-white border-slate-200">
+            <SelectValue placeholder="Azione" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all text-xs">Tutte le azioni</SelectItem>
+            <SelectItem value="article_generate" className="text-xs">Generazione</SelectItem>
+            <SelectItem value="wordpress_publish" className="text-xs">Pubblicazione WP</SelectItem>
+            <SelectItem value="batch_start" className="text-xs">Avvio batch</SelectItem>
+            <SelectItem value="batch_complete" className="text-xs">Batch completato</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Badge variant="outline" className="h-8 px-3 ml-auto text-[10px] font-medium text-slate-500 bg-white border-slate-200">
+          {filteredLogs.length} LOGS
+        </Badge>
+      </div>
+
+      <Card className="border-slate-200 shadow-sm overflow-hidden" data-testid="activity-log-list">
+        <ScrollArea className="h-[calc(100vh-280px)]">
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+              </div>
+            ) : filteredLogs.length === 0 ? (
+              <div className="text-center py-20">
+                <Activity className="w-10 h-10 text-slate-200 mx-auto mb-2" />
+                <p className="text-sm text-slate-400 font-medium">Nessuna attività</p>
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 bg-slate-50 border-b border-slate-100 z-10">
+                  <tr className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+                    <th className="py-2.5 px-4 font-bold">Stato</th>
+                    <th className="py-2.5 px-4 font-bold">Azione / Cliente</th>
+                    <th className="py-2.5 px-4 font-bold">Dettagli</th>
+                    <th className="py-2.5 px-4 text-right font-bold">Data</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredLogs.map((log, i) => (
+                    <tr key={log.id || i} className="hover:bg-slate-50/50 transition-colors group" data-testid={`activity-row-${i}`}>
+                      <td className="py-3 px-4 w-16">
+                        <div className="flex justify-center">{getStatusIcon(log.status)}</div>
+                      </td>
+                      <td className="py-3 px-4 max-w-[200px]">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-bold text-slate-900 truncate">
+                            {ACTION_LABELS[log.action] || log.action}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">
+                            {getClientName(log.client_id)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-col max-w-[400px]">
+                          {log.details?.titolo && (
+                            <span className="text-xs text-slate-600 truncate font-semibold">{log.details.titolo}</span>
+                          )}
+                          {log.details?.error && (
+                            <span className="text-[11px] text-red-500 line-clamp-1 italic">{log.details.error}</span>
+                          )}
+                          {log.details?.link && (
+                            <a href={log.details.link} target="_blank" rel="noopener noreferrer"
+                              className="text-[11px] text-blue-600 hover:text-blue-800 flex items-center gap-1 w-fit mt-0.5">
+                              Link WordPress <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          )}
+                          {log.details?.total_combinations && (
+                            <span className="text-[10px] text-slate-400">{log.details.total_combinations} combinazioni • {log.details.model}</span>
+                          )}
+                          {log.action === 'batch_complete' && log.details?.total !== undefined && (
+                            <span className="text-[10px] text-slate-400">{log.details.generated}/{log.details.total} generati • {log.details.published} pubblicati</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <span className="text-[11px] font-medium text-slate-400 tabular-nums">
+                          {new Date(log.timestamp).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        <Badge variant="outline" className="text-xs">{getClientName(log.client_id)}</Badge>
-                        <Badge className={`text-xs ${STATUS_COLORS[log.status] || ''}`}>{log.status}</Badge>
-                      </div>
-                      {log.details?.titolo && (
-                        <p className="text-sm text-slate-600 mt-1 truncate">{log.details.titolo}</p>
-                      )}
-                      {log.details?.error && (
-                        <p className="text-sm text-red-600 mt-1 bg-red-50 p-2 rounded line-clamp-2">{log.details.error}</p>
-                      )}
-                      {log.details?.link && (
-                        <a href={log.details.link} target="_blank" rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1">
-                          {log.details.link.replace('https://', '').slice(0, 50)} <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                      {log.details?.post_id && (
-                        <span className="text-xs text-slate-500 mt-0.5 block">WP Post ID: {log.details.post_id}</span>
-                      )}
-                      {log.details?.total_combinations && (
-                        <span className="text-xs text-slate-500">{log.details.total_combinations} combinazioni | {log.details.provider} ({log.details.model})</span>
-                      )}
-                      {log.action === 'batch_complete' && log.details?.total !== undefined && (
-                        <span className="text-xs text-slate-500">{log.details.generated}/{log.details.total} generati, {log.details.published} pubblicati</span>
-                      )}
-                    </div>
-                    <span className="text-xs text-slate-400 whitespace-nowrap">
-                      {new Date(log.timestamp).toLocaleString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </ScrollArea>
       </Card>
     </div>
   );

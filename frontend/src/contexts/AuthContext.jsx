@@ -50,20 +50,20 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const response = await axios.post(`${API}/auth/login`, { email, password });
     const { token: newToken, user: userData } = response.data;
-    
+
     localStorage.setItem('seo_token', newToken);
     setToken(newToken);
     setUser(userData);
-    
+
     return userData;
   };
 
   const register = async (email, password, name, role = 'client') => {
-    const response = await axios.post(`${API}/auth/register`, { 
-      email, 
-      password, 
-      name, 
-      role 
+    const response = await axios.post(`${API}/auth/register`, {
+      email,
+      password,
+      name,
+      role
     });
     return response.data;
   };
@@ -81,6 +81,7 @@ export const AuthProvider = ({ children }) => {
     register,
     getAuthHeaders,
     isAdmin: user?.role === 'admin',
+    clientIds: user?.client_ids || [],
     isAuthenticated: !!user
   };
 

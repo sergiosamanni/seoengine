@@ -12,7 +12,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://serp-wizard.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'http://localhost:8000').rstrip('/')
 
 # Test credentials
 ADMIN_EMAIL = "admin@seoengine.it"
@@ -333,7 +333,7 @@ class TestConfigurationTabs:
         
         # Check key sections exist or can be set
         sections = ["wordpress", "llm", "seo", "tono_e_stile", "knowledge_base", 
-                    "keyword_combinations", "content_strategy", "apify", "advanced_prompt"]
+                    "keyword_combinations", "content_strategy", "advanced_prompt"]
         
         present_sections = [s for s in sections if config.get(s)]
         print(f"PASS: Config has sections: {present_sections}")

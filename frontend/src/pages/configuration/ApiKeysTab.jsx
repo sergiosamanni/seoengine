@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -10,7 +11,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { Key, Globe, Sparkles, Search } from 'lucide-react';
+import { Badge } from '../../components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../../components/ui/alert-dialog";
+import { Key, Globe, Sparkles, Search, Activity } from 'lucide-react';
 
 const LLM_PROVIDERS = [
   {
@@ -68,7 +81,18 @@ const PROVIDER_DESCRIPTIONS = {
   perplexity: 'Perplexity integra ricerca web real-time, perfetto per contenuti sempre aggiornati.'
 };
 
-export const ApiKeysTab = ({ llm, setLlm, wordpress, setWordpress, apify, setApify }) => {
+const API = process.env.REACT_APP_BACKEND_URL ? `${process.env.REACT_APP_BACKEND_URL}/api` : 'http://localhost:8000/api';
+
+export const ApiKeysTab = ({ llm, setLlm, wordpress, setWordpress, seo, setSeo, onIndexSite, onSave, clientConfig, clientId }) => {
+  const { getAuthHeaders } = useAuth();
+  const [indexing, setIndexing] = React.useState(false);
+
+  const handleIndex = async () => {
+    setIndexing(true);
+    await onIndexSite();
+    setIndexing(false);
+  };
+
   const handleProviderChange = (newProvider) => {
     const models = getModelsForProvider(newProvider);
     setLlm({
@@ -79,7 +103,57 @@ export const ApiKeysTab = ({ llm, setLlm, wordpress, setWordpress, apify, setApi
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="space-y-6">
+      {/* Integration Status Card */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+        <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 font-medium">Stato LLM (AI)</p>
+              <p className="text-sm font-bold text-slate-900">{clientConfig?.llm?.api_key || clientConfig?.openai?.api_key ? 'Configurato' : 'Mancante'}</p>
+            </div>
+          </div>
+          <Badge variant={clientConfig?.llm?.api_key || clientConfig?.openai?.api_key ? "default" : "destructive"}>
+            {clientConfig?.llm?.api_key || clientConfig?.openai?.api_key ? 'OK' : 'ERROR'}
+          </Badge>
+        </div>
+
+        <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+              <Globe className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 font-medium">Stato WordPress</p>
+              <p className="text-sm font-bold text-slate-900">{clientConfig?.wordpress?.url_api ? 'Connesso' : 'Disconnesso'}</p>
+            </div>
+          </div>
+          <Badge variant={clientConfig?.wordpress?.url_api ? "default" : "destructive"}>
+            {clientConfig?.wordpress?.url_api ? 'OK' : 'ERROR'}
+          </Badge>
+        </div>
+
+        <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-sky-50 flex items-center justify-center">
+              <Search className="w-5 h-5 text-sky-600" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 font-medium">Search Console</p>
+              <p className="text-sm font-bold text-slate-900">{clientConfig?.gsc?.connected ? 'Sincronizzato' : 'Non Collegato'}</p>
+            </div>
+          </div>
+          <Badge variant={clientConfig?.gsc?.connected ? "default" : "secondary"}>
+            {clientConfig?.gsc?.connected ? 'OK' : 'OFF'}
+          </Badge>
+        </div>
+
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* LLM Configuration */}
       <Card className="border-slate-200 lg:col-span-2">
         <CardHeader>
@@ -151,21 +225,33 @@ export const ApiKeysTab = ({ llm, setLlm, wordpress, setWordpress, apify, setApi
         </CardContent>
       </Card>
 
-      {/* WordPress */}
+      {/* WordPress & SEO */}
       <Card className="border-slate-200 lg:col-span-2">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
               <Globe className="w-4 h-4 text-blue-600" />
             </div>
-            WordPress
+            WordPress & SEO
           </CardTitle>
-          <CardDescription>Credenziali per la pubblicazione degli articoli</CardDescription>
+          <div className="flex items-center gap-2">
+            <CardDescription>Configura WordPress e le risorse SEO del sito</CardDescription>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-[10px] font-bold gap-1 ml-auto"
+              onClick={handleIndex}
+              disabled={indexing}
+            >
+              <Activity className={`w-3 h-3 ${indexing ? 'animate-spin' : ''}`} />
+              {indexing ? 'Indicizzazione...' : 'Aggiorna Indice Contenuti'}
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label>URL API</Label>
+              <Label>URL API WordPress</Label>
               <Input
                 value={wordpress.url_api}
                 onChange={(e) => setWordpress({ ...wordpress, url_api: e.target.value })}
@@ -209,75 +295,29 @@ export const ApiKeysTab = ({ llm, setLlm, wordpress, setWordpress, apify, setApi
               </Select>
             </div>
           </div>
+
+          <div className="pt-4 border-t border-slate-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Search className="w-3 h-3 text-slate-400" />
+                  Sitemap URL (per Linking Interno)
+                </Label>
+                <Input
+                  value={seo.sitemap_url || ''}
+                  onChange={(e) => setSeo({ ...seo, sitemap_url: e.target.value })}
+                  placeholder="https://sito.it/sitemap_index.xml"
+                />
+                <p className="text-[10px] text-slate-500">
+                  L'agente userà la sitemap per trovare articoli correlati da linkare automaticamente.
+                </p>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Apify Configuration */}
-      <Card className="border-slate-200 lg:col-span-2">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                <Search className="w-4 h-4 text-purple-600" />
-              </div>
-              <div>
-                <CardTitle>Apify (SERP Scraping)</CardTitle>
-                <CardDescription>Analisi dei risultati di ricerca Google</CardDescription>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Label htmlFor="apify-toggle" className="text-sm text-slate-600">
-                {apify.enabled ? 'Abilitato' : 'Disabilitato'}
-              </Label>
-              <button
-                id="apify-toggle"
-                type="button"
-                role="switch"
-                aria-checked={apify.enabled}
-                onClick={() => setApify({ ...apify, enabled: !apify.enabled })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  apify.enabled ? 'bg-purple-600' : 'bg-slate-200'
-                }`}
-                data-testid="apify-toggle"
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    apify.enabled ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-        </CardHeader>
-        {apify.enabled && (
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>API Key Apify</Label>
-                <Input
-                  type="password"
-                  value={apify.api_key}
-                  onChange={(e) => setApify({ ...apify, api_key: e.target.value })}
-                  placeholder="apify_api_..."
-                  data-testid="apify-api-key-input"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Actor ID</Label>
-                <Input
-                  value={apify.actor_id}
-                  onChange={(e) => setApify({ ...apify, actor_id: e.target.value })}
-                  placeholder="apify/google-search-scraper"
-                  data-testid="apify-actor-input"
-                />
-              </div>
-            </div>
-            <p className="text-sm text-slate-500 mt-3">
-              Ottieni la tua API key su <a href="https://apify.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">apify.com</a>
-            </p>
-          </CardContent>
-        )}
-      </Card>
+      </div>
     </div>
   );
 };
