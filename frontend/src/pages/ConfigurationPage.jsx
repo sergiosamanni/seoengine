@@ -12,7 +12,7 @@ import { ApiKeysTab } from './configuration/ApiKeysTab';
 import { KnowledgeBaseTab } from './configuration/KnowledgeBaseTab';
 import { ToneStyleTab } from './configuration/ToneStyleTab';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
 export const ConfigurationPage = () => {
   const { getAuthHeaders, isAdmin, user } = useAuth();

@@ -12,7 +12,7 @@ import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { toast } from 'sonner';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
 const CopyButton = ({ text }) => {
     const [copied, setCopied] = useState(false);

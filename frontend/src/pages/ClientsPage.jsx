@@ -59,7 +59,7 @@ import {
 } from '../components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
 const SETTORI = [
   { value: 'noleggio_veicoli', label: 'Noleggio Veicoli' },

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
 export const GscDataTab = ({ clientId, getAuthHeaders, client }) => {
     const [loading, setLoading] = useState(false);

@@ -24,7 +24,7 @@ import { ToneStyleTab } from './configuration/ToneStyleTab';
 import { GscConnectionTab } from './configuration/GscConnectionTab';
 import { GscDataTab } from './configuration/GscDataTab';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
 export const GeneratorPage = () => {
   const { getAuthHeaders, user, isAdmin } = useAuth();

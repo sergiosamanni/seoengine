@@ -23,7 +23,7 @@ import {
   Filter
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
 const ACTION_LABELS = {
   batch_start: 'Avvio batch',

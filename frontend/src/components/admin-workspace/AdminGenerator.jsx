@@ -26,13 +26,15 @@ import { Switch } from '../ui/switch';
 import { ContentStrategyTab } from '../../pages/configuration/ContentStrategyTab';
 import { KeywordsTab } from '../../pages/configuration/KeywordsTab';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000") || 'http://localhost:8000'}/api`;
 
 const AdminGenerator = ({
-    client, effectiveClientId, getAuthHeaders, navigate, initialData, onDataUsed,
-    targetKeywords = [], setTargetKeywords, automation = { enabled: false, articles_per_week: 1 },
-    setAutomation, onSaveConfig, saving, branding = {}, setBranding = () => {}
+    client, effectiveClientId, getAuthHeaders, navigate, initialData, onDataUsed
 }) => {
+    const [automation, setAutomation] = useState({ enabled: false, articles_per_week: 1 });
+    const [targetKeywords, setTargetKeywords] = useState([]);
+    const [branding, setBranding] = useState({});
+    const [saving, setSaving] = useState(false);
     const [step, setStep] = useState(1);
 
     // Strategy state
@@ -343,7 +345,7 @@ const AdminGenerator = ({
                 url: imgUrl, 
                 client_id: effectiveClientId 
             }, { headers: getAuthHeaders() });
-            const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
+            const backendUrl = (process.env.REACT_APP_BACKEND_URL || "http://localhost:8000") || "http://localhost:8000";
             const imageUrlFull = `${backendUrl}/api/uploads/files/${res.data.id}?auth=${token}`;
 
             if (activePlanImageIndex !== null) {
@@ -387,7 +389,7 @@ const AdminGenerator = ({
             });
             setSingleSelectedImage({ 
                 id: res.data.id, 
-                url: `${process.env.REACT_APP_BACKEND_URL}/api/uploads/files/${res.data.id}?auth=${token}` 
+                url: `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api/uploads/files/${res.data.id}?auth=${token}` 
             });
             toast.success("Immagine caricata");
         } catch (error) {
@@ -439,6 +441,18 @@ const AdminGenerator = ({
         } catch (e) { /* silent */ }
     };
 
+    const onSaveConfig = async () => {
+        setSaving(true);
+        try {
+            await saveConfig();
+            toast.success("Impostazioni salvate con successo!");
+        } catch (e) {
+            toast.error("Errore salvataggio impostazioni");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const handleSingleGenerate = async (typeOverride = null) => {
         if (!singleKeywords.trim() && !singleTitle.trim()) { toast.error('Inserisci almeno keywords o titolo'); return; }
         setSingleGenerating(true);
@@ -449,7 +463,7 @@ const AdminGenerator = ({
                 keyword: singleKeywords || singleTitle,
                 titolo_suggerito: singleTitle || undefined,
                 topic: singleObjective || undefined,
-                publish_to_wordpress: publishToWP,
+                publish_to_wordpress: publishToWp,
                 content_type: 'articolo',
                 objective: 'informazionale',
                 image_ids: (imageSource !== 'ai' && singleSelectedImage) ? [singleSelectedImage.id] : (adminUploadedImages.length > 0 ? adminUploadedImages.map(img => img.id) : undefined),
@@ -682,8 +696,8 @@ const AdminGenerator = ({
 
     return (
         <div className="space-y-8 animate-fade-in">
-            {/* Steps Progress Bar - Minimalist Version */}
-            <div className="flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-[#f1f3f6] shadow-sm overflow-x-auto" data-testid="step-bar">
+            {/* Steps Progress Bar - Minimalist Version (Sticky) */}
+            <div className="sticky top-4 z-40 flex items-center gap-1.5 p-1.5 bg-white/90 backdrop-blur-md rounded-2xl border border-[#f1f3f6] shadow-md overflow-x-auto transition-all" data-testid="step-bar">
                 {steps.map((s, i) => {
                     const isActive = step === s.num;
                     const isDone = s.done && !isActive;
@@ -1199,7 +1213,7 @@ const AdminGenerator = ({
                                                             <div className="flex gap-2 items-center">
                                                                 {r.image_url ? (
                                                                     <div className="w-12 h-12 rounded border bg-white flex items-center justify-center overflow-hidden">
-                                                                        <img src={r.image_url.startsWith('http') ? r.image_url : `${process.env.REACT_APP_BACKEND_URL}${r.image_url}`} alt="cover" className="w-full h-full object-cover" />
+                                                                        <img src={r.image_url.startsWith('http') ? r.image_url : `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}${r.image_url}`} alt="cover" className="w-full h-full object-cover" />
                                                                     </div>
                                                                 ) : (
                                                                     <div className="w-12 h-12 rounded border bg-slate-100 flex items-center justify-center text-[8px] text-slate-400">
@@ -1692,7 +1706,7 @@ const AdminGenerator = ({
                             <div className="article-full-preview bg-white">
                                 <style dangerouslySetInnerHTML={{ __html: `
                                     .article-full-preview .hero-block {
-                                        background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('${fullPreview.image_url ? (fullPreview.image_url.startsWith('http') ? fullPreview.image_url : (process.env.REACT_APP_BACKEND_URL || '') + fullPreview.image_url + '?auth=' + localStorage.getItem('token')) : "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=2070"}');
+                                        background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('${fullPreview.image_url ? (fullPreview.image_url.startsWith('http') ? fullPreview.image_url : ((process.env.REACT_APP_BACKEND_URL || "http://localhost:8000") || '') + fullPreview.image_url + '?auth=' + localStorage.getItem('token')) : "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=2070"}');
                                         background-size: cover;
                                         background-position: center;
                                         padding: 120px 40px;

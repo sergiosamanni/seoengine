@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Plus, X, AlertCircle, Upload, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
 export const KeywordsTab = ({ keywords, setKeywords, effectiveClientId, getAuthHeaders }) => {
   const [newServizio, setNewServizio] = React.useState('');
