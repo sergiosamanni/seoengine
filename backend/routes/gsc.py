@@ -377,3 +377,65 @@ async def get_client_gsc_status(client_id: str, request: Request, current_user: 
         "redirect_uri": redirect_uri,
         "has_per_client_credentials": has_client_creds
     }
+
+
+@router.post("/clients/{client_id}/gsc-strategic-suggestions")
+async def gsc_strategic_suggestions(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+        
+    client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+        
+    gsc_data = request.get("gsc_data", {})
+    if not gsc_data:
+        raise HTTPException(status_code=400, detail="Dati GSC mancanti")
+        
+    config = client_doc.get("configuration", {})
+    llm_config = config.get("llm", {}) or config.get("openai", {})
+    
+    # Costruisco il prompt per l'analisi strategica
+    keywords = gsc_data.get("keywords", [])[:20]  # Top 20 keywords
+    pages = gsc_data.get("pages", [])[:10]  # Top 10 pages
+    
+    kw_text = "\n".join([f"- {k['keyword']} (Click: {k['clicks']}, Imp: {k['impressions']}, Pos: {k['position']})" for k in keywords])
+    pg_text = "\n".join([f"- {p['page']} (Click: {p['clicks']}, Imp: {p['impressions']})" for p in pages])
+    
+    system_prompt = (
+        "Sei un Consulente SEO Senior. Analizzerai i dati di Google Search Console (ultimi 28 giorni) "
+        "e darai suggerimenti STRATEGICI e AZIONABILI.\n\n"
+        "REGOLE IMPORTANTISSIME:\n"
+        "1. Tutti gli articoli (nuovi o aggiornati) DEVONO avere 3 link interni esatti con anchor text semantiche, "
+        "   per prevenire contenuti orfani. Fai di questa regola un pilastro SEO.\n"
+        "2. Rispondi SOLO con un array JSON di oggetti. Nessun markdown testuale fuori dal JSON.\n"
+        "   Formato per Ogni Oggetto JSON:\n"
+        "   {\n"
+        "     \"type\": \"new_article\" OR \"update_article\",\n"
+        "     \"title\": \"Titolo sugerito\",\n"
+        "     \"keyword\": \"Focus keyword da attaccare\",\n"
+        "     \"reason\": \"Perché questa azione è utile (breve, 1 frase). Cita esplicitamente l'uso di link interni/anchor nel reason.\"\n"
+        "   }"
+    )
+    
+    user_prompt = f"Dati Keyword:\n{kw_text}\n\nDati Pagine:\n{pg_text}\n\nGenera 5-7 suggerimenti strategici (JSON array limit):"
+    
+    from helpers import generate_with_rotation
+    import json
+    import re
+    
+    try:
+        response_text = await generate_with_rotation(llm_config, system_prompt, user_prompt)
+        
+        # Estrazione JSON
+        json_match = re.search(r'\[\s*\{.*?\}\s*\]', response_text, re.DOTALL)
+        if json_match:
+            suggestions = json.loads(json_match.group(0))
+        else:
+            suggestions = json.loads(response_text)
+            
+        return {"suggestions": suggestions}
+    except Exception as e:
+        logger.error(f"Errore generazione suggerimenti GSC: {e}")
+        raise HTTPException(status_code=500, detail="Errore nell'elaborazione dei suggerimenti con l'AI")
+

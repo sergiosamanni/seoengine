@@ -1062,8 +1062,13 @@ REGOLE DI UMANIZZAZIONE:
         links_list = "\n".join([f'- {l.get("titolo")}: {l.get("url")}' for l in existing_articles[:10]])
         prompt += f"""
 === LINK INTERNI DA INTEGRARE (STRATEGICO) ===
-Inserisci ALMENO 2-3 link interni ai seguenti articoli correlati. 
-FALLO IN MODO NATURALE all'interno del testo:
+Inserisci TASSATIVAMENTE ALMENO 3 link interni ai seguenti articoli correlati per evitare contenuti orfani e spingere il link juice.
+
+REGOLE SEO PER I LINK INTERNI:
+1. Inserisci ALMENO 3 link verso altrettanti articoli diversi della lista.
+2. Utilizza anchor text SEMANTICI e NATURALI (non usare 'clicca qui' o 'leggi questo articolo').
+3. Distribuisci i link all'interno del contenuto dove hanno senso logico.
+
 {links_list}
 REGOLE LINK:
 - Usa il titolo dell'articolo o varianti naturali come anchor text.

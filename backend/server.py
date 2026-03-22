@@ -18,6 +18,7 @@ from routes.clients import router as clients_router
 from routes.articles import router as articles_router
 from routes.gsc import router as gsc_router
 from routes.uploads import router as uploads_router
+from routes.freshness import router as freshness_router
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(auth_router)
@@ -25,6 +26,7 @@ api_router.include_router(clients_router)
 api_router.include_router(articles_router)
 api_router.include_router(gsc_router)
 api_router.include_router(uploads_router)
+api_router.include_router(freshness_router)
 
 
 @api_router.get("/")

@@ -23,6 +23,7 @@ import { KnowledgeBaseTab } from './configuration/KnowledgeBaseTab';
 import { ToneStyleTab } from './configuration/ToneStyleTab';
 import { GscConnectionTab } from './configuration/GscConnectionTab';
 import { GscDataTab } from './configuration/GscDataTab';
+import FreshnessTab from './client-workspace/FreshnessTab';
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
@@ -150,12 +151,16 @@ export const GeneratorPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="w-full justify-start bg-transparent p-0 h-auto flex-wrap mb-10 border-b border-[#f1f3f6] rounded-none gap-10">
+        <TabsList className="w-full justify-start bg-transparent p-0 h-auto flex-wrap mb-10 border-b border-[#f1f3f6] rounded-none gap-6">
           <TabsTrigger value="generate" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all">
             Genera Contenuti
           </TabsTrigger>
           <TabsTrigger value="gsc" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all">
             Dashboard Search Console
+          </TabsTrigger>
+          <TabsTrigger value="freshness" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3 text-emerald-500" />
+            Freshness & Link Interni
           </TabsTrigger>
           <TabsTrigger value="config" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all">
             Configurazione & Setup
@@ -188,6 +193,11 @@ export const GeneratorPage = () => {
         {/* TAB: GSC DATA */}
         <TabsContent value="gsc" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <GscDataTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} />
+        </TabsContent>
+
+        {/* TAB: FRESHNESS */}
+        <TabsContent value="freshness" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <FreshnessTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} />
         </TabsContent>
 
         {/* TAB: CONFIGURATION */}

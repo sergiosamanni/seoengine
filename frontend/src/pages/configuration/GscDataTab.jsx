@@ -8,7 +8,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../../components/ui/select';
 import {
-  BarChart3, Loader2, RefreshCw, ExternalLink, TrendingUp,
+  BarChart3, Loader2, RefreshCw, ExternalLink, TrendingUp, Sparkles,
   MousePointerClick, Eye, Target, AlertTriangle, CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,6 +20,9 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client }) => {
     const [data, setData] = useState(null);
     const [days, setDays] = useState('28');
     const [gscConnected, setGscConnected] = useState(false);
+    
+    const [aiLoading, setAiLoading] = useState(false);
+    const [suggestions, setSuggestions] = useState(null);
 
     const fetchData = async () => {
         setLoading(true);
@@ -46,6 +49,29 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client }) => {
     useEffect(() => {
         if (clientId) fetchData();
     }, [clientId, days]);
+
+    const handleApplySuggestion = (sugg) => {
+        // Here we could directly push the article to the queue/generation endpoint
+        // MVP: show a toast
+        toast.info(`Configurato nel generatore: ${sugg.title}. Action: ${sugg.type}`, { description: sugg.reason });
+    };
+
+    const requestAiStrategy = async () => {
+        if(!data) return;
+        setAiLoading(true);
+        setSuggestions(null);
+        try {
+            const res = await axios.post(`${API}/clients/${clientId}/gsc-strategic-suggestions`, { gsc_data: data }, {
+                headers: getAuthHeaders()
+            });
+            setSuggestions(res.data.suggestions || []);
+            toast.success("Strategia AI elaborata!");
+        } catch (error) {
+            toast.error("Errore nell'elaborazione strategica AI");
+        } finally {
+            setAiLoading(false);
+        }
+    };
 
     if (!gscConnected && !loading) {
         return (
@@ -89,6 +115,45 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client }) => {
                 <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>
             ) : data ? (
                 <>
+                    {/* SEZIONE AI STRATEGY */}
+                    <Card className="border-indigo-100 bg-gradient-to-br from-indigo-50/50 to-white shadow-md">
+                        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="text-lg flex items-center gap-2 text-indigo-900">
+                                    <Target className="w-5 h-5 text-indigo-500" /> Consulto Strategico AI
+                                </CardTitle>
+                                <CardDescription className="text-indigo-600/70">Analizza i dati GSC e ottieni indicazioni pratiche (nuovi articoli o tuning).</CardDescription>
+                            </div>
+                            <Button onClick={requestAiStrategy} disabled={aiLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg border-indigo-700 text-xs font-bold uppercase tracking-wider h-9">
+                                {aiLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                                Analizza Dati
+                            </Button>
+                        </CardHeader>
+                        {suggestions && (
+                            <CardContent className="pt-2">
+                                <div className="space-y-3 mt-4">
+                                    {suggestions.map((s, idx) => (
+                                        <div key={idx} className="bg-white border border-indigo-100 p-4 rounded-xl flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shadow-sm">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Badge className={s.type === 'new_article' ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : "bg-amber-100 text-amber-700 hover:bg-amber-100"}>
+                                                        {s.type === 'new_article' ? 'Nuovo Contenuto' : 'Ottimizzazione'}
+                                                    </Badge>
+                                                    <span className="font-mono text-xs text-indigo-400 font-bold tracking-wider">{s.keyword}</span>
+                                                </div>
+                                                <h4 className="font-bold text-slate-900 text-base">{s.title}</h4>
+                                                <p className="text-sm text-slate-500 mt-1">{s.reason}</p>
+                                            </div>
+                                            <Button size="sm" onClick={() => handleApplySuggestion(s)} variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 w-full md:w-auto flex-shrink-0">
+                                                Applica Ora
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        )}
+                    </Card>
+
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {[
                             { label: 'Click totali', value: data.totals?.total_clicks, icon: MousePointerClick, color: 'text-blue-600', bg: 'bg-blue-50' },
