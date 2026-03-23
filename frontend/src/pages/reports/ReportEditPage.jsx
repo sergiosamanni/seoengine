@@ -10,10 +10,11 @@ import {
   ArrowLeft, Save, Plus, Trash2, Layout, Table, 
   BarChart3, Target, MousePointer2, Link, Quote, 
   MapPin, Loader2, CheckCircle2, Globe, ExternalLink,
-  UploadCloud
+  UploadCloud, Printer
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
@@ -36,6 +37,7 @@ export const ReportEditPage = () => {
   const [saving, setSaving] = useState(false);
   const [report, setReport] = useState(null);
   const [modules, setModules] = useState({});
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -85,11 +87,31 @@ export const ReportEditPage = () => {
     }
   };
 
+  const handleDelete = async () => {
+    try {
+        await axios.delete(`${API}/reports/${reportId}`, { headers: getAuthHeaders() });
+        toast.success('Report eliminato');
+        navigate(`/reports/client/${report.client_id}`);
+    } catch (e) {
+        toast.error('Errore durante l\'eliminazione');
+    }
+  };
+
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
 
   return (
-    <div className="space-y-8 animate-fade-in max-w-4xl mx-auto pb-20">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-fade-in max-w-4xl mx-auto pb-20 print:p-0 print:max-w-none">
+      <style>{`
+        @media print {
+            .no-print, nav, aside, button, .print-hide { display: none !important; }
+            body { background: white !important; }
+            .print-full { width: 100% !important; max-width: none !important; border: none !important; box-shadow: none !important; }
+            .print-break { page-break-after: always; }
+            .card { border: 1px solid #eee !important; box-shadow: none !important; }
+        }
+      `}</style>
+
+      <div className="flex items-center justify-between no-print">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => navigate(`/reports/client/${report.client_id}`)} className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold uppercase tracking-tighter text-[10px]">
             <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Annulla
@@ -99,16 +121,28 @@ export const ReportEditPage = () => {
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Editor Report Dinamico</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-            <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest hidden md:block">Ultima modifica: {new Date(report.updated_at).toLocaleString('it-IT')}</p>
+        <div className="flex items-center gap-2">
+            <Button onClick={() => window.print()} variant="outline" className="h-10 px-4 rounded-xl font-black uppercase tracking-widest text-[10px] bg-white border-slate-200">
+                <Printer className="w-4 h-4 mr-2 text-blue-500" /> Esporta PDF
+            </Button>
+            <Button onClick={() => setIsDeleteConfirmOpen(true)} variant="outline" className="h-10 px-4 rounded-xl font-black uppercase tracking-widest text-[10px] bg-white border-red-200 text-red-500 hover:bg-red-50">
+                <Trash2 className="w-4 h-4 mr-2" /> Elimina
+            </Button>
             <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 h-10 px-6 rounded-xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-blue-100">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />} Aggiorna Report
             </Button>
         </div>
       </div>
 
-      {/* Modules Selector */}
-      <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden p-6 bg-slate-50/50">
+      <div className="print:block hidden mb-10 border-b-2 border-slate-100 pb-6">
+        <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-2">{report.title}</h1>
+        <div className="flex justify-between items-center">
+            <p className="text-blue-600 font-black uppercase tracking-widest text-sm">Report SEO Mensile</p>
+            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Data Report: {report.date}</p>
+        </div>
+      </div>
+
+      <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden p-6 bg-slate-50/50 no-print">
         <div className="mb-4">
             <h3 className="font-black text-slate-800 uppercase tracking-tighter text-sm mb-1">Moduli Report</h3>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Seleziona i moduli da includere in questo report.</p>
@@ -120,20 +154,20 @@ export const ReportEditPage = () => {
               <div 
                 key={m.id} 
                 onClick={() => toggleModule(m.id)}
-                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer group relative flex flex-col gap-2 ${
+                className={`p-5 rounded-[2rem] border-2 transition-all cursor-pointer group relative flex flex-col gap-3 ${
                   isEnabled 
-                  ? 'bg-white border-blue-500 shadow-md ring-4 ring-blue-50' 
+                  ? 'bg-white border-blue-500 shadow-xl shadow-blue-100/50 ring-4 ring-blue-50/50' 
                   : 'bg-white/40 border-slate-100 hover:border-slate-200 opacity-60 hover:opacity-100'
                 }`}
               >
                 <div className="flex items-start justify-between">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isEnabled ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                        <m.icon className="w-4 h-4" />
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isEnabled ? 'bg-blue-500 text-white shadow-lg shadow-blue-200' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
+                        <m.icon className="w-5 h-5" />
                     </div>
-                    {isEnabled && <CheckCircle2 className="w-4 h-4 text-blue-500" />}
+                    {isEnabled && <CheckCircle2 className="w-5 h-5 text-blue-500 fill-blue-50" />}
                 </div>
                 <div>
-                    <h5 className={`font-black uppercase tracking-tighter text-[11px] ${isEnabled ? 'text-slate-900' : 'text-slate-500'}`}>{m.label}</h5>
+                    <h5 className={`font-black uppercase tracking-tighter text-xs ${isEnabled ? 'text-slate-900' : 'text-slate-500'}`}>{m.label}</h5>
                     <p className={`text-[9px] leading-tight font-medium ${isEnabled ? 'text-slate-400' : 'text-slate-300'}`}>{m.description}</p>
                 </div>
               </div>
@@ -156,6 +190,19 @@ export const ReportEditPage = () => {
           />
         ))}
       </div>
+
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="rounded-3xl max-w-sm">
+            <DialogHeader>
+                <DialogTitle className="font-black tracking-tighter uppercase text-slate-900">Conferma Eliminazione</DialogTitle>
+                <p className="text-xs text-slate-500 font-medium">Sei sicuro di voler eliminare definitivamente questo report? L'azione non è reversibile.</p>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2 pt-4">
+                <Button variant="ghost" onClick={() => setIsDeleteConfirmOpen(false)} className="flex-1 rounded-xl font-bold uppercase tracking-widest text-[10px]">Annulla</Button>
+                <Button onClick={handleDelete} className="flex-1 bg-red-500 hover:bg-red-600 rounded-xl font-bold uppercase tracking-widest text-[10px] text-white">Elimina ora</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -186,13 +233,15 @@ const AttivitaForm = ({ module, data, updateData }) => {
     };
 
     return (
-        <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden border-l-4 border-l-blue-500">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 bg-slate-50/50 p-4">
-                <div className="flex items-center gap-3">
-                    <module.icon className="w-5 h-5 text-blue-500" />
-                    <CardTitle className="text-sm font-black uppercase tracking-tighter">{module.label}</CardTitle>
+        <Card className="border-slate-100 shadow-sm rounded-[2rem] overflow-hidden border-l-8 border-l-blue-500 bg-white">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 bg-slate-50/30 p-6">
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center">
+                        <module.icon className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <CardTitle className="text-base font-black uppercase tracking-tighter text-slate-900">{module.label}</CardTitle>
                 </div>
-                <Button size="sm" onClick={addItem} className="h-7 px-3 rounded-lg bg-blue-600 font-black uppercase tracking-widest text-[9px] uppercase"><Plus className="w-3 h-3 mr-1.5" /> Aggiungi Attività</Button>
+                <Button size="sm" onClick={addItem} className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 font-black uppercase tracking-widest text-[9px] uppercase"><Plus className="w-3 h-3 mr-1.5" /> Aggiungi Attività</Button>
             </CardHeader>
             <CardContent className="p-4 space-y-4">
                 {items.length === 0 && <p className="text-[11px] text-slate-400 italic text-center py-4">Nessuna attività aggiunta.</p>}

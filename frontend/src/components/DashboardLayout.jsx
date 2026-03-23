@@ -17,7 +17,6 @@ export const DashboardLayout = ({ children }) => {
 
   const adminNav = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'Reportistica', icon: FileText, path: '/reports' },
     { label: 'Utenti', icon: Users, path: '/users' },
     { label: 'Activity Log', icon: Activity, path: '/activity-log' },
   ];

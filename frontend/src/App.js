@@ -8,7 +8,6 @@ import { DashboardPage } from './pages/DashboardPage';
 import { GeneratorPage } from './pages/GeneratorPage';
 import { ActivityLogPage } from './pages/ActivityLogPage';
 import { UsersPage } from './pages/UsersPage';
-import { ReportsDashboard } from './pages/reports/ReportsDashboard';
 import { ClientReportsPage } from './pages/reports/ClientReportsPage';
 import { ReportEditPage } from './pages/reports/ReportEditPage';
 import './App.css';
@@ -39,8 +38,7 @@ function AppRoutes() {
       {/* Admin: Users management */}
       <Route path="/users" element={<ProtectedRoute adminOnly><UsersPage /></ProtectedRoute>} />
 
-      {/* Admin: Reports section */}
-      <Route path="/reports" element={<ProtectedRoute adminOnly><ReportsDashboard /></ProtectedRoute>} />
+      {/* Admin: Reports section (Direct access via client cards) */}
       <Route path="/reports/client/:clientId" element={<ProtectedRoute adminOnly><ClientReportsPage /></ProtectedRoute>} />
       <Route path="/reports/:reportId" element={<ProtectedRoute adminOnly><ReportEditPage /></ProtectedRoute>} />
 

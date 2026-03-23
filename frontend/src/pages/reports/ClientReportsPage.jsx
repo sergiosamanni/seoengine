@@ -3,10 +3,10 @@ import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { ArrowLeft, Plus, Globe, FileText, Archive, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Globe, FileText, Archive, Loader2, Trash2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 
@@ -21,6 +21,8 @@ export const ClientReportsPage = () => {
   const [loading, setLoading] = useState(true);
   const [newReportDate, setNewReportDate] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,6 +63,26 @@ export const ClientReportsPage = () => {
     } catch (e) {
       toast.error('Errore creazione report');
     }
+  };
+
+  const handleDeleteReport = async () => {
+    if (!reportToDelete) return;
+
+    try {
+      await axios.delete(`${API}/reports/${reportToDelete}`, { headers: getAuthHeaders() });
+      setReports(prev => prev.filter(r => r.id !== reportToDelete));
+      toast.success('Report eliminato');
+      setIsDeleteConfirmOpen(false);
+      setReportToDelete(null);
+    } catch (e) {
+      toast.error('Errore durante l\'eliminazione');
+    }
+  };
+
+  const confirmDelete = (reportId, e) => {
+    e.stopPropagation();
+    setReportToDelete(reportId);
+    setIsDeleteConfirmOpen(true);
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
@@ -128,29 +150,61 @@ export const ClientReportsPage = () => {
                 </div>
                 
                 {reports.length === 0 ? (
-                    <div className="text-center py-10 bg-white border-2 border-dashed border-slate-100 rounded-2xl">
-                        <p className="text-slate-300 font-bold text-xs">Nessun report creato per questo dominio.</p>
+                    <div className="text-center py-20 bg-white border-2 border-dashed border-slate-100 rounded-[2rem]">
+                        <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <FileText className="w-6 h-6 text-slate-200" />
+                        </div>
+                        <p className="text-slate-300 font-bold text-xs uppercase tracking-widest">Nessun report creato per questo dominio</p>
                     </div>
                 ) : (
-                    reports.map(report => (
-                        <Card 
-                            key={report.id} 
-                            className="bg-white hover:bg-slate-50 transition-all border-slate-100 shadow-sm cursor-pointer active:scale-[0.99] rounded-2xl overflow-hidden group"
-                            onClick={() => navigate(`/reports/${report.id}`)}
-                        >
-                            <CardContent className="p-4 flex items-center justify-between">
-                                <div>
-                                    <h5 className="font-black text-slate-800 uppercase tracking-tighter text-sm">{report.date}</h5>
-                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Creato il {new Date(report.created_at).toLocaleDateString('it-IT')}</p>
-                                </div>
-                                <ArrowLeft className="w-4 h-4 text-slate-200 rotate-180 group-hover:text-blue-500 transition-colors" />
-                            </CardContent>
-                        </Card>
-                    ))
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {reports.map(report => (
+                            <Card 
+                                key={report.id} 
+                                className="bg-white hover:shadow-2xl hover:shadow-blue-100/30 transition-all border-slate-100 shadow-sm cursor-pointer active:scale-[0.99] rounded-3xl overflow-hidden group border-l-0"
+                                onClick={() => navigate(`/reports/${report.id}`)}
+                            >
+                                <CardContent className="p-0 flex items-stretch h-20">
+                                    <div className="w-1.5 bg-slate-100 group-hover:bg-blue-500 transition-colors" />
+                                    <div className="flex-1 flex items-center justify-between px-6">
+                                        <div>
+                                            <h5 className="font-black text-slate-800 uppercase tracking-tighter text-base group-hover:text-blue-600 transition-colors">{report.date}</h5>
+                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Report Generato il {new Date(report.created_at).toLocaleDateString('it-IT')}</p>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                onClick={(e) => confirmDelete(report.id, e)}
+                                                className="h-9 w-9 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-xl"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                            <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-500 transition-all">
+                                                <ArrowLeft className="w-4 h-4 rotate-180" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
                 )}
             </div>
         </Card>
       </div>
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="rounded-3xl max-w-sm">
+            <DialogHeader>
+                <DialogTitle className="font-black tracking-tighter uppercase text-slate-900">Conferma Eliminazione</DialogTitle>
+                <p className="text-xs text-slate-500 font-medium">Sei sicuro di voler eliminare definitivamente questo report? L'azione non è reversibile.</p>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2 pt-4">
+                <Button variant="ghost" onClick={() => setIsDeleteConfirmOpen(false)} className="flex-1 rounded-xl font-bold uppercase tracking-widest text-[10px]">Annulla</Button>
+                <Button onClick={handleDeleteReport} className="flex-1 bg-red-500 hover:bg-red-600 rounded-xl font-bold uppercase tracking-widest text-[10px] text-white">Elimina ora</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
