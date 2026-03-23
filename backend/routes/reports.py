@@ -35,7 +35,7 @@ async def create_report(client_id: str, report: ReportCreate, current_user: dict
 @router.get("/client/{client_id}", response_model=List[ReportResponse])
 async def get_client_reports(client_id: str, current_user: dict = Depends(get_current_user)):
     # Standard security check: admin can see all, client only their own
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso negato")
     
     cursor = db.reports.find({"client_id": client_id})
@@ -51,7 +51,7 @@ async def get_report_detail(report_id: str, current_user: dict = Depends(get_cur
     if not report:
         raise HTTPException(status_code=404, detail="Report non trovato")
     
-    if current_user["role"] != "admin" and current_user.get("client_id") != report["client_id"]:
+    if current_user["role"] != "admin" and report["client_id"] not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso negato")
     
     return report

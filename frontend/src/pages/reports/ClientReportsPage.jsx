@@ -157,31 +157,31 @@ export const ClientReportsPage = () => {
                         <p className="text-slate-300 font-bold text-xs uppercase tracking-widest">Nessun report creato per questo dominio</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {reports.map(report => (
                             <Card 
                                 key={report.id} 
-                                className="bg-white hover:shadow-2xl hover:shadow-blue-100/30 transition-all border-slate-100 shadow-sm cursor-pointer active:scale-[0.99] rounded-3xl overflow-hidden group border-l-0"
+                                className="bg-white hover:border-blue-200 transition-all border-slate-100 shadow-sm cursor-pointer active:scale-[0.99] rounded-2xl overflow-hidden group border-l-0"
                                 onClick={() => navigate(`/reports/${report.id}`)}
                             >
-                                <CardContent className="p-0 flex items-stretch h-20">
-                                    <div className="w-1.5 bg-slate-100 group-hover:bg-blue-500 transition-colors" />
-                                    <div className="flex-1 flex items-center justify-between px-6">
-                                        <div>
-                                            <h5 className="font-black text-slate-800 uppercase tracking-tighter text-base group-hover:text-blue-600 transition-colors">{report.date}</h5>
-                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Report Generato il {new Date(report.created_at).toLocaleDateString('it-IT')}</p>
+                                <CardContent className="p-0 flex items-stretch h-14">
+                                    <div className="w-1 bg-slate-100 group-hover:bg-blue-400 transition-colors" />
+                                    <div className="flex-1 flex items-center justify-between px-4">
+                                        <div className="min-w-0">
+                                            <h5 className="font-bold text-slate-800 uppercase tracking-tight text-[12px] group-hover:text-blue-600 transition-colors truncate">{report.date}</h5>
+                                            <p className="text-[8px] text-slate-400 font-medium uppercase tracking-widest truncate">Creato: {new Date(report.created_at).toLocaleDateString('it-IT')}</p>
                                         </div>
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2">
                                             <Button 
                                                 variant="ghost" 
                                                 size="icon" 
                                                 onClick={(e) => confirmDelete(report.id, e)}
-                                                className="h-9 w-9 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-xl"
+                                                className="h-7 w-7 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-lg"
                                             >
-                                                <Trash2 className="w-4 h-4" />
+                                                <Trash2 className="w-3.5 h-3.5" />
                                             </Button>
-                                            <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-500 transition-all">
-                                                <ArrowLeft className="w-4 h-4 rotate-180" />
+                                            <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-500 transition-all">
+                                                <ArrowLeft className="w-3.5 h-3.5 rotate-180" />
                                             </div>
                                         </div>
                                     </div>

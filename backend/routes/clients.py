@@ -21,10 +21,10 @@ router = APIRouter()
 @router.get("/clients", response_model=List[ClientResponse])
 async def get_clients(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin":
-        client_id = current_user.get("client_id")
-        if not client_id:
+        client_ids = current_user.get("client_ids", [])
+        if not client_ids:
             return []
-        clients = await db.clients.find({"id": client_id}, {"_id": 0}).to_list(1)
+        clients = await db.clients.find({"id": {"$in": client_ids}}, {"_id": 0}).to_list(100)
     else:
         clients = await db.clients.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
     result = []
@@ -54,7 +54,7 @@ async def create_client(client: ClientCreate, current_user: dict = Depends(requi
 
 @router.get("/clients/{client_id}", response_model=ClientResponse)
 async def get_client(client_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     client = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client:
@@ -93,7 +93,7 @@ async def delete_client(client_id: str, current_user: dict = Depends(require_adm
 
 @router.put("/clients/{client_id}/configuration")
 async def update_configuration(client_id: str, config: ClientConfiguration, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     config_dict = config.model_dump(exclude_none=True)
     existing = await db.clients.find_one({"id": client_id}, {"_id": 0})
@@ -107,7 +107,7 @@ async def update_configuration(client_id: str, config: ClientConfiguration, curr
 
 @router.get("/clients/{client_id}/combinations")
 async def get_combinations(client_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     client = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client:
@@ -192,7 +192,7 @@ async def scrape_website_for_kb(client_id: str, request: dict, current_user: dic
 
 @router.post("/clients/{client_id}/upload-xlsx")
 async def upload_xlsx(client_id: str, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="File deve essere .xlsx o .xls")
@@ -234,7 +234,7 @@ async def upload_xlsx(client_id: str, file: UploadFile = File(...), current_user
 async def apply_xlsx_suggestions(client_id: str, upload_id: str = Form(...), apply_servizi: bool = Form(True),
                                   apply_citta: bool = Form(True), apply_tipi: bool = Form(True),
                                   merge_mode: str = Form("append"), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     upload = await db.xlsx_uploads.find_one({"id": upload_id, "client_id": client_id}, {"_id": 0})
     if not upload:
@@ -266,7 +266,7 @@ async def apply_xlsx_suggestions(client_id: str, upload_id: str = Form(...), app
 
 @router.get("/clients/{client_id}/xlsx-uploads")
 async def get_xlsx_uploads(client_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     uploads = await db.xlsx_uploads.find({"client_id": client_id}, {"_id": 0, "extracted_data": 0}).sort("created_at", -1).limit(20).to_list(20)
     return {"uploads": uploads}
@@ -276,7 +276,7 @@ async def get_xlsx_uploads(client_id: str, current_user: dict = Depends(get_curr
 
 @router.post("/clients/{client_id}/seo-sessions")
 async def create_seo_session(client_id: str, session: SEOSessionCreate, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     client = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client:
@@ -299,7 +299,7 @@ async def create_seo_session(client_id: str, session: SEOSessionCreate, current_
 
 @router.get("/clients/{client_id}/seo-sessions")
 async def get_seo_sessions(client_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     sessions = await db.seo_sessions.find({"client_id": client_id}, {"_id": 0}).sort("created_at", -1).limit(50).to_list(50)
     return {"sessions": sessions}
@@ -307,7 +307,7 @@ async def get_seo_sessions(client_id: str, current_user: dict = Depends(get_curr
 
 @router.get("/clients/{client_id}/seo-sessions/{session_id}")
 async def get_seo_session(client_id: str, session_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     session = await db.seo_sessions.find_one({"id": session_id, "client_id": client_id}, {"_id": 0})
     if not session:
@@ -317,7 +317,7 @@ async def get_seo_session(client_id: str, session_id: str, current_user: dict = 
 
 @router.post("/clients/{client_id}/seo-sessions/{session_id}/restore")
 async def restore_seo_session(client_id: str, session_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     session = await db.seo_sessions.find_one({"id": session_id, "client_id": client_id}, {"_id": 0})
     if not session:
@@ -335,7 +335,7 @@ async def restore_seo_session(client_id: str, session_id: str, current_user: dic
 
 @router.delete("/clients/{client_id}/seo-sessions/{session_id}")
 async def delete_seo_session(client_id: str, session_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     result = await db.seo_sessions.delete_one({"id": session_id, "client_id": client_id})
     if result.deleted_count == 0:

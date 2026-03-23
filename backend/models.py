@@ -158,7 +158,7 @@ class UserCreate(BaseModel):
     password: str
     name: str
     role: str = "client"
-    client_id: Optional[str] = None
+    client_ids: List[str] = []
 
 
 class UserResponse(BaseModel):
@@ -166,13 +166,13 @@ class UserResponse(BaseModel):
     email: str
     name: str
     role: str
-    client_id: Optional[str] = None
+    client_ids: List[str] = []
     created_at: str
 
 
 class AssignClientRequest(BaseModel):
     user_id: str
-    client_id: str
+    client_ids: List[str]
 
 
 class SerpScrapingRequest(BaseModel):

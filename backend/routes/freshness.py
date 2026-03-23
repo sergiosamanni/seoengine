@@ -7,7 +7,7 @@ router = APIRouter()
 
 @router.get("/freshness/{client_id}")
 async def get_freshness_candidates(client_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
         
     client = await db.clients.find_one({"id": client_id})
@@ -48,7 +48,7 @@ async def get_freshness_candidates(client_id: str, current_user: dict = Depends(
 
 @router.post("/freshness-audit/{client_id}")
 async def freshness_audit(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
         
     client = await db.clients.find_one({"id": client_id})

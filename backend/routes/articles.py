@@ -56,7 +56,7 @@ async def get_article(article_id: str, current_user: dict = Depends(get_current_
     article = await db.articles.find_one({"id": article_id}, {"_id": 0})
     if not article:
         raise HTTPException(status_code=404, detail="Articolo non trovato")
-    if current_user["role"] != "admin" and current_user.get("client_id") != article["client_id"]:
+    if current_user["role"] != "admin" and article["client_id"] not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     return ArticleResponse(**article)
 
@@ -66,7 +66,7 @@ async def get_article_full(article_id: str, current_user: dict = Depends(get_cur
     article = await db.articles.find_one({"id": article_id}, {"_id": 0})
     if not article:
         raise HTTPException(status_code=404, detail="Articolo non trovato")
-    if current_user["role"] != "admin" and current_user.get("client_id") != article["client_id"]:
+    if current_user["role"] != "admin" and article["client_id"] not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     return article
 
@@ -76,7 +76,7 @@ async def delete_article(article_id: str, current_user: dict = Depends(get_curre
     article = await db.articles.find_one({"id": article_id}, {"_id": 0})
     if not article:
         raise HTTPException(status_code=404, detail="Articolo non trovato")
-    if current_user["role"] != "admin" and current_user.get("client_id") != article["client_id"]:
+    if current_user["role"] != "admin" and article["client_id"] not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     await db.articles.delete_one({"id": article_id})
     return {"message": "Articolo eliminato"}
@@ -86,7 +86,7 @@ async def delete_article(article_id: str, current_user: dict = Depends(get_curre
 
 @router.post("/articles/generate")
 async def generate_articles(request: ArticleGenerate, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != request.client_id:
+    if current_user["role"] != "admin" and request.client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     client = await db.clients.find_one({"id": request.client_id}, {"_id": 0})
     if not client:
@@ -143,7 +143,7 @@ async def publish_articles(request: ArticlePublish, current_user: dict = Depends
         article = await db.articles.find_one({"id": article_id}, {"_id": 0})
         if not article:
             failed.append({"id": article_id, "error": "Articolo non trovato"}); continue
-        if current_user["role"] != "admin" and current_user.get("client_id") != article["client_id"]:
+        if current_user["role"] != "admin" and article["client_id"] not in current_user.get("client_ids", []):
             failed.append({"id": article_id, "error": "Accesso non autorizzato"}); continue
         client = await db.clients.find_one({"id": article["client_id"]}, {"_id": 0})
         if not client:
@@ -180,7 +180,7 @@ async def generate_and_publish(request: dict, current_user: dict = Depends(get_c
     client_id = request.get("client_id")
     if not client_id:
         raise HTTPException(status_code=400, detail="client_id richiesto")
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client_doc:
@@ -645,7 +645,7 @@ async def get_job_status(job_id: str, current_user: dict = Depends(get_current_u
     job = await db.jobs.find_one({"id": job_id}, {"_id": 0})
     if not job:
         raise HTTPException(status_code=404, detail="Job non trovato")
-    if current_user["role"] != "admin" and current_user.get("client_id") != job.get("client_id"):
+    if current_user["role"] != "admin" and job.get("client_id") not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     return job
 
@@ -675,15 +675,18 @@ async def get_overview_stats(current_user: dict = Depends(get_current_user)):
 
 @router.get("/activity-logs/{client_id}")
 async def get_activity_logs(client_id: str, limit: int = 50, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     logs = await db.activity_logs.find({"client_id": client_id}, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
     return logs
 
 
 @router.get("/activity-logs")
-async def get_all_activity_logs(limit: int = 100, current_user: dict = Depends(require_admin)):
-    logs = await db.activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
+async def get_all_activity_logs(limit: int = 100, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if current_user["role"] != "admin":
+        query = {"client_id": {"$in": current_user.get("client_ids", [])}}
+    logs = await db.activity_logs.find(query, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
     return logs
 
 
@@ -883,7 +886,7 @@ async def serp_full_analysis(request: dict, current_user: dict = Depends(get_cur
 
 @router.post("/clients/{client_id}/serp-analysis")
 async def analyze_serp(client_id: str, request: SerpScrapingRequest, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     client = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client:
@@ -899,7 +902,7 @@ async def analyze_serp(client_id: str, request: SerpScrapingRequest, current_use
 
 @router.get("/clients/{client_id}/serp-history")
 async def get_serp_history(client_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     analyses = await db.serp_analyses.find({"client_id": client_id}, {"_id": 0}).sort("created_at", -1).limit(50).to_list(50)
     return {"analyses": analyses}
@@ -910,7 +913,7 @@ async def get_serp_history(client_id: str, current_user: dict = Depends(get_curr
 @router.post("/clients/{client_id}/save-and-generate")
 async def save_and_generate(client_id: str, session_name: str = "", notes: str = "",
                              generate_articles: bool = True, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     client = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client:
@@ -947,7 +950,7 @@ async def save_and_generate(client_id: str, session_name: str = "", notes: str =
 
 @router.get("/editorial-plan/{client_id}")
 async def get_editorial_plan(client_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     
     plan = await db.editorial_plans.find_one({"client_id": client_id}, {"_id": 0})
@@ -958,7 +961,7 @@ async def get_editorial_plan(client_id: str, current_user: dict = Depends(get_cu
 
 @router.delete("/editorial-plan/{client_id}")
 async def delete_editorial_plan(client_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     await db.editorial_plans.delete_one({"client_id": client_id})
     return {"message": "Piano editoriale eliminato"}
@@ -966,7 +969,7 @@ async def delete_editorial_plan(client_id: str, current_user: dict = Depends(get
 
 @router.post("/generate-plan/{client_id}")
 async def generate_editorial_plan(client_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
         
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
@@ -1040,7 +1043,7 @@ async def batch_plan(request: dict, current_user: dict = Depends(get_current_use
     client_id = request.get("client_id")
     if not client_id:
         raise HTTPException(status_code=400, detail="client_id richiesto")
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client_doc:

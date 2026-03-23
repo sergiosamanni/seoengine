@@ -100,14 +100,14 @@ export const ReportsDashboard = () => {
                             {clientsInAgency.map(client => (
                                 <Card 
                                     key={client.id} 
-                                    className="hover:shadow-xl hover:shadow-indigo-100/30 transition-all border-slate-100 shadow-sm group cursor-pointer active:scale-[0.98] rounded-2xl overflow-hidden bg-white"
+                                    className="hover:border-indigo-200 transition-all border-slate-100 shadow-sm group cursor-pointer active:scale-[0.99] rounded-xl overflow-hidden bg-white"
                                     onClick={() => navigate(`/reports/client/${client.id}`)}
                                 >
                                     <CardContent className="p-0 flex items-stretch h-16">
-                                        <div className={`w-1 ${agenzia.color}`} />
+                                        <div className={`w-1 ${agenzia.color} opacity-40 group-hover:opacity-100 transition-opacity`} />
                                         <div className="flex-1 flex items-center justify-between px-5">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-[11px] font-black text-slate-400 group-hover:bg-white group-hover:text-blue-600 group-hover:border-blue-100 transition-all">
+                                                <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-50 flex items-center justify-center text-[11px] font-bold text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all">
                                                     {client.nome?.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div>

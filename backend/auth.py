@@ -4,7 +4,7 @@ import jwt
 from datetime import datetime, timezone, timedelta
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Optional
+from typing import Optional, List
 
 JWT_SECRET = os.environ.get('JWT_SECRET')
 JWT_ALGORITHM = "HS256"
@@ -21,12 +21,14 @@ def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode(), hashed.encode())
 
 
-def create_token(user_id: str, email: str, role: str, client_id: Optional[str] = None) -> str:
+def create_token(user_id: str, email: str, role: str, client_ids: Optional[List[str]] = None) -> str:
+    ids = client_ids or []
     payload = {
         "user_id": user_id,
         "email": email,
         "role": role,
-        "client_id": client_id,
+        "client_ids": ids,
+        "client_id": ids[0] if ids else None,
         "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)

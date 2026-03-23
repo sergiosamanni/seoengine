@@ -39,8 +39,11 @@ import {
   Search,
   Loader2,
   Shield,
-  User
+  User,
+  Plus
 } from 'lucide-react';
+import { Checkbox } from '../components/ui/checkbox';
+import { ScrollArea } from '../components/ui/scroll-area';
 import { toast } from 'sonner';
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
@@ -53,9 +56,14 @@ export const UsersPage = () => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all'); // all, unassigned, assigned
   const [assignDialog, setAssignDialog] = useState(null); // user to assign
-  const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedClientIds, setSelectedClientIds] = useState([]);
   const [assigning, setAssigning] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(null);
+  
+  // Create User State
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'client', client_ids: [] });
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -77,27 +85,47 @@ export const UsersPage = () => {
     }
   };
 
-  const getClientName = (clientId) => {
-    const client = clients.find(c => c.id === clientId);
-    return client?.nome || '—';
+  const getClientNames = (clientIds) => {
+    if (!clientIds || clientIds.length === 0) return '—';
+    const names = clientIds.map(id => clients.find(c => c.id === id)?.nome).filter(Boolean);
+    return names.join(', ');
   };
 
   const assignUser = async () => {
-    if (!assignDialog || !selectedClientId) return;
+    if (!assignDialog) return;
     setAssigning(true);
     try {
       await axios.post(`${API}/users/assign-client`, {
         user_id: assignDialog.id,
-        client_id: selectedClientId
+        client_ids: selectedClientIds
       }, { headers: getAuthHeaders() });
-      toast.success(`${assignDialog.name} assegnato a ${getClientName(selectedClientId)}`);
+      toast.success(`${assignDialog.name} aggiornato`);
       setAssignDialog(null);
-      setSelectedClientId('');
+      setSelectedClientIds([]);
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Errore assegnazione');
     } finally {
       setAssigning(false);
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUser.name || !newUser.email || !newUser.password) {
+        toast.error("Compila tutti i campi obbligatori");
+        return;
+    }
+    setCreating(true);
+    try {
+        await axios.post(`${API}/auth/register`, newUser, { headers: getAuthHeaders() });
+        toast.success(`Utente ${newUser.name} creato con successo`);
+        setCreateDialogOpen(false);
+        setNewUser({ name: '', email: '', password: '', role: 'client', client_ids: [] });
+        fetchData();
+    } catch (error) {
+        toast.error(error.response?.data?.detail || "Errore creazione utente");
+    } finally {
+        setCreating(false);
     }
   };
 
@@ -131,12 +159,12 @@ export const UsersPage = () => {
       u.email.toLowerCase().includes(search.toLowerCase());
     const matchesFilter =
       filter === 'all' ||
-      (filter === 'unassigned' && !u.client_id) ||
-      (filter === 'assigned' && !!u.client_id);
+      (filter === 'unassigned' && (!u.client_ids || u.client_ids.length === 0)) ||
+      (filter === 'assigned' && u.client_ids && u.client_ids.length > 0);
     return matchesSearch && matchesFilter;
   });
 
-  const unassignedCount = users.filter(u => u.role === 'client' && !u.client_id).length;
+  const unassignedCount = users.filter(u => u.role === 'client' && (!u.client_ids || u.client_ids.length === 0)).length;
 
   if (loading) {
     return (
@@ -154,7 +182,7 @@ export const UsersPage = () => {
           <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-none">Gestione Workspace</h1>
           <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-widest font-semibold">Amministrazione Utenti e Permessi</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
             <div className="bg-white border border-[#f1f3f6] rounded-lg px-3 py-1.5 shadow-sm flex items-center gap-2">
                 <Users className="w-3.5 h-3.5 text-slate-400" />
                 <span className="text-xs font-bold text-slate-600 tracking-tight">{users.length}</span>
@@ -164,6 +192,10 @@ export const UsersPage = () => {
               {unassignedCount} DA ASSEGNARE
             </Badge>
           )}
+          <Button onClick={() => setCreateDialogOpen(true)} className="bg-slate-900 hover:bg-slate-800 text-white h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-200 active:scale-95 transition-all">
+              <Plus className="w-3.5 h-3.5 mr-2" />
+              Nuovo Utente
+          </Button>
         </div>
       </div>
 
@@ -230,7 +262,7 @@ export const UsersPage = () => {
                       {user.role === 'admin' ? (
                         <Shield className="w-4 h-4 text-white" />
                       ) : (
-                        <User className={`w-4 h-4 ${user.client_id ? 'text-slate-400' : 'text-amber-400'}`} />
+                        <User className={`w-4 h-4 ${user.client_ids && user.client_ids.length > 0 ? 'text-slate-400' : 'text-amber-400'}`} />
                       )}
                     </div>
                     <div>
@@ -253,9 +285,9 @@ export const UsersPage = () => {
                             <span className="text-[9px] uppercase font-bold tracking-widest text-slate-300 mb-0.5">Associazione</span>
                             {user.role === 'admin' ? (
                                 <span className="text-[10px] font-bold text-slate-400">Tutti i Clienti</span>
-                            ) : user.client_id ? (
-                                <span className="text-[10px] font-bold text-emerald-600" data-testid={`user-assigned-${user.id}`}>
-                                    {getClientName(user.client_id)}
+                            ) : user.client_ids && user.client_ids.length > 0 ? (
+                                <span className="text-[10px] font-bold text-emerald-600 truncate max-w-[150px] block" data-testid={`user-assigned-${user.id}`}>
+                                    {getClientNames(user.client_ids)}
                                 </span>
                             ) : (
                                 <span className="text-[10px] font-bold text-amber-500" data-testid={`user-unassigned-${user.id}`}>
@@ -274,14 +306,14 @@ export const UsersPage = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-xl border border-[#f1f3f6] shadow-xl p-1.5 min-w-[180px]">
-                          <DropdownMenuItem className="rounded-lg text-xs font-semibold p-2" onClick={() => { setAssignDialog(user); setSelectedClientId(user.client_id || ''); }}>
+                          <DropdownMenuItem className="rounded-lg text-xs font-semibold p-2" onClick={() => { setAssignDialog(user); setSelectedClientIds(user.client_ids || []); }}>
                             <Link2 className="w-3.5 h-3.5 mr-2 text-slate-400" />
-                            {user.client_id ? 'Cambia cliente' : 'Collega a cliente'}
+                            {user.client_ids && user.client_ids.length > 0 ? 'Gestisci siti' : 'Collega a siti'}
                           </DropdownMenuItem>
-                          {user.client_id && (
+                          {user.client_ids && user.client_ids.length > 0 && (
                             <DropdownMenuItem className="rounded-lg text-xs font-semibold p-2" onClick={() => unassignUser(user)}>
                               <Unlink className="w-3.5 h-3.5 mr-2 text-slate-400" />
-                              Scollega cliente
+                              Scollega tutto
                             </DropdownMenuItem>
                           )}
                           <div className="h-px bg-[#f1f3f6] my-1.5 mx-1" />
@@ -301,37 +333,132 @@ export const UsersPage = () => {
       </Card>
 
       {/* Dialogs - Consistent Minimal Style */}
-      <Dialog open={!!assignDialog} onOpenChange={(open) => { if (!open) { setAssignDialog(null); setSelectedClientId(''); } }}>
+      <Dialog open={!!assignDialog} onOpenChange={(open) => { if (!open) { setAssignDialog(null); setSelectedClientIds([]); } }}>
         <DialogContent className="rounded-2xl border-[#f1f3f6] max-w-md p-0 overflow-hidden">
           <DialogHeader className="p-8 bg-slate-50 border-b border-[#f1f3f6]">
-            <DialogTitle className="text-lg font-bold">Associa Cliente</DialogTitle>
+            <DialogTitle className="text-lg font-bold">Gestisci Accesso Siti</DialogTitle>
             <DialogDescription className="text-xs font-medium text-slate-400 uppercase tracking-widest mt-1">
-              {assignDialog?.name}
+              Seleziona i siti gestibili da {assignDialog?.name}
             </DialogDescription>
           </DialogHeader>
-          <div className="p-8 space-y-6">
-            <div className="space-y-3">
-                <Label className="text-[10px] uppercase font-bold tracking-[0.2em] text-slate-400 ml-1">Seleziona Workspace</Label>
-                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                <SelectTrigger className="h-11 border-[#f1f3f6] rounded-xl text-xs font-bold" data-testid="assign-client-select">
-                    <SelectValue placeholder="Scegli un cliente..." />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px] rounded-xl border-[#f1f3f6]">
+          <div className="p-0">
+             <ScrollArea className="h-[300px] p-8">
+                <div className="space-y-4">
                     {clients.map(c => (
-                    <SelectItem key={c.id} value={c.id} className="text-xs font-semibold">
-                        {c.nome}
-                    </SelectItem>
+                        <div key={c.id} className="flex items-center space-x-3 p-3 rounded-xl border border-slate-50 hover:bg-slate-50 transition-all">
+                            <Checkbox 
+                                id={`assign-${c.id}`} 
+                                checked={selectedClientIds.includes(c.id)}
+                                onCheckedChange={(checked) => {
+                                    if (checked) setSelectedClientIds([...selectedClientIds, c.id]);
+                                    else setSelectedClientIds(selectedClientIds.filter(id => id !== c.id));
+                                }}
+                            />
+                            <label htmlFor={`assign-${c.id}`} className="text-xs font-bold text-slate-700 cursor-pointer flex-1">
+                                {c.nome}
+                                <span className="block text-[9px] text-slate-400 font-medium uppercase tracking-tighter">{c.sito_web?.replace('https://','')}</span>
+                            </label>
+                        </div>
                     ))}
-                </SelectContent>
-                </Select>
-            </div>
+                </div>
+             </ScrollArea>
           </div>
           <DialogFooter className="p-6 bg-slate-50 border-t border-[#f1f3f6] gap-2 flex-row sm:justify-end">
             <Button variant="ghost" className="text-xs font-bold uppercase tracking-widest text-slate-400 h-10 px-6 rounded-xl" onClick={() => setAssignDialog(null)}>Annulla</Button>
-            <Button onClick={assignUser} disabled={!selectedClientId || assigning} className="bg-slate-900 h-10 px-8 rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-slate-200" data-testid="assign-confirm-btn">
-              {assigning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Conferma'}
+            <Button onClick={assignUser} disabled={assigning} className="bg-slate-900 h-10 px-8 rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-slate-200" data-testid="assign-confirm-btn">
+              {assigning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Salva Permessi'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* NEW: Create User Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="rounded-3xl border-[#f1f3f6] max-w-md p-0 overflow-hidden shadow-2xl">
+            <DialogHeader className="p-10 bg-slate-900 text-white">
+                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-6">
+                    <UserPlus className="w-6 h-6 text-white" />
+                </div>
+                <DialogTitle className="text-2xl font-bold tracking-tight">Crea Nuovo Utente</DialogTitle>
+                <DialogDescription className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2 opacity-60">
+                    Definisci le credenziali e il ruolo
+                </DialogDescription>
+            </DialogHeader>
+            <div className="p-10 space-y-6">
+                <div className="grid grid-cols-1 gap-6">
+                    <div className="space-y-2">
+                        <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Nome Completo</Label>
+                        <Input 
+                            value={newUser.name} 
+                            onChange={e => setNewUser({...newUser, name: e.target.value})}
+                            placeholder="Es: Mario Rossi" 
+                            className="h-12 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-medium"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Email Aziendale</Label>
+                        <Input 
+                            value={newUser.email} 
+                            onChange={e => setNewUser({...newUser, email: e.target.value})}
+                            placeholder="mario@esempio.it" 
+                            className="h-12 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-medium"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Password</Label>
+                        <Input 
+                            type="password"
+                            value={newUser.password} 
+                            onChange={e => setNewUser({...newUser, password: e.target.value})}
+                            placeholder="••••••••" 
+                            className="h-12 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-medium"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Ruolo Sistema</Label>
+                        <Select value={newUser.role} onValueChange={v => setNewUser({...newUser, role: v})}>
+                            <SelectTrigger className="h-12 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-bold">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+                                <SelectItem value="client" className="text-xs font-bold py-3">Cliente (Limitato ai suoi siti)</SelectItem>
+                                <SelectItem value="admin" className="text-xs font-bold py-3">Admin (Accesso totale)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {newUser.role === 'client' && (
+                        <div className="space-y-3">
+                            <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Associa Siti Web</Label>
+                            <ScrollArea className="h-[200px] rounded-2xl border border-slate-50 bg-slate-50/30 p-4">
+                                <div className="space-y-3">
+                                    {clients.map(c => (
+                                        <div key={c.id} className="flex items-center space-x-3 p-2 hover:bg-white rounded-lg transition-all">
+                                            <Checkbox 
+                                                id={`new-assign-${c.id}`} 
+                                                checked={newUser.client_ids.includes(c.id)}
+                                                onCheckedChange={(checked) => {
+                                                    if (checked) setNewUser({...newUser, client_ids: [...newUser.client_ids, c.id]});
+                                                    else setNewUser({...newUser, client_ids: newUser.client_ids.filter(id => id !== c.id)});
+                                                }}
+                                            />
+                                            <label htmlFor={`new-assign-${c.id}`} className="text-[11px] font-bold text-slate-600 cursor-pointer flex-1">
+                                                {c.nome}
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        </div>
+                    )}
+                </div>
+            </div>
+            <DialogFooter className="p-8 bg-slate-50 border-t border-[#f1f3f6] gap-3 flex-row">
+                <Button variant="ghost" className="flex-1 text-[10px] font-black uppercase tracking-widest text-slate-400 h-14 rounded-2xl" onClick={() => setCreateDialogOpen(false)}>Annulla</Button>
+                <Button onClick={handleCreateUser} disabled={creating} className="flex-1 bg-slate-900 text-white h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-200 active:scale-95 transition-all">
+                    {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Crea Account'}
+                </Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
 

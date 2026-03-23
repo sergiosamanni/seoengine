@@ -35,7 +35,11 @@ export const AuthProvider = ({ children }) => {
         const response = await axios.get(`${API}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setUser(response.data);
+        const userData = response.data;
+        if (!userData.client_id && userData.client_ids && userData.client_ids.length > 0) {
+          userData.client_id = userData.client_ids[0];
+        }
+        setUser(userData);
       } catch (error) {
         console.error('Token verification failed:', error);
         logout();
@@ -50,6 +54,10 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const response = await axios.post(`${API}/auth/login`, { email, password });
     const { token: newToken, user: userData } = response.data;
+    
+    if (!userData.client_id && userData.client_ids && userData.client_ids.length > 0) {
+      userData.client_id = userData.client_ids[0];
+    }
     
     localStorage.setItem('seo_token', newToken);
     setToken(newToken);
@@ -72,6 +80,12 @@ export const AuthProvider = ({ children }) => {
     Authorization: `Bearer ${token}`
   });
 
+  const switchClient = (clientId) => {
+    if (user && user.client_ids.includes(clientId)) {
+      setUser({ ...user, client_id: clientId });
+    }
+  };
+
   const value = {
     user,
     token,
@@ -80,6 +94,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     register,
     getAuthHeaders,
+    switchClient,
     isAdmin: user?.role === 'admin',
     isAuthenticated: !!user
   };

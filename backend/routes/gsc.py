@@ -35,7 +35,7 @@ def _require_gsc_credentials():
 
 @router.post("/clients/{client_id}/gsc-config")
 async def save_gsc_config(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     
     # Get existing config or create new
@@ -63,7 +63,7 @@ async def save_gsc_config(client_id: str, request: dict, current_user: dict = De
 
 @router.get("/gsc/authorize/{client_id}")
 async def gsc_authorize(client_id: str, request: Request, redirect_uri: str = Query(None), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
@@ -159,7 +159,7 @@ async def gsc_callback(code: str, state: str):
 
 @router.post("/clients/{client_id}/gsc-disconnect")
 async def gsc_disconnect(client_id: str, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     await db.clients.update_one(
         {"id": client_id},
@@ -181,7 +181,7 @@ async def gsc_integration_status(request: Request, current_user: dict = Depends(
 
 @router.get("/clients/{client_id}/gsc-data")
 async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client_doc:
@@ -378,7 +378,7 @@ async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depe
 @router.get("/clients/{client_id}/gsc-status")
 async def get_client_gsc_status(client_id: str, request: Request, current_user: dict = Depends(get_current_user)):
     """Status endpoint specifically for a client property (used by GscConnectionTab.jsx)."""
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
         
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
@@ -404,7 +404,7 @@ async def get_client_gsc_status(client_id: str, request: Request, current_user: 
 
 @router.post("/clients/{client_id}/gsc-strategic-suggestions")
 async def gsc_strategic_suggestions(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
         
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})

@@ -142,40 +142,33 @@ export const ReportEditPage = () => {
         </div>
       </div>
 
-      <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden p-6 bg-slate-50/50 no-print">
+      <Card className="border-slate-100 shadow-sm rounded-2xl overflow-hidden p-5 bg-white no-print">
         <div className="mb-4">
-            <h3 className="font-black text-slate-800 uppercase tracking-tighter text-sm mb-1">Moduli Report</h3>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Seleziona i moduli da includere in questo report.</p>
+            <h3 className="font-bold text-slate-800 uppercase tracking-tight text-[11px] mb-1">Moduli Report</h3>
+            <p className="text-[9px] text-slate-400 font-medium uppercase tracking-widest">Seleziona i moduli da includere</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-2">
           {MODULE_DEFS.map(m => {
             const isEnabled = !!modules[m.id];
             return (
               <div 
                 key={m.id} 
                 onClick={() => toggleModule(m.id)}
-                className={`p-5 rounded-[2rem] border-2 transition-all cursor-pointer group relative flex flex-col gap-3 ${
+                className={`p-2.5 rounded-xl border transition-all cursor-pointer group relative flex items-center gap-2.5 ${
                   isEnabled 
-                  ? 'bg-white border-blue-500 shadow-xl shadow-blue-100/50 ring-4 ring-blue-50/50' 
-                  : 'bg-white/40 border-slate-100 hover:border-slate-200 opacity-60 hover:opacity-100'
+                  ? 'bg-blue-50/30 border-blue-200 ring-1 ring-blue-100 shadow-sm' 
+                  : 'bg-white border-slate-100 hover:border-slate-200 opacity-70 hover:opacity-100'
                 }`}
               >
-                <div className="flex items-start justify-between">
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isEnabled ? 'bg-blue-500 text-white shadow-lg shadow-blue-200' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
-                        <m.icon className="w-5 h-5" />
-                    </div>
-                    {isEnabled && <CheckCircle2 className="w-5 h-5 text-blue-500 fill-blue-50" />}
+                <div className={`w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center transition-all ${isEnabled ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-slate-100'}`}>
+                    <m.icon className="w-3.5 h-3.5" />
                 </div>
-                <div>
-                    <h5 className={`font-black uppercase tracking-tighter text-xs ${isEnabled ? 'text-slate-900' : 'text-slate-500'}`}>{m.label}</h5>
-                    <p className={`text-[9px] leading-tight font-medium ${isEnabled ? 'text-slate-400' : 'text-slate-300'}`}>{m.description}</p>
+                <div className="min-w-0">
+                    <h5 className={`font-bold uppercase tracking-tight text-[9px] truncate ${isEnabled ? 'text-blue-700' : 'text-slate-500'}`}>{m.label}</h5>
                 </div>
               </div>
             );
           })}
-        </div>
-        <div className="mt-4 text-[9px] text-blue-500 font-black uppercase tracking-widest text-center">
-            {Object.keys(modules).length} moduli selezionati
         </div>
       </Card>
 
@@ -233,17 +226,17 @@ const AttivitaForm = ({ module, data, updateData }) => {
     };
 
     return (
-        <Card className="border-slate-100 shadow-sm rounded-[2rem] overflow-hidden border-l-8 border-l-blue-500 bg-white">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 bg-slate-50/30 p-6">
-                <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center">
-                        <module.icon className="w-5 h-5 text-blue-600" />
+        <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 p-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100">
+                        <module.icon className="w-3.5 h-3.5 text-slate-500" />
                     </div>
-                    <CardTitle className="text-base font-black uppercase tracking-tighter text-slate-900">{module.label}</CardTitle>
+                    <CardTitle className="text-[12px] font-bold uppercase tracking-tight text-slate-700">{module.label}</CardTitle>
                 </div>
-                <Button size="sm" onClick={addItem} className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 font-black uppercase tracking-widest text-[9px] uppercase"><Plus className="w-3 h-3 mr-1.5" /> Aggiungi Attività</Button>
+                <Button size="sm" onClick={addItem} variant="ghost" className="h-7 px-2 rounded-lg text-blue-600 hover:bg-blue-50 font-bold uppercase tracking-tight text-[9px]"><Plus className="w-3 h-3 mr-1" /> Aggiungi</Button>
             </CardHeader>
-            <CardContent className="p-4 space-y-4">
+            <CardContent className="p-4 space-y-3">
                 {items.length === 0 && <p className="text-[11px] text-slate-400 italic text-center py-4">Nessuna attività aggiunta.</p>}
                 {items.map((item, i) => (
                     <div key={i} className="flex items-center gap-3 group">
@@ -268,15 +261,17 @@ const CitazioniForm = ({ module, data, updateData }) => {
     };
 
     return (
-        <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden border-l-4 border-l-blue-500">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 bg-slate-50/50 p-4">
+        <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 p-4">
                 <div className="flex items-center gap-3">
-                    <module.icon className="w-5 h-5 text-blue-500" />
-                    <CardTitle className="text-sm font-black uppercase tracking-tighter">{module.label}</CardTitle>
+                    <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100">
+                        <module.icon className="w-3.5 h-3.5 text-slate-500" />
+                    </div>
+                    <CardTitle className="text-[12px] font-bold uppercase tracking-tight text-slate-700">{module.label}</CardTitle>
                 </div>
-                <Button size="sm" onClick={addItem} className="h-7 px-3 rounded-lg bg-blue-600 font-black uppercase tracking-widest text-[9px] uppercase"><Plus className="w-3 h-3 mr-1.5" /> Aggiungi Citazione</Button>
+                <Button size="sm" onClick={addItem} variant="ghost" className="h-7 px-2 rounded-lg text-blue-600 hover:bg-blue-50 font-bold uppercase tracking-tight text-[9px]"><Plus className="w-3 h-3 mr-1" /> Aggiungi</Button>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
+            <CardContent className="p-4 space-y-3">
                 {items.map((item, i) => (
                     <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-slate-50/50 rounded-2xl relative group">
                         <div className="space-y-1">
@@ -312,15 +307,17 @@ const GmbForm = ({ module, data, updateData }) => {
     };
 
     return (
-        <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden border-l-4 border-l-blue-500">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 bg-slate-50/50 p-4">
+        <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 p-4">
                 <div className="flex items-center gap-3">
-                    <module.icon className="w-5 h-5 text-blue-500" />
-                    <CardTitle className="text-sm font-black uppercase tracking-tighter">{module.label}</CardTitle>
+                    <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100">
+                        <module.icon className="w-3.5 h-3.5 text-slate-500" />
+                    </div>
+                    <CardTitle className="text-[12px] font-bold uppercase tracking-tight text-slate-700">{module.label}</CardTitle>
                 </div>
-                <Button size="sm" onClick={addItem} className="h-7 px-3 rounded-lg bg-blue-600 font-black uppercase tracking-widest text-[9px] uppercase"><Plus className="w-3 h-3 mr-1.5" /> Aggiungi Attività GMB</Button>
+                <Button size="sm" onClick={addItem} variant="ghost" className="h-7 px-2 rounded-lg text-blue-600 hover:bg-blue-50 font-bold uppercase tracking-tight text-[9px]"><Plus className="w-3 h-3 mr-1" /> Aggiungi</Button>
             </CardHeader>
-            <CardContent className="p-6 space-y-6">
+            <CardContent className="p-4 space-y-4">
                 <div className="space-y-1">
                     <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Link Profilo GMB (opzionale)</Label>
                     <Input value={data.profile_url || ''} onChange={(e) => updateData({ ...data, profile_url: e.target.value })} placeholder="https://business.google.com/..." className="h-9 rounded-xl text-xs font-bold" />
@@ -355,12 +352,14 @@ const GmbForm = ({ module, data, updateData }) => {
 
 const GscForm = ({ module, data, updateData }) => {
     return (
-        <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden border-l-4 border-l-blue-500">
-            <CardHeader className="flex flex-row items-center border-b border-slate-50 bg-slate-50/50 p-4">
-                <module.icon className="w-5 h-5 text-blue-500 mr-3" />
-                <CardTitle className="text-sm font-black uppercase tracking-tighter">{module.label}</CardTitle>
+        <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white">
+            <CardHeader className="flex flex-row items-center border-b border-slate-100 p-4">
+                <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100 mr-3">
+                    <module.icon className="w-3.5 h-3.5 text-slate-500" />
+                </div>
+                <CardTitle className="text-[12px] font-bold uppercase tracking-tight text-slate-700">{module.label}</CardTitle>
             </CardHeader>
-            <CardContent className="p-6 space-y-6">
+            <CardContent className="p-4 space-y-4">
                 <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-100 rounded-3xl bg-slate-50/30">
                     <Button variant="outline" className="bg-white border-slate-200 h-10 px-6 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-sm">
                         <UploadCloud className="w-4 h-4 mr-2 text-blue-500" /> Carica Screenshot GSC
@@ -391,12 +390,14 @@ const GscForm = ({ module, data, updateData }) => {
 
 const GenericSheetsForm = ({ module, data, updateData }) => {
     return (
-        <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden border-l-4 border-l-blue-500">
-            <CardHeader className="flex flex-row items-center border-b border-slate-50 bg-slate-50/50 p-4">
-                <module.icon className="w-5 h-5 text-blue-500 mr-3" />
-                <CardTitle className="text-sm font-black uppercase tracking-tighter">{module.label}</CardTitle>
+        <Card className="border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white">
+            <CardHeader className="flex flex-row items-center border-b border-slate-100 p-4">
+                <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100 mr-3">
+                    <module.icon className="w-3.5 h-3.5 text-slate-500" />
+                </div>
+                <CardTitle className="text-[12px] font-bold uppercase tracking-tight text-slate-700">{module.label}</CardTitle>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
+            <CardContent className="p-4 space-y-3">
                 <div className="space-y-1">
                     <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Link Google Sheets ({module.label})</Label>
                     <Input value={data.sheets_url || ''} onChange={(e) => updateData({ ...data, sheets_url: e.target.value })} placeholder="https://docs.google.com/spreadsheets/..." className="h-9 rounded-xl text-xs font-bold" />

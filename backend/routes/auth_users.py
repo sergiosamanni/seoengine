@@ -21,11 +21,11 @@ async def register(user: UserCreate):
     now = datetime.now(timezone.utc).isoformat()
     user_doc = {
         "id": user_id, "email": user.email, "password": hash_password(user.password),
-        "name": user.name, "role": user.role, "client_id": user.client_id, "created_at": now
+        "name": user.name, "role": user.role, "client_ids": user.client_ids, "created_at": now
     }
     await db.users.insert_one(user_doc)
     return UserResponse(id=user_id, email=user.email, name=user.name, role=user.role,
-                        client_id=user.client_id, created_at=now)
+                        client_ids=user.client_ids, created_at=now)
 
 
 @router.post("/auth/login")
@@ -35,11 +35,11 @@ async def login(request: dict):
     user = await db.users.find_one({"email": email})
     if not user or not verify_password(password, user["password"]):
         raise HTTPException(status_code=401, detail="Credenziali non valide")
-    token = create_token(user["id"], user["email"], user["role"], user.get("client_id"))
+    token = create_token(user["id"], user["email"], user["role"], user.get("client_ids", []))
     return {
         "token": token,
         "user": {"id": user["id"], "email": user["email"], "name": user["name"],
-                 "role": user["role"], "client_id": user.get("client_id")}
+                 "role": user["role"], "client_ids": user.get("client_ids", [])}
     }
 
 
@@ -59,10 +59,10 @@ async def get_users(current_user: dict = Depends(require_admin)):
 
 @router.post("/users/assign-client")
 async def assign_user_to_client(request: AssignClientRequest, current_user: dict = Depends(require_admin)):
-    result = await db.users.update_one({"id": request.user_id}, {"$set": {"client_id": request.client_id}})
+    result = await db.users.update_one({"id": request.user_id}, {"$set": {"client_ids": request.client_ids}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Utente non trovato")
-    return {"message": "Utente assegnato al cliente", "user_id": request.user_id, "client_id": request.client_id}
+    return {"message": "Utente assegnato ai clienti", "user_id": request.user_id, "client_ids": request.client_ids}
 
 
 @router.post("/users/unassign-client")
@@ -70,10 +70,10 @@ async def unassign_user_from_client(request: dict, current_user: dict = Depends(
     user_id = request.get("user_id")
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id richiesto")
-    result = await db.users.update_one({"id": user_id}, {"$set": {"client_id": None}})
+    result = await db.users.update_one({"id": user_id}, {"$set": {"client_ids": []}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Utente non trovato")
-    return {"message": "Utente rimosso dal cliente"}
+    return {"message": "Utente rimosso dai clienti"}
 
 
 @router.delete("/users/{user_id}")
@@ -96,6 +96,6 @@ async def seed_data():
         await db.users.insert_one({
             "id": admin_id, "email": os.environ.get("ADMIN_SEED_EMAIL", "admin@seoengine.it"),
             "password": hash_password(os.environ.get("ADMIN_SEED_PASSWORD", "changeme")),
-            "name": "Admin SEO", "role": "admin", "client_id": None, "created_at": now
+            "name": "Admin SEO", "role": "admin", "client_ids": [], "created_at": now
         })
     return {"message": "Seed completato"}

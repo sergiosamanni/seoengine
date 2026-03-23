@@ -4,16 +4,35 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import {
-  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X
+  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X, Globe
 } from 'lucide-react';
+import axios from 'axios';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+
+const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
 export const DashboardLayout = ({ children }) => {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, logout, switchClient, getAuthHeaders } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [clients, setClients] = useState([]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
+
+  React.useEffect(() => {
+    if (!isAdmin && user?.client_ids?.length >= 1) {
+      axios.get(`${API}/clients`, { headers: getAuthHeaders() })
+        .then(res => setClients(res.data))
+        .catch(err => console.error('Error fetching plants for switcher', err));
+    }
+  }, [user?.client_ids, isAdmin, getAuthHeaders]);
 
   const adminNav = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
@@ -53,6 +72,34 @@ export const DashboardLayout = ({ children }) => {
         {/* Navigation */}
         <ScrollArea className="flex-1 px-4 py-2">
           <div className="space-y-8">
+            {/* Site Switcher for Clients */}
+            {!isAdmin && (
+              <div className="px-4">
+                <p className="text-[9px] uppercase font-bold tracking-[0.2em] text-slate-300 mb-3">Workspace</p>
+                {user?.client_ids?.length > 1 ? (
+                  <Select value={user.client_id} onValueChange={switchClient}>
+                    <SelectTrigger className="w-full bg-slate-50 border-[#f1f3f6] text-[11px] font-bold rounded-xl h-10 shadow-sm">
+                      <SelectValue placeholder="Seleziona sito" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map(c => (
+                        <SelectItem key={c.id} value={c.id} className="text-[11px] font-medium">
+                          {c.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="bg-slate-50 border border-[#f1f3f6] rounded-xl p-3 flex items-center gap-2">
+                    <Globe className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-[11px] font-bold text-slate-600 truncate">
+                      {clients.find(c => c.id === user?.client_id)?.nome || 'Sito Attivo'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <p className="px-4 text-[9px] uppercase font-bold tracking-[0.2em] text-slate-300 mb-4">Main Menu</p>
               <nav className="space-y-1">
