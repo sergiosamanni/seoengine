@@ -107,17 +107,36 @@ const AdminGenerator = ({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const config = client?.configuration || {};
-    const allPlanTopics = [
-        ...(plan?.topics || []),
-        ...(config.editorial_queue || []).map(itemText => ({
-            titolo: itemText,
-            keyword: itemText.split(': ').pop() || itemText,
-            funnel: 'TOFU',
-            motivo: 'Audit Freshness/GSC',
-            isQueueItem: true,
-            topic: 'Priorità Audit AI (Freshness/GSC)'
-        }))
-    ];
+    const allPlanTopics = React.useMemo(() => {
+        const planItems = plan?.topics || [];
+        const queueItems = (client?.configuration?.editorial_queue || []).map(itemText => {
+            // Smart parsing
+            let title = itemText;
+            let kw = itemText;
+            if (itemText.includes('] ')) {
+                const parts = itemText.split('] ');
+                title = parts[1] || itemText;
+                if (title.includes(': ')) {
+                    const subParts = title.split(': ');
+                    title = subParts.slice(1).join(': ');
+                    kw = subParts[0] || title;
+                } else {
+                    kw = title;
+                }
+            }
+
+            return {
+                titolo: title,
+                keyword: kw,
+                funnel: 'TOFU',
+                motivo: 'Priorità Audit AI (Freshness/GSC)',
+                isQueueItem: true,
+                topic: 'Contenuti Suggeriti dal Sistema',
+                originalText: itemText
+            };
+        });
+        return [...planItems, ...queueItems];
+    }, [plan, client?.configuration?.editorial_queue]);
     const llmConfig = config.llm || config.openai || {};
     const wpConfig = config.wordpress || {};
     const hasApiKey = !!llmConfig.api_key;
@@ -691,21 +710,14 @@ const AdminGenerator = ({
     };
 
     const selectAllPlanTopics = () => {
-        const planTopics = plan?.topics?.filter(t => !recentArticles.some(art => art.titolo?.toLowerCase() === t.titolo?.toLowerCase() || (art.keyword && art.keyword === t.keyword))) || [];
-        const queueTopics = (config.editorial_queue || []).map(itemText => ({ 
-            titolo: itemText, 
-            keyword: itemText.split(': ').pop() || itemText, 
-            funnel: 'TOFU', 
-            motivo: 'Suggerito da Analisi Freshness/GSC',
-            isQueueItem: true 
-        }));
-
-        const allAvailable = [...planTopics, ...queueTopics];
-
-        if (selectedPlanTopics.length >= allAvailable.length) {
+        if (selectedPlanTopics.length === allPlanTopics.length && allPlanTopics.length > 0) {
             setSelectedPlanTopics([]);
         } else {
-            setSelectedPlanTopics(allAvailable);
+            // Selezioniamo tutti quelli che non sono ancora pubblicati
+            const notPublished = allPlanTopics.filter(t => 
+                !recentArticles.some(art => art.titolo?.toLowerCase() === t.titolo?.toLowerCase() || (art.keyword && art.keyword === t.keyword))
+            );
+            setSelectedPlanTopics(notPublished);
         }
     };
 
@@ -715,16 +727,16 @@ const AdminGenerator = ({
         toast.info("Articolo rimosso dal piano");
     };
 
-    const handleRemoveFromQueue = async (keyword) => {
+    const handleRemoveFromQueue = async (item) => {
+        const textToRemove = item.originalText || item.titolo;
         const currentQueue = config.editorial_queue || [];
-        const newQueue = currentQueue.filter(k => k !== keyword);
+        const newQueue = currentQueue.filter(k => k !== textToRemove);
         const newConfig = { ...config, editorial_queue: newQueue };
         
         try {
             await axios.put(`${API}/clients/${effectiveClientId}/configuration`, newConfig, { headers: getAuthHeaders() });
             toast.success("Rimosso dalla coda");
             // Nota: il client viene aggiornato nel genitore, quindi dovremmo aspettarci un re-render
-            // Se AdminGenerator gestisce il proprio stato 'client' dovremmo sincronizzarlo
         } catch (e) {
             toast.error("Errore durante la rimozione");
         }
@@ -1195,120 +1207,117 @@ const AdminGenerator = ({
 
                     {genMode === 'programmatic' && (
                         <div className="space-y-6">
-                            {/* Info banner */}
-                            <div className="flex items-start gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
-                                <Sparkles className="w-5 h-5 text-indigo-500 mt-0.5 flex-shrink-0" />
-                                <div>
-                                    <p className="text-sm font-semibold text-indigo-900">SEO Programmatica — Pagine Ottimizzate con Spintax</p>
-                                    <p className="text-xs text-indigo-700 mt-0.5">
-                                        Genera varianti uniche per ogni combinazione utilizzando la tecnologia <strong>Spintax</strong>. 
-                                        L'agente crea un template intelligente con migliaia di varianti possibili, assicurando che ogni pagina sia originale pur mantenendo la struttura Gutenberg richiesta.
-                                    </p>
-                                </div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 border-indigo-200 px-3 py-1 flex items-center gap-2">
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                    SEO Programmatica Atttiva (Spintax Template)
+                                </Badge>
+                                <div className="h-px flex-1 bg-indigo-100" />
                             </div>
+                            
                             <KeywordsTab keywords={keywords} setKeywords={setKeywords} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
-                            <div className="flex justify-end">
-                                <Button onClick={refreshCombinations} className="bg-indigo-700 hover:bg-indigo-800">
-                                    Aggiorna Varianti Pagine ({combinations.length})
-                                </Button>
-                            </div>
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <Card className="border-slate-200 lg:col-span-1">
-                                    <CardHeader className="pb-3">
+                            
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Selezione combinazioni */}
+                                <Card className="border-slate-200 shadow-sm overflow-hidden flex flex-col h-[500px]">
+                                    <CardHeader className="bg-slate-50/50 border-b py-3 px-4">
                                         <div className="flex items-center justify-between">
-                                            <CardTitle className="text-base">Combinazioni</CardTitle>
-                                            <Button variant="ghost" size="sm" onClick={selectAll} className="text-xs">Tutte</Button>
+                                            <div className="flex items-center gap-2">
+                                                <CardTitle className="text-sm font-bold">Varianti Generate</CardTitle>
+                                                <Badge variant="outline" className="text-[10px]">{combinations.length}</Badge>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button variant="ghost" size="xs" onClick={refreshCombinations} className="h-7 text-[10px]">
+                                                   <RefreshCcw className="w-3 h-3 mr-1" /> Ricarica
+                                                </Button>
+                                                <Button variant="outline" size="xs" onClick={selectAll} className="h-7 text-[10px]">Sel. Tutte</Button>
+                                            </div>
                                         </div>
                                     </CardHeader>
-                                    <CardContent>
-                                        <ScrollArea className="h-[300px]">
-                                            <div className="space-y-1">
+                                    <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
+                                        <ScrollArea className="flex-1 px-4 py-2">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 py-2">
                                                 {combinations.map((combo, i) => {
                                                     const key = `${combo.servizio}-${combo.citta}-${combo.tipo}`;
                                                     const sel = selectedCombinations.find(c => `${c.servizio}-${c.citta}-${c.tipo}` === key);
                                                     return (
-                                                        <div key={key} onClick={() => toggleCombo(combo)} className={`p-2 rounded-md cursor-pointer flex items-center gap-2 ${sel ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50'}`}>
-                                                            <Checkbox checked={!!sel} />
-                                                            <span className="text-sm truncate">{combo.titolo}</span>
+                                                        <div key={key} onClick={() => toggleCombo(combo)} className={`p-2 rounded-lg cursor-pointer flex items-center gap-2 border transition-all ${sel ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'hover:bg-slate-50 border-transparent'}`}>
+                                                            <Checkbox checked={!!sel} className="h-3.5 w-3.5" />
+                                                            <span className="text-[11px] font-medium truncate">{combo.titolo}</span>
                                                         </div>
                                                     );
                                                 })}
                                             </div>
                                         </ScrollArea>
-                                    </CardContent>
-                                </Card>
-                                <Card className="border-slate-200 lg:col-span-1">
-                                    <CardHeader><CardTitle className="text-base">Esecuzione</CardTitle></CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div className="p-4 bg-slate-50 rounded-lg text-center">
-                                            <p className="text-2xl font-bold">{selectedCombinations.length}</p>
-                                            <p className="text-xs text-slate-500">Selezionati</p>
-                                        </div>
-
-                                        <div className="flex items-center justify-between p-3 border rounded-lg bg-indigo-50/30">
-                                            <div className="space-y-0.5">
-                                                <Label className="text-xs font-semibold">Attiva Spintax</Label>
-                                                <p className="text-[10px] text-slate-500 leading-tight">
-                                                    Genera un template unico con varianti testuali per massimizzare l'originalità di ogni pagina.
-                                                </p>
+                                        
+                                        <div className="p-4 bg-slate-50 border-t mt-auto space-y-3">
+                                            <div className="flex items-center justify-between">
+                                               <div className="flex items-center gap-2">
+                                                  <Label className="text-xs font-semibold">Usa Spintax</Label>
+                                                  <Switch checked={useSpintax} onCheckedChange={setUseSpintax} scale={0.8} />
+                                               </div>
+                                               <span className="text-xs font-bold text-slate-600">{selectedCombinations.length} selezionate</span>
                                             </div>
-                                            <Switch checked={useSpintax} onCheckedChange={setUseSpintax} />
+                                            
+                                            {generating && <Progress value={progressPercent} className="h-1.5" />}
+                                            
+                                            <Button 
+                                                className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 shadow-lg" 
+                                                onClick={handleProgrammaticGenerate} 
+                                                disabled={generating || selectedCombinations.length === 0}
+                                            >
+                                                {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+                                                Avvia Generazione Bulk
+                                            </Button>
                                         </div>
-
-                                        {generating && <Progress value={progressPercent} className="h-2" />}
-                                        <Button className={`w-full h-12 ${genMode === 'programmatic' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-orange-500 hover:bg-orange-600'}`} onClick={handleProgrammaticGenerate} disabled={generating || selectedCombinations.length === 0}>
-                                            {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
-                                            {genMode === 'programmatic' ? 'Genera Pagine' : 'Genera Articoli'}
-                                        </Button>
                                     </CardContent>
                                 </Card>
-                                <Card className="border-slate-200 lg:col-span-1">
-                                    <CardHeader><CardTitle className="text-base">Risultati</CardTitle></CardHeader>
-                                    <CardContent>
-                                        <ScrollArea className="h-[300px]">
-                                            <div className="space-y-2">
+
+                                {/* Risultati veloci */}
+                                <Card className="border-slate-200 shadow-sm overflow-hidden h-[500px]">
+                                    <CardHeader className="bg-slate-50/50 border-b py-3 px-4">
+                                        <CardTitle className="text-sm font-bold">Risultati in Coda</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-0 h-full">
+                                        <ScrollArea className="h-full px-4 py-2">
+                                            <div className="space-y-2 py-2">
                                                 {results.map((r, i) => (
-                                                    <div key={i} className="text-xs p-2 bg-slate-50 rounded border flex flex-col gap-2">
-                                                        <div className="flex justify-between items-start gap-2">
-                                                            <div className="flex-1 truncate">
-                                                                <p className="font-medium truncate">{r.titolo}</p>
-                                                                {r.visual_audit && (
-                                                                    <div className="flex items-center gap-1 mt-0.5">
-                                                                        <div className={`w-1.5 h-1.5 rounded-full ${r.visual_audit.score >= 80 ? 'bg-emerald-500' : r.visual_audit.score >= 60 ? 'bg-amber-500' : 'bg-red-500'}`} />
-                                                                        <span className="text-[9px] text-slate-400">Audit Score: {r.visual_audit.score}%</span>
-                                                                    </div>
+                                                    <div key={i} className="text-xs p-3 bg-white border border-slate-100 rounded-xl flex items-center justify-between gap-3 shadow-sm">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-bold text-slate-800 truncate text-[11px]">{r.titolo}</p>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                {r.generation_status === 'done' ? (
+                                                                     <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-none text-[9px] h-4">Pronto</Badge>
+                                                                ) : r.generation_status === 'running' ? (
+                                                                     <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-none text-[9px] h-4 animate-pulse">Running</Badge>
+                                                                ) : (
+                                                                     <Badge variant="outline" className="text-[9px] h-4">In coda</Badge>
                                                                 )}
-                                                            </div>
-                                                            <div className="flex gap-1">
-                                                                {getStatusIcon(r.generation_status)}
-                                                                {getStatusIcon(r.publish_status)}
+                                                                {r.publish_status === 'published' && <Badge className="bg-indigo-600 text-white text-[9px] h-4">Online</Badge>}
                                                             </div>
                                                         </div>
-                                                        <div className="flex justify-between items-center mt-1">
-                                                            <div className="flex gap-2 items-center">
-                                                                {r.image_url ? (
-                                                                    <div className="w-12 h-12 rounded border bg-white flex items-center justify-center overflow-hidden">
-                                                                        <img src={r.image_url.startsWith('http') ? r.image_url : `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}${r.image_url}`} alt="cover" className="w-full h-full object-cover" />
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="w-12 h-12 rounded border bg-slate-100 flex items-center justify-center text-[8px] text-slate-400">
-                                                                        No Image
-                                                                    </div>
-                                                                )}
-                                                                <Button
-                                                                    size="xs"
-                                                                    variant="outline"
-                                                                    className="h-7 text-[10px] px-2"
-                                                                    disabled={coverLoading[r.id]}
-                                                                    onClick={() => handleGenerateCover(r.id, r.titolo)}
-                                                                >
-                                                                    {coverLoading[r.id] ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <ImageIcon className="w-3 h-3 mr-1" />}
-                                                                    Cover
-                                                                </Button>
-                                                            </div>
+                                                        <div className="flex items-center gap-2">
+                                                            {r.image_url && (
+                                                                <img src={r.image_url.startsWith('http') ? r.image_url : `${API.replace('/api', '')}${r.image_url}`} className="w-8 h-8 rounded-lg object-cover border border-slate-200" alt="img" />
+                                                            )}
+                                                            <Button
+                                                                size="icon"
+                                                                variant="ghost"
+                                                                className="h-8 w-8 hover:bg-slate-100"
+                                                                onClick={() => handleGenerateCover(r.id, r.titolo)}
+                                                                disabled={coverLoading[r.id]}
+                                                            >
+                                                                {coverLoading[r.id] ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+                                                            </Button>
                                                         </div>
                                                     </div>
                                                 ))}
+                                                {results.length === 0 && (
+                                                    <div className="h-full flex flex-col items-center justify-center opacity-40 mt-32">
+                                                        <FileText className="w-8 h-8 mb-2" />
+                                                        <p className="text-xs">Nessun contenuto generato</p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </ScrollArea>
                                     </CardContent>
@@ -1393,21 +1402,21 @@ const AdminGenerator = ({
                                     </div>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
-                                    {plan?.topics?.length > 0 && (
+                                    {allPlanTopics.length > 0 && (
                                         <div className="flex items-center bg-slate-100 rounded-lg p-1 mr-2">
                                             <Button 
                                                 variant="ghost" 
                                                 size="sm" 
                                                 onClick={selectAllPlanTopics} 
-                                                className={`text-[11px] h-8 px-3 ${selectedPlanTopics.length === plan.topics.length ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
+                                                className={`text-[11px] h-8 px-3 ${selectedPlanTopics.length === allPlanTopics.length ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
                                             >
-                                                {selectedPlanTopics.length === plan.topics.length ? "Deseleziona" : "Seleziona Tutti"}
+                                                {selectedPlanTopics.length === allPlanTopics.length ? "Deseleziona" : "Seleziona Tutti"}
                                             </Button>
                                         </div>
                                     )}
-                                    <Button onClick={generateNewPlan} disabled={planGenerating} className="h-10 bg-slate-900 hover:bg-slate-800 shadow-sm">
+                                    <Button onClick={generateNewPlan} disabled={planGenerating} className="h-10 bg-slate-900 hover:bg-slate-800 shadow-sm transition-all active:scale-95">
                                         {planGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCcw className="w-4 h-4 mr-2" />}
-                                        {plan?.topics?.length > 0 ? "Rigenera Piano" : "Crea Strategia"}
+                                        {(plan?.topics?.length > 0 || allPlanTopics.length > 0) ? "Aggiorna Strategia" : "Genera Piano Editoriale"}
                                     </Button>
                                     {allPlanTopics.length > 0 && (
                                         <>
@@ -1457,7 +1466,7 @@ const AdminGenerator = ({
                                 </div>
                             )}
 
-                            {!planLoading && allPlanTopics.length > 0 && (
+                            {allPlanTopics.length > 0 && (
                                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
                                     {/* Sidebar Toggle Button (Sticky) */}
                                     <Button 
@@ -1620,7 +1629,7 @@ const AdminGenerator = ({
                                                                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-indigo-600 rounded-lg hover:bg-slate-50" onClick={() => handleUseTopicInGenerator(item)}>
                                                                                             <PenTool className="w-3.5 h-3.5" />
                                                                                         </Button>
-                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-500 rounded-lg hover:bg-slate-50" onClick={() => item.isQueueItem ? handleRemoveFromQueue(item.titolo) : removeTopicFromPlan(planIndex)}>
+                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-500 rounded-lg hover:bg-slate-50" onClick={() => item.isQueueItem ? handleRemoveFromQueue(item) : removeTopicFromPlan(planIndex)}>
                                                                                             <Trash2 className="w-3.5 h-3.5" />
                                                                                         </Button>
                                                                                     </div>
@@ -1760,18 +1769,14 @@ const AdminGenerator = ({
                             )}
 
                             {!planLoading && allPlanTopics.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-24 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-200/5 transition-colors hover:bg-slate-200/10">
-                                    <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-6">
-                                        <BrainCircuit className="w-10 h-10 text-slate-300" />
+                                <div className="flex flex-col items-center justify-center py-24 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                                    <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center mb-6">
+                                        <Sparkles className="w-10 h-10 text-indigo-400 opacity-40" />
                                     </div>
-                                    <h3 className="text-lg font-bold text-slate-800 mb-2">Pianifica la tua Dominanza SEO</h3>
-                                    <p className="text-sm text-slate-500 max-w-sm text-center mb-8">
-                                        Fai clic su "Crea Strategia" per analizzare le opportunità del tuo sito e generare un piano d'attacco basato sui dati.
+                                    <h3 className="text-lg font-bold text-slate-900 mb-1">Inizia la tua Strategia</h3>
+                                    <p className="text-sm text-slate-500 max-w-sm text-center">
+                                        Fai clic sul pulsante in alto per analizzare i dati del sito e generare un piano d'attacco basato sui dati AI, oppure aggiungi articoli dalla Freshness.
                                     </p>
-                                    <Button size="lg" onClick={generateNewPlan} disabled={planGenerating} className="bg-slate-900 px-8 rounded-xl h-12">
-                                        {planGenerating ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2 text-amber-400" />}
-                                        Avvia Analisi Strategica
-                                    </Button>
                                 </div>
                             )}
                         </div>

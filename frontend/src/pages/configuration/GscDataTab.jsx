@@ -9,7 +9,7 @@ import {
 } from '../../components/ui/select';
 import {
   BarChart3, Loader2, RefreshCw, ExternalLink, TrendingUp, Sparkles,
-  MousePointerClick, Eye, Target, AlertTriangle, CheckCircle2
+  MousePointerClick, Eye, Target, AlertTriangle, CheckCircle2, Globe
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -88,159 +88,233 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900 pr-4 tracking-tight">Performance di Ricerca</h3>
-                  <p className="text-sm text-slate-500">{client?.nome} — Dati organici reali da Google</p>
-                </div>
+        <div className="space-y-4 animate-fade-in">
+            {/* Header Section Compact */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3 px-5 rounded-2xl border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-950 flex items-center justify-center shadow-lg">
+                        <BarChart3 className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h3 className="text-base font-black text-slate-900 tracking-tighter uppercase leading-tight">Performance di Ricerca</h3>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{client?.nome} — Real-time Google Data</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
                     <Select value={days} onValueChange={(v) => setDays(v)}>
-                      <SelectTrigger className="w-[140px]">
+                      <SelectTrigger className="w-[140px] h-8 rounded-lg border-slate-200 bg-slate-100/50 font-bold text-[10px] uppercase tracking-wider">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="7">Ultimi 7 giorni</SelectItem>
-                        <SelectItem value="28">Ultimi 28 giorni</SelectItem>
-                        <SelectItem value="90">Ultimi 3 mesi</SelectItem>
+                      <SelectContent className="rounded-lg border-slate-100 shadow-xl">
+                        <SelectItem value="7" className="text-[10px] font-bold">Ultimi 7 giorni</SelectItem>
+                        <SelectItem value="28" className="text-[10px] font-bold">Ultimi 28 giorni</SelectItem>
+                        <SelectItem value="90" className="text-[10px] font-bold">Ultimi 3 mesi</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
-                      <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />Aggiorna
+                    <Button variant="outline" size="sm" onClick={fetchData} disabled={loading} className="h-8 rounded-lg px-3 border-slate-200 font-bold text-[9px] uppercase tracking-widest hover:bg-slate-50">
+                      <RefreshCw className={`w-3 h-3 mr-1.5 ${loading ? 'animate-spin' : ''}`} /> Sincronizza
                     </Button>
                 </div>
             </div>
 
             {loading ? (
-                <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>
+                <div className="flex flex-col items-center justify-center py-20 space-y-3">
+                    <div className="relative">
+                        <div className="w-12 h-12 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
+                    </div>
+                    <p className="text-slate-400 font-black uppercase tracking-widest text-[9px] animate-pulse">Sincronizzazione Google...</p>
+                </div>
             ) : data ? (
                 <>
-                    {/* SEZIONE AI STRATEGY */}
-                    <Card className="border-indigo-100 bg-gradient-to-br from-indigo-50/50 to-white shadow-md">
-                        <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle className="text-lg flex items-center gap-2 text-indigo-900">
-                                    <Target className="w-5 h-5 text-indigo-500" /> Consulto Strategico AI
-                                </CardTitle>
-                                <CardDescription className="text-indigo-600/70">Analizza i dati GSC e ottieni indicazioni pratiche (nuovi articoli o tuning).</CardDescription>
+                    {/* STATS GRID COMPACT */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {[
+                            { label: 'Click totali', value: data.totals?.total_clicks, icon: MousePointerClick, color: 'text-indigo-600', bg: 'bg-indigo-50/50', border: 'border-indigo-100/50' },
+                            { label: 'Impressioni', value: data.totals?.total_impressions, icon: Eye, color: 'text-emerald-600', bg: 'bg-emerald-50/50', border: 'border-emerald-100/50' },
+                            { label: 'CTR medio', value: `${data.totals?.avg_ctr}%`, icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-50/50', border: 'border-amber-100/50' },
+                            { label: 'Pos. media', value: data.totals?.avg_position, icon: Target, color: 'text-rose-500', bg: 'bg-rose-50/50', border: 'border-rose-100/50' },
+                        ].map(s => (
+                            <Card key={s.label} className={`border-none ${s.bg} shadow-sm overflow-hidden relative group h-20`}>
+                                <div className={`absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition-opacity`}>
+                                    <s.icon className="w-16 h-16" />
+                                </div>
+                                <CardContent className="p-4 relative flex flex-col justify-between h-full">
+                                    <div className="flex items-center gap-1.5 opacity-60">
+                                        <s.icon className={`w-3 h-3 ${s.color}`} />
+                                        <span className="text-[8.5px] text-slate-500 uppercase tracking-widest font-black">{s.label}</span>
+                                    </div>
+                                    <p className="text-xl font-black text-slate-900 tracking-tighter leading-none">{s.value?.toLocaleString()}</p>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+
+                    {/* AI STRATEGY BANNER COMPACT */}
+                    <Card className="border-indigo-100 bg-gradient-to-r from-indigo-700 to-indigo-900 shadow-lg shadow-indigo-100 rounded-2xl overflow-hidden">
+                        <CardHeader className="p-4 flex flex-row items-center justify-between border-none space-y-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                                    <Sparkles className="w-5 h-5 text-white" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-sm font-black text-white tracking-tighter uppercase">Consulto Strategico AI</CardTitle>
+                                    <CardDescription className="text-indigo-100/70 font-medium text-[10px]">Trend di Google, suggerimenti automatici e ottimizzazioni.</CardDescription>
+                                </div>
                             </div>
-                            <Button onClick={requestAiStrategy} disabled={aiLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg border-indigo-700 text-xs font-bold uppercase tracking-wider h-9">
-                                {aiLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                            <Button 
+                                onClick={requestAiStrategy} 
+                                disabled={aiLoading} 
+                                className="bg-white hover:bg-slate-50 text-indigo-700 shadow-md font-black uppercase tracking-widest text-[9px] h-9 px-5 rounded-xl border-none active:scale-95"
+                            >
+                                {aiLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1.5" /> : <Sparkles className="w-3 h-3 mr-1.5" />}
                                 Analizza Dati
                             </Button>
                         </CardHeader>
                         {suggestions && (
-                            <CardContent className="pt-2">
-                                <div className="space-y-3 mt-4">
+                            <CardContent className="p-6 pt-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                                     {suggestions.map((s, idx) => (
-                                        <div key={idx} className="bg-white border border-indigo-100 p-4 rounded-xl flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shadow-sm">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <Badge className={s.type === 'new_article' ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : "bg-amber-100 text-amber-700 hover:bg-amber-100"}>
-                                                        {s.type === 'new_article' ? 'Nuovo Contenuto' : 'Ottimizzazione'}
+                                        <div key={idx} className="bg-white/5 backdrop-blur-sm border border-white/10 p-5 rounded-2xl flex items-center justify-between group/item hover:bg-white/10 transition-colors">
+                                            <div className="min-w-0 pr-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Badge className={s.type === 'new_article' ? "bg-emerald-400/20 text-emerald-300 border-none text-[8px] font-black uppercase tracking-widest px-1.5 h-4" : "bg-amber-400/20 text-amber-300 border-none text-[8px] font-black uppercase tracking-widest px-1.5 h-4"}>
+                                                        {s.type === 'new_article' ? 'Nuovo' : 'Ottimizzazione'}
                                                     </Badge>
-                                                    <span className="font-mono text-xs text-indigo-400 font-bold tracking-wider">{s.keyword}</span>
+                                                    <span className="font-mono text-[10px] text-white/40 font-bold tracking-tighter truncate max-w-[150px]">{s.keyword}</span>
                                                 </div>
-                                                <h4 className="font-bold text-slate-900 text-base">{s.title}</h4>
-                                                <p className="text-sm text-slate-500 mt-1">{s.reason}</p>
+                                                <h4 className="font-bold text-white text-sm tracking-tight mb-1">{s.title}</h4>
+                                                <p className="text-[10px] text-white/50 leading-relaxed line-clamp-2">{s.reason}</p>
                                             </div>
-                                            <Button size="sm" onClick={() => handleApplySuggestion(s)} variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 w-full md:w-auto flex-shrink-0">
-                                                Applica Ora
+                                            <Button 
+                                                size="sm" 
+                                                onClick={() => handleApplySuggestion(s)} 
+                                                variant="outline" 
+                                                className="bg-white/10 border-white/10 text-white hover:bg-white hover:text-indigo-900 rounded-xl font-black uppercase tracking-widest text-[9px] h-9 h-9 transition-all"
+                                            >
+                                                Applica
                                             </Button>
                                         </div>
                                     ))}
                                 </div>
                             </CardContent>
                         )}
+                        {!suggestions && <div className="h-6" />}
                     </Card>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[
-                            { label: 'Click totali', value: data.totals?.total_clicks, icon: MousePointerClick, color: 'text-blue-600', bg: 'bg-blue-50' },
-                            { label: 'Impressioni', value: data.totals?.total_impressions, icon: Eye, color: 'text-purple-600', bg: 'bg-purple-50' },
-                            { label: 'CTR medio', value: `${data.totals?.avg_ctr}%`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                            { label: 'Pos. media', value: data.totals?.avg_position, icon: Target, color: 'text-orange-600', bg: 'bg-orange-50' },
-                        ].map(s => (
-                            <Card key={s.label} className="border-slate-200">
-                              <CardContent className="p-4">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <s.icon className={`w-4 h-4 ${s.color}`} />
-                                  <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{s.label}</span>
-                                </div>
-                                <p className="text-2xl font-bold text-slate-900">{s.value?.toLocaleString()}</p>
-                              </CardContent>
+                    {/* DATA TABLES */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* KEYWORDS */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between px-2">
+                                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                    <Target className="w-4 h-4 text-indigo-500" /> Top Keyword
+                                </h4>
+                                <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-[10px] font-black border-none px-2 h-5">
+                                    {data.keywords?.length || 0} POSIZIONATE
+                                </Badge>
+                            </div>
+                            <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden">
+                                <CardContent className="p-0">
+                                    <ScrollArea className="h-[480px]">
+                                        <table className="w-full text-sm border-separate border-spacing-0">
+                                            <thead className="sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b border-slate-50">
+                                                <tr className="text-slate-400 text-[9px] text-left uppercase font-black tracking-widest">
+                                                    <th className="py-4 px-6 border-b border-slate-50">Keyword</th>
+                                                    <th className="py-4 px-4 border-b border-slate-50 text-right">Click</th>
+                                                    <th className="py-4 px-4 border-b border-slate-50 text-right">CTR</th>
+                                                    <th className="py-4 px-6 border-b border-slate-50 text-right">Pos.</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {(data.keywords || []).map((kw, i) => (
+                                                    <tr key={i} className="group hover:bg-slate-50 transition-colors">
+                                                        <td className="py-3 px-6 border-b border-slate-50 font-bold text-slate-700 text-xs">
+                                                            {kw.keyword}
+                                                        </td>
+                                                        <td className="py-3 px-4 border-b border-slate-50 text-right text-indigo-600 font-black text-xs">
+                                                            {kw.clicks}
+                                                        </td>
+                                                        <td className="py-3 px-4 border-b border-slate-50 text-right text-slate-400 font-bold text-[10px]">
+                                                            {kw.ctr}%
+                                                        </td>
+                                                        <td className="py-3 px-6 border-b border-slate-50 text-right">
+                                                            <div className="flex justify-end">
+                                                                <div className={`px-2 py-0.5 rounded-lg text-[10px] font-black border shadow-sm ${
+                                                                    kw.position <= 3 ? 'bg-emerald-500 border-emerald-400 text-white' : 
+                                                                    kw.position <= 10 ? 'bg-amber-500 border-amber-400 text-white' : 
+                                                                    'bg-slate-50 border-slate-200 text-slate-500'
+                                                                }`}>
+                                                                    {kw.position}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </ScrollArea>
+                                </CardContent>
                             </Card>
-                        ))}
-                    </div>
+                        </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card className="border-slate-200">
-                          <CardHeader className="pb-3"><CardTitle className="text-lg">Top Keyword</CardTitle><CardDescription>{data.keywords?.length} keyword posizionate</CardDescription></CardHeader>
-                          <CardContent>
-                            <ScrollArea className="h-[400px]">
-                              <table className="w-full text-sm">
-                                <thead className="border-b border-slate-200 sticky top-0 bg-white">
-                                  <tr className="text-slate-500 text-xs text-left uppercase font-semibold">
-                                    <th className="py-2 px-1">Keyword</th>
-                                    <th className="py-2 px-1 text-right">Click</th>
-                                    <th className="py-2 px-1 text-right">CTR</th>
-                                    <th className="py-2 px-1 text-right">Pos.</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {(data.keywords || []).map((kw, i) => (
-                                    <tr key={i} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                                      <td className="py-2 px-1 font-medium text-slate-900 truncate max-w-[180px]">{kw.keyword}</td>
-                                      <td className="py-2 px-1 text-right text-blue-600 font-bold">{kw.clicks}</td>
-                                      <td className="py-2 px-1 text-right text-slate-500">{kw.ctr}%</td>
-                                      <td className="py-2 px-1 text-right">
-                                        <Badge variant={kw.position <= 3 ? 'default' : kw.position <= 10 ? 'secondary' : 'outline'}
-                                          className={`text-[10px] sm:text-xs h-5 px-1 ${kw.position <= 3 ? 'bg-emerald-600' : ''}`}>
-                                          {kw.position}
-                                        </Badge>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </ScrollArea>
-                          </CardContent>
-                        </Card>
-
-                        <Card className="border-slate-200">
-                          <CardHeader className="pb-3"><CardTitle className="text-lg">Top Pagine</CardTitle><CardDescription>{data.pages?.length} pagine con traffico</CardDescription></CardHeader>
-                          <CardContent>
-                            <ScrollArea className="h-[400px]">
-                              <table className="w-full text-sm">
-                                <thead className="border-b border-slate-200 sticky top-0 bg-white">
-                                  <tr className="text-slate-500 text-xs text-left uppercase font-semibold">
-                                    <th className="py-2 px-1">URL</th>
-                                    <th className="py-2 px-1 text-right">Click</th>
-                                    <th className="py-2 px-1 text-right">Pos.</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {(data.pages || []).map((pg, i) => (
-                                    <tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
-                                      <td className="py-2 px-1">
-                                        <a href={pg.page} target="_blank" rel="noopener noreferrer"
-                                          className="text-blue-600 hover:underline flex items-center gap-1 max-w-[200px] truncate">
-                                          {pg.page.replace(/https?:\/\/[^/]+/, '') || '/'}
-                                          <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                                        </a>
-                                      </td>
-                                      <td className="py-2 px-1 text-right text-blue-600 font-bold">{pg.clicks}</td>
-                                      <td className="py-2 px-1 text-right"><span className="text-xs text-slate-500">{pg.position}</span></td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </ScrollArea>
-                          </CardContent>
-                        </Card>
+                        {/* PAGES */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between px-2">
+                                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                    <Globe className="w-4 h-4 text-emerald-500" /> Top Pagine
+                                </h4>
+                                <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-[10px] font-black border-none px-2 h-5">
+                                    {data.pages?.length || 0} CON TRAFFICO
+                                </Badge>
+                            </div>
+                            <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden">
+                                <CardContent className="p-0">
+                                    <ScrollArea className="h-[480px]">
+                                        <table className="w-full text-sm border-separate border-spacing-0">
+                                            <thead className="sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b border-slate-50">
+                                                <tr className="text-slate-400 text-[9px] text-left uppercase font-black tracking-widest">
+                                                    <th className="py-4 px-6 border-b border-slate-50">URL</th>
+                                                    <th className="py-4 px-6 border-b border-slate-50 text-right">Click</th>
+                                                    <th className="py-4 px-6 border-b border-slate-50 text-right">Pos. Media</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {(data.pages || []).map((pg, i) => (
+                                                    <tr key={i} className="group hover:bg-slate-50 transition-colors">
+                                                        <td className="py-3 px-6 border-b border-slate-50">
+                                                            <a href={pg.page} target="_blank" rel="noopener noreferrer"
+                                                                className="text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-2 group/link text-xs max-w-[200px] truncate">
+                                                                {pg.page.replace(/https?:\/\/[^/]+/, '') || '/'}
+                                                                <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                                                            </a>
+                                                        </td>
+                                                        <td className="py-3 px-6 border-b border-slate-50 text-right text-emerald-600 font-black text-xs">
+                                                            {pg.clicks}
+                                                        </td>
+                                                        <td className="py-3 px-6 border-b border-slate-50 text-right">
+                                                            <span className="text-[10px] font-black text-slate-500 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100 italic">
+                                                                {pg.position}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </ScrollArea>
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
                 </>
-            ) : null}
+            ) : (
+                <div className="flex flex-col items-center justify-center py-24 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                    <BarChart3 className="w-12 h-12 text-slate-100 mb-6" />
+                    <h3 className="text-lg font-bold text-slate-800 mb-1">Nessun dato disponibile</h3>
+                    <p className="text-sm text-slate-400 max-w-sm text-center">
+                        Non è stato possibile recuperare dati organici per questo periodo. Verifica la connessione a GSC.
+                    </p>
+                </div>
+            )}
         </div>
     );
 };

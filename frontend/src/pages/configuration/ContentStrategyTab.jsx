@@ -54,8 +54,7 @@ const OBJECTIVES = [
 ];
 
 export const ContentStrategyTab = ({ strategy, setStrategy }) => {
-  const [newKwSec, setNewKwSec] = React.useState('');
-  const [newKwLsi, setNewKwLsi] = React.useState('');
+  const [newKw, setNewKw] = React.useState('');
 
   const toggleLever = (leverId) => {
     const current = strategy.leve_psicologiche || [];
@@ -66,273 +65,175 @@ export const ContentStrategyTab = ({ strategy, setStrategy }) => {
     }
   };
 
-  const addToList = (field, value, setValue) => {
-    const trimmed = value.trim();
-    const current = strategy[field] || [];
+  const addKw = () => {
+    const trimmed = newKw.trim();
+    const current = strategy.keyword_secondarie || [];
     if (trimmed && !current.includes(trimmed)) {
-      setStrategy({ ...strategy, [field]: [...current, trimmed] });
-      setValue('');
+      setStrategy({ ...strategy, keyword_secondarie: [...current, trimmed] });
+      setNewKw('');
     }
   };
 
-  const removeFromList = (field, value) => {
-    setStrategy({ ...strategy, [field]: (strategy[field] || []).filter(v => v !== value) });
+  const removeKw = (val) => {
+    setStrategy({ ...strategy, keyword_secondarie: (strategy.keyword_secondarie || []).filter(v => v !== val) });
   };
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Funnel & Objective */}
-        <Card className="border-slate-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-orange-500" />
-              Strategia Funnel
+        {/* Impostazioni Core */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="pb-3 px-6">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Target className="w-5 h-5 text-indigo-600" />
+              Obiettivo e Stile
             </CardTitle>
-            <CardDescription>Definisci il posizionamento nel funnel e l'obiettivo</CardDescription>
+            <CardDescription className="text-xs">Definisci cosa vuoi ottenere e come</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Funnel Stage</Label>
-              <Select value={strategy.funnel_stage || 'TOFU'} onValueChange={(v) => setStrategy({ ...strategy, funnel_stage: v })}>
-                <SelectTrigger data-testid="strategy-funnel-select"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {FUNNEL_STAGES.map(s => (
-                    <SelectItem key={s.value} value={s.value}>
-                      <div><span className="font-medium">{s.label}</span><br/><span className="text-xs text-slate-500">{s.desc}</span></div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <CardContent className="space-y-5 px-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Funnel Step</Label>
+                <Select value={strategy.funnel_stage || 'TOFU'} onValueChange={(v) => setStrategy({ ...strategy, funnel_stage: v })}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {FUNNEL_STAGES.map(s => <SelectItem key={s.value} value={s.value} className="text-xs">{s.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Modello Copy</Label>
+                <Select value={strategy.modello_copywriting || 'PAS'} onValueChange={(v) => setStrategy({ ...strategy, modello_copywriting: v })}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {COPYWRITING_MODELS.map(m => <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Obiettivo Primario</Label>
-              <Select value={strategy.obiettivo_primario || 'traffico'} onValueChange={(v) => setStrategy({ ...strategy, obiettivo_primario: v })}>
-                <SelectTrigger data-testid="strategy-objective-select"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {OBJECTIVES.map(o => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Intento di Ricerca</Label>
-              <Select value={strategy.search_intent || 'informazionale'} onValueChange={(v) => setStrategy({ ...strategy, search_intent: v })}>
-                <SelectTrigger data-testid="strategy-intent-select"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {SEARCH_INTENTS.map(s => (
-                    <SelectItem key={s.value} value={s.value}>
-                      <div><span className="font-medium">{s.label}</span><span className="text-xs text-slate-500 ml-2">{s.desc}</span></div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Copywriting Model */}
-        <Card className="border-slate-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="w-5 h-5 text-amber-500" />
-              Modello Copywriting
-            </CardTitle>
-            <CardDescription>Seleziona il framework persuasivo per i contenuti</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Modello</Label>
-              <Select value={strategy.modello_copywriting || 'PAS'} onValueChange={(v) => setStrategy({ ...strategy, modello_copywriting: v })}>
-                <SelectTrigger data-testid="strategy-model-select"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {COPYWRITING_MODELS.map(m => (
-                    <SelectItem key={m.value} value={m.value}>
-                      <div><span className="font-bold">{m.label}</span><span className="text-xs text-slate-500 ml-2">{m.desc}</span></div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Separator />
-            <div className="space-y-2">
-              <Label>Lunghezza Target (parole)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">CTA Finale (Call to Action)</Label>
               <Input
-                type="number"
-                value={strategy.lunghezza_target || 1500}
-                onChange={(e) => setStrategy({ ...strategy, lunghezza_target: parseInt(e.target.value) || 1500 })}
-                min={500}
-                max={5000}
-                data-testid="strategy-length-input"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>CTA Finale</Label>
-              <Textarea
                 value={strategy.cta_finale || ''}
                 onChange={(e) => setStrategy({ ...strategy, cta_finale: e.target.value })}
-                placeholder="Es: Richiedi un preventivo gratuito senza impegno"
-                rows={2}
-                data-testid="strategy-cta-input"
+                placeholder="Es: Richiedi un preventivo gratuito"
+                className="h-9 text-sm"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Leve Psicologiche</Label>
+              <div className="flex flex-wrap gap-2">
+                {PSYCHOLOGICAL_LEVERS.map(lever => {
+                  const isActive = (strategy.leve_psicologiche || []).includes(lever.id);
+                  return (
+                    <Badge
+                      key={lever.id}
+                      variant={isActive ? "default" : "outline"}
+                      className={`cursor-pointer px-3 py-1 text-[10px] transition-all ${isActive ? 'bg-indigo-600' : 'hover:bg-slate-50'}`}
+                      onClick={() => {
+                        const current = strategy.leve_psicologiche || [];
+                        setStrategy({ 
+                          ...strategy, 
+                          leve_psicologiche: isActive ? current.filter(l => l !== lever.id) : [...current, lever.id] 
+                        });
+                      }}
+                    >
+                      {lever.label}
+                    </Badge>
+                  );
+                })}
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Buyer Persona */}
-        <Card className="border-slate-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-500" />
-              Buyer Persona
+        {/* Target & Keywords */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="pb-3 px-6">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="w-5 h-5 text-indigo-600" />
+              Target e Semantica
             </CardTitle>
-            <CardDescription>Definisci il lettore ideale dei contenuti</CardDescription>
+            <CardDescription className="text-xs">Per chi scrivi e quali concetti toccare</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome Persona</Label>
-              <Input
-                value={strategy.buyer_persona_nome || ''}
-                onChange={(e) => setStrategy({ ...strategy, buyer_persona_nome: e.target.value })}
-                placeholder="Es: Marco, imprenditore PMI"
-                data-testid="strategy-persona-name"
-              />
+          <CardContent className="space-y-5 px-6">
+            <div className="space-y-1.5">
+                <Label className="text-xs font-semibold italic">Chi e il tuo lettore ideale? (Bisogni e Consapevolezza)</Label>
+                <Textarea
+                  value={strategy.buyer_persona_descrizione || ''}
+                  onChange={(e) => setStrategy({ ...strategy, buyer_persona_descrizione: e.target.value })}
+                  placeholder="Es: Imprenditore locale che cerca sicurezza e velocita, teme i costi nascosti..."
+                  rows={2}
+                  className="text-xs resize-none"
+                />
             </div>
-            <div className="space-y-2">
-              <Label>Descrizione (ruolo, consapevolezza, bisogni)</Label>
-              <Textarea
-                value={strategy.buyer_persona_descrizione || ''}
-                onChange={(e) => setStrategy({ ...strategy, buyer_persona_descrizione: e.target.value })}
-                placeholder="Descrivi chi e, cosa cerca, qual e il suo livello di consapevolezza..."
-                rows={3}
-                data-testid="strategy-persona-desc"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Obiezioni Tipiche</Label>
-              <Textarea
-                value={strategy.buyer_persona_obiezioni || ''}
-                onChange={(e) => setStrategy({ ...strategy, buyer_persona_obiezioni: e.target.value })}
-                placeholder="Es: Costa troppo, non ho tempo, non sono sicuro che funzioni..."
-                rows={2}
-                data-testid="strategy-persona-objections"
-              />
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Psychological Levers */}
-        <Card className="border-slate-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="w-5 h-5 text-purple-500" />
-              Leve Psicologiche
-            </CardTitle>
-            <CardDescription>Seleziona le leve da integrare nei contenuti (uso etico)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-2">
-              {PSYCHOLOGICAL_LEVERS.map(lever => {
-                const isActive = (strategy.leve_psicologiche || []).includes(lever.id);
-                return (
-                  <button
-                    key={lever.id}
-                    type="button"
-                    onClick={() => toggleLever(lever.id)}
-                    className={`flex items-center justify-between p-3 rounded-lg border text-left transition-all ${
-                      isActive
-                        ? 'bg-purple-50 border-purple-300 text-purple-900'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                    }`}
-                    data-testid={`lever-${lever.id}`}
-                  >
-                    <div>
-                      <span className="font-medium text-sm">{lever.label}</span>
-                      <p className="text-xs text-slate-500 mt-0.5">{lever.desc}</p>
-                    </div>
-                    {isActive && <Badge className="bg-purple-600 text-white text-xs">Attiva</Badge>}
-                  </button>
-                );
-              })}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold italic text-slate-600">Keyword Semantiche & Varianti (LSI)</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newKw}
+                  onChange={(e) => setNewKw(e.target.value)}
+                  placeholder="Aggiungi keyword..."
+                  className="h-8 text-xs"
+                  onKeyPress={(e) => e.key === 'Enter' && addKw()}
+                />
+                <Button type="button" variant="outline" size="sm" onClick={addKw} className="h-8 w-8 p-0">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-1.5 mt-2 min-h-[2.5rem] p-2 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+                {(strategy.keyword_secondarie || []).map((kw, i) => (
+                  <Badge key={i} variant="secondary" className="text-[10px] bg-white border-slate-200 text-slate-700">
+                    {kw}
+                    <X className="w-3 h-3 ml-1 cursor-pointer hover:text-red-500" onClick={() => removeKw(kw)} />
+                  </Badge>
+                ))}
+                {(strategy.keyword_secondarie || []).length === 0 && <span className="text-[10px] text-slate-400">Nessuna keyword aggiunta</span>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+               <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Lunghezza Target</Label>
+                  <Select value={(strategy.lunghezza_target || 1500).toString()} onValueChange={(v) => setStrategy({ ...strategy, lunghezza_target: parseInt(v) })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1000" className="text-xs">Breve (1000 p.)</SelectItem>
+                      <SelectItem value="1500" className="text-xs">Standard (1500 p.)</SelectItem>
+                      <SelectItem value="2500" className="text-xs">Pilastro (2500 p.)</SelectItem>
+                    </SelectContent>
+                  </Select>
+               </div>
+               <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Intento</Label>
+                  <Select value={strategy.search_intent || 'informazionale'} onValueChange={(v) => setStrategy({ ...strategy, search_intent: v })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="informazionale" className="text-xs">Informa</SelectItem>
+                      <SelectItem value="commerciale" className="text-xs">Vendi/Compara</SelectItem>
+                      <SelectItem value="transazionale" className="text-xs">Azione</SelectItem>
+                    </SelectContent>
+                  </Select>
+               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Keywords and Notes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-slate-200">
-          <CardHeader>
-            <CardTitle>Keyword Secondarie</CardTitle>
-            <CardDescription>Keyword da integrare naturalmente nel testo</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex gap-2">
-              <Input
-                value={newKwSec}
-                onChange={(e) => setNewKwSec(e.target.value)}
-                placeholder="Aggiungi keyword secondaria"
-                onKeyPress={(e) => e.key === 'Enter' && addToList('keyword_secondarie', newKwSec, setNewKwSec)}
-                data-testid="strategy-kw-sec-input"
-              />
-              <Button type="button" variant="outline" size="icon" onClick={() => addToList('keyword_secondarie', newKwSec, setNewKwSec)}>
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {(strategy.keyword_secondarie || []).map((kw, i) => (
-                <Badge key={i} variant="outline" className="text-xs font-mono">
-                  {kw}
-                  <button onClick={() => removeFromList('keyword_secondarie', kw)} className="ml-1 hover:text-red-600"><X className="w-3 h-3" /></button>
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardHeader>
-            <CardTitle>Keyword LSI (Semantiche)</CardTitle>
-            <CardDescription>Sinonimi e varianti per copertura semantica</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex gap-2">
-              <Input
-                value={newKwLsi}
-                onChange={(e) => setNewKwLsi(e.target.value)}
-                placeholder="Aggiungi keyword LSI"
-                onKeyPress={(e) => e.key === 'Enter' && addToList('keyword_lsi', newKwLsi, setNewKwLsi)}
-                data-testid="strategy-kw-lsi-input"
-              />
-              <Button type="button" variant="outline" size="icon" onClick={() => addToList('keyword_lsi', newKwLsi, setNewKwLsi)}>
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {(strategy.keyword_lsi || []).map((kw, i) => (
-                <Badge key={i} className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-mono">
-                  {kw}
-                  <button onClick={() => removeFromList('keyword_lsi', kw)} className="ml-1 hover:text-red-600"><X className="w-3 h-3" /></button>
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-slate-200">
-        <CardHeader>
-          <CardTitle>Note Speciali</CardTitle>
-          <CardDescription>Istruzioni aggiuntive per la generazione</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className="border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-slate-50 border-b px-6 py-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Note Speciali e Istruzioni</Label>
+        </div>
+        <CardContent className="p-0">
           <Textarea
             value={strategy.note_speciali || ''}
             onChange={(e) => setStrategy({ ...strategy, note_speciali: e.target.value })}
-            placeholder="Es: Non parlare mai di competitor X, enfatizza sempre il servizio di assistenza 24/7..."
-            rows={3}
-            data-testid="strategy-notes-input"
+            placeholder="Istruzioni aggiuntive (es: tono formale, non citare il prezzo...)"
+            rows={2}
+            className="border-none focus-visible:ring-0 text-sm p-4 resize-none min-h-[80px]"
           />
         </CardContent>
       </Card>
