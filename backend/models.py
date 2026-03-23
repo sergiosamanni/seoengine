@@ -225,3 +225,27 @@ class SimpleGenerateRequest(BaseModel):
     serp_context: Optional[Dict] = None
     content_type: str = "articolo"  # articolo, landing_page, pillar_page
     image_ids: Optional[List[str]] = None
+
+
+class ReportCreate(BaseModel):
+    title: str
+    date: str  # "MM-YYYY"
+    modules: Optional[Dict[str, Any]] = None
+
+
+class ReportUpdate(BaseModel):
+    title: Optional[str] = None
+    date: Optional[str] = None
+    modules: Optional[Dict[str, Any]] = None
+    is_archived: Optional[bool] = None
+
+
+class ReportResponse(BaseModel):
+    id: str
+    client_id: str
+    title: str
+    date: str
+    created_at: str
+    updated_at: str
+    is_archived: bool = False
+    modules: Dict[str, Any] = {}

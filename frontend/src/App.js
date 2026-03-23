@@ -8,6 +8,9 @@ import { DashboardPage } from './pages/DashboardPage';
 import { GeneratorPage } from './pages/GeneratorPage';
 import { ActivityLogPage } from './pages/ActivityLogPage';
 import { UsersPage } from './pages/UsersPage';
+import { ReportsDashboard } from './pages/reports/ReportsDashboard';
+import { ClientReportsPage } from './pages/reports/ClientReportsPage';
+import { ReportEditPage } from './pages/reports/ReportEditPage';
 import './App.css';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -35,6 +38,11 @@ function AppRoutes() {
 
       {/* Admin: Users management */}
       <Route path="/users" element={<ProtectedRoute adminOnly><UsersPage /></ProtectedRoute>} />
+
+      {/* Admin: Reports section */}
+      <Route path="/reports" element={<ProtectedRoute adminOnly><ReportsDashboard /></ProtectedRoute>} />
+      <Route path="/reports/client/:clientId" element={<ProtectedRoute adminOnly><ClientReportsPage /></ProtectedRoute>} />
+      <Route path="/reports/:reportId" element={<ProtectedRoute adminOnly><ReportEditPage /></ProtectedRoute>} />
 
       {/* Shared: Activity Log */}
       <Route path="/activity-log" element={<ProtectedRoute><ActivityLogPage /></ProtectedRoute>} />

@@ -270,10 +270,9 @@ async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depe
             except:
                 raise HTTPException(status_code=400, detail=f"Errore GSC: Proprietà '{site_url}' non trovata o permessi mancanti.")
 
-        # We try 1000 keywords and 500 pages. 
-        # If it fails, we catch the exception and try a much smaller set as fallback.
+        # We try 1000 keywords, 500 pages, and full date range for charts.
         try:
-            logger.info(f"Primary GSC query for {effective_site_url} (KW: 1000, Pages: 500)")
+            logger.info(f"Primary GSC query for {effective_site_url} (KW: 1000, Pages: 500, Dates: {days})")
             kw_response = service.searchanalytics().query(
                 siteUrl=effective_site_url,
                 body={"startDate": start_date.isoformat(), "endDate": end_date.isoformat(),
@@ -283,6 +282,11 @@ async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depe
                 siteUrl=effective_site_url,
                 body={"startDate": start_date.isoformat(), "endDate": end_date.isoformat(),
                       "dimensions": ["page"], "rowLimit": 500}
+            ).execute()
+            chart_response = service.searchanalytics().query(
+                siteUrl=effective_site_url,
+                body={"startDate": start_date.isoformat(), "endDate": end_date.isoformat(),
+                      "dimensions": ["date"], "rowLimit": 500}
             ).execute()
         except Exception as e:
             logger.warning(f"GSC Primary query failed, attempting emergency fallback (100 rows): {e}")
@@ -295,6 +299,11 @@ async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depe
                 siteUrl=effective_site_url,
                 body={"startDate": start_date.isoformat(), "endDate": end_date.isoformat(),
                       "dimensions": ["page"], "rowLimit": 50}
+            ).execute()
+            chart_response = service.searchanalytics().query(
+                siteUrl=effective_site_url,
+                body={"startDate": start_date.isoformat(), "endDate": end_date.isoformat(),
+                      "dimensions": ["date"], "rowLimit": 100}
             ).execute()
 
         total_time = time.time() - start_t
@@ -322,9 +331,23 @@ async def get_gsc_data(client_id: str, days: int = 28, current_user: dict = Depe
                 "position": round(row.get("position") or 0, 1)
             })
 
+        chart_data = []
+        for row in chart_response.get("rows", []):
+            if not row.get("keys"): continue
+            chart_data.append({
+                "date": row["keys"][0],
+                "clicks": row.get("clicks") or 0,
+                "impressions": row.get("impressions") or 0,
+                "ctr": round((row.get("ctr") or 0) * 100, 2),
+                "position": round(row.get("position") or 0, 1)
+            })
+        chart_data.sort(key=lambda x: x["date"])
+
         return {
             "period": {"start": start_date.isoformat(), "end": end_date.isoformat()},
-            "keywords": keywords, "pages": pages,
+            "keywords": keywords, 
+            "pages": pages,
+            "chart_data": chart_data,
             "totals": {
                 "total_clicks": sum(k["clicks"] for k in keywords),
                 "total_impressions": sum(k["impressions"] for k in keywords),

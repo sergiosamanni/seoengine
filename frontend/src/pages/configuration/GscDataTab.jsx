@@ -12,8 +12,138 @@ import {
   MousePointerClick, Eye, Target, AlertTriangle, CheckCircle2, Globe
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { 
+    ResponsiveContainer, AreaChart, Area, XAxis, YAxis, 
+    CartesianGrid, Tooltip, LineChart, Line 
+} from 'recharts';
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
+const GscTrendChart = ({ data }) => {
+    if (!data || data.length === 0) return null;
+    
+    // Formattazione data YYYYMMDD -> DD/MM
+    const chartData = data.map(d => ({
+        ...d,
+        formattedDate: `${d.date.substring(6,8)}/${d.date.substring(4,6)}`
+    }));
+
+    return (
+        <Card className="border-slate-100 shadow-sm rounded-2xl overflow-hidden p-4 bg-white">
+            <div className="flex items-center justify-between mb-2 px-1">
+                <div>
+                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-tighter">Andamento Traffico</h4>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Click e Impressioni</p>
+                </div>
+            </div>
+            <div className="h-[180px] w-full mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                        <defs>
+                            <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15}/>
+                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis 
+                            dataKey="formattedDate" 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{fontSize: 9, fontWeight: 800, fill: '#cbd5e1'}}
+                            minTickGap={40}
+                        />
+                        <YAxis 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{fontSize: 9, fontWeight: 800, fill: '#cbd5e1'}}
+                        />
+                        <Tooltip 
+                            contentStyle={{borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold'}}
+                            itemStyle={{padding: '0'}}
+                            labelStyle={{marginBottom: '4px', color: '#64748b'}}
+                        />
+                        <Area 
+                            type="monotone" 
+                            dataKey="clicks" 
+                            name="Click" 
+                            stroke="#6366f1" 
+                            strokeWidth={3} 
+                            fillOpacity={1} 
+                            fill="url(#colorClicks)" 
+                            animationDuration={1500}
+                        />
+                        <Area 
+                            type="monotone" 
+                            dataKey="impressions" 
+                            name="Impressioni" 
+                            stroke="#10b981" 
+                            strokeWidth={2} 
+                            fill="transparent" 
+                            strokeDasharray="5 5"
+                            animationDuration={2000}
+                        />
+                    </AreaChart>
+                </ResponsiveContainer>
+            </div>
+        </Card>
+    );
+};
+
+const GscPositionChart = ({ data }) => {
+    if (!data || data.length === 0) return null;
+    
+    const chartData = data.map(d => ({
+        ...d,
+        formattedDate: `${d.date.substring(6,8)}/${d.date.substring(4,6)}`
+    }));
+
+    return (
+        <Card className="border-slate-100 shadow-sm rounded-2xl overflow-hidden p-4 bg-white">
+            <div className="flex items-center justify-between mb-2 px-1">
+                <div>
+                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-tighter">Posizionamento Medio</h4>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Trend Ranking</p>
+                </div>
+            </div>
+            <div className="h-[180px] w-full mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis 
+                            dataKey="formattedDate" 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{fontSize: 9, fontWeight: 800, fill: '#cbd5e1'}}
+                            minTickGap={40}
+                        />
+                        <YAxis 
+                            reversed 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{fontSize: 9, fontWeight: 800, fill: '#cbd5e1'}}
+                            domain={['dataMin - 1', 'dataMax + 1']}
+                        />
+                        <Tooltip 
+                            contentStyle={{borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold'}}
+                            itemStyle={{padding: '0'}}
+                            labelStyle={{marginBottom: '4px', color: '#64748b'}}
+                        />
+                        <Line 
+                            type="monotone" 
+                            dataKey="position" 
+                            name="Posizione" 
+                            stroke="#f43f5e" 
+                            strokeWidth={3} 
+                            dot={false}
+                            animationDuration={2500}
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
+        </Card>
+    );
+};
 
 export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => {
     const [loading, setLoading] = useState(false);
@@ -22,16 +152,17 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
     const [gscConnected, setGscConnected] = useState(false);
     
     const [aiLoading, setAiLoading] = useState(false);
-    const [suggestions, setSuggestions] = useState(null);
+    const [aiStrategy, setAiStrategy] = useState(null);
 
-    const fetchData = async () => {
+    const fetchData = React.useCallback(async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API}/clients/${clientId}/gsc-data?days=${days}`, {
+            const resp = await axios.get(`${API}/clients/${clientId}/gsc-data?days=${days}`, {
                 headers: getAuthHeaders()
             });
-            setData(res.data);
+            setData(resp.data);
             setGscConnected(true);
+            setAiStrategy(null); 
         } catch (error) {
             if (error.response?.status === 401) {
                 setGscConnected(false);
@@ -44,11 +175,11 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
         } finally {
             setLoading(false);
         }
-    };
+    }, [clientId, days, getAuthHeaders]);
 
     useEffect(() => {
         if (clientId) fetchData();
-    }, [clientId, days]);
+    }, [clientId, fetchData]);
 
     const handleApplySuggestion = (sugg) => {
         if(addToQueue) {
@@ -59,12 +190,12 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
     const requestAiStrategy = async () => {
         if(!data) return;
         setAiLoading(true);
-        setSuggestions(null);
+        setAiStrategy(null);
         try {
-            const res = await axios.post(`${API}/clients/${clientId}/gsc-strategic-suggestions`, { gsc_data: data }, {
+            const resp = await axios.post(`${API}/clients/${clientId}/gsc-strategic-suggestions`, { gsc_data: data }, {
                 headers: getAuthHeaders()
             });
-            setSuggestions(res.data.suggestions || []);
+            setAiStrategy(resp.data.suggestions || []);
             toast.success("Strategia AI elaborata!");
         } catch (error) {
             toast.error("Errore nell'elaborazione strategica AI");
@@ -72,6 +203,8 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
             setAiLoading(false);
         }
     };
+
+    if (!clientId) return null;
 
     if (!gscConnected && !loading) {
         return (
@@ -149,6 +282,12 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
                         ))}
                     </div>
 
+                    {/* TREND CHARTS GRID */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <GscTrendChart data={data.chart_data} />
+                        <GscPositionChart data={data.chart_data} />
+                    </div>
+
                     {/* AI STRATEGY BANNER COMPACT */}
                     <Card className="border-indigo-100 bg-gradient-to-r from-indigo-700 to-indigo-900 shadow-lg shadow-indigo-100 rounded-2xl overflow-hidden">
                         <CardHeader className="p-4 flex flex-row items-center justify-between border-none space-y-0">
@@ -170,10 +309,10 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
                                 Analizza Dati
                             </Button>
                         </CardHeader>
-                        {suggestions && (
+                        {aiStrategy && (
                             <CardContent className="p-6 pt-2">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                                    {suggestions.map((s, idx) => (
+                                    {aiStrategy.map((s, idx) => (
                                         <div key={idx} className="bg-white/5 backdrop-blur-sm border border-white/10 p-5 rounded-2xl flex items-center justify-between group/item hover:bg-white/10 transition-colors">
                                             <div className="min-w-0 pr-4">
                                                 <div className="flex items-center gap-2 mb-2">
@@ -198,7 +337,7 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
                                 </div>
                             </CardContent>
                         )}
-                        {!suggestions && <div className="h-6" />}
+                        {!aiStrategy && <div className="h-4" />}
                     </Card>
 
                     {/* DATA TABLES */}
