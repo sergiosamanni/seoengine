@@ -18,7 +18,7 @@ import {
     XCircle, Clock, Send, ExternalLink, Search, Lock, Target, BarChart3,
     PenTool, ChevronRight, Sparkles, ImagePlus, X, Camera, Image as ImageIcon,
     Calendar, BrainCircuit, RefreshCcw, Info, AlertTriangle, Plus,
-    ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, Save
+    ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, Save, History, ListPlus, MousePointerClick
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '../ui/switch';
@@ -107,6 +107,17 @@ const AdminGenerator = ({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const config = client?.configuration || {};
+    const allPlanTopics = [
+        ...(plan?.topics || []),
+        ...(config.editorial_queue || []).map(itemText => ({
+            titolo: itemText,
+            keyword: itemText.split(': ').pop() || itemText,
+            funnel: 'TOFU',
+            motivo: 'Audit Freshness/GSC',
+            isQueueItem: true,
+            topic: 'Priorità Audit AI (Freshness/GSC)'
+        }))
+    ];
     const llmConfig = config.llm || config.openai || {};
     const wpConfig = config.wordpress || {};
     const hasApiKey = !!llmConfig.api_key;
@@ -634,6 +645,15 @@ const AdminGenerator = ({
                 generate_cover: true
             }, { headers: getAuthHeaders() });
 
+            // Se abbiamo generato elementi della coda manuale, rimuoviamoli dal config
+            const queueItemsInBatch = selectedPlanTopics.filter(t => t.isQueueItem).map(t => t.titolo);
+            if (queueItemsInBatch.length > 0) {
+                const currentQueue = config.editorial_queue || [];
+                const newQueue = currentQueue.filter(k => !queueItemsInBatch.includes(k));
+                axios.put(`${API}/clients/${effectiveClientId}/configuration`, { ...config, editorial_queue: newQueue }, { headers: getAuthHeaders() })
+                     .catch(e => console.error("Could not cleanup queue", e));
+            }
+
             const jobId = res.data.job_id;
             const total = res.data.total;
             toast.info(`Job Piano avviato: ${total} articoli in coda...`);
@@ -671,12 +691,21 @@ const AdminGenerator = ({
     };
 
     const selectAllPlanTopics = () => {
-        const notPublished = plan?.topics?.filter(t => !recentArticles.some(art => art.titolo?.toLowerCase() === t.titolo?.toLowerCase() || (art.keyword && art.keyword === t.keyword))) || [];
-        
-        if (selectedPlanTopics.length === notPublished.length) {
+        const planTopics = plan?.topics?.filter(t => !recentArticles.some(art => art.titolo?.toLowerCase() === t.titolo?.toLowerCase() || (art.keyword && art.keyword === t.keyword))) || [];
+        const queueTopics = (config.editorial_queue || []).map(itemText => ({ 
+            titolo: itemText, 
+            keyword: itemText.split(': ').pop() || itemText, 
+            funnel: 'TOFU', 
+            motivo: 'Suggerito da Analisi Freshness/GSC',
+            isQueueItem: true 
+        }));
+
+        const allAvailable = [...planTopics, ...queueTopics];
+
+        if (selectedPlanTopics.length >= allAvailable.length) {
             setSelectedPlanTopics([]);
         } else {
-            setSelectedPlanTopics(notPublished);
+            setSelectedPlanTopics(allAvailable);
         }
     };
 
@@ -684,6 +713,21 @@ const AdminGenerator = ({
         const newTopics = plan.topics.filter((_, i) => i !== index);
         setPlan({ ...plan, topics: newTopics });
         toast.info("Articolo rimosso dal piano");
+    };
+
+    const handleRemoveFromQueue = async (keyword) => {
+        const currentQueue = config.editorial_queue || [];
+        const newQueue = currentQueue.filter(k => k !== keyword);
+        const newConfig = { ...config, editorial_queue: newQueue };
+        
+        try {
+            await axios.put(`${API}/clients/${effectiveClientId}/configuration`, newConfig, { headers: getAuthHeaders() });
+            toast.success("Rimosso dalla coda");
+            // Nota: il client viene aggiornato nel genitore, quindi dovremmo aspettarci un re-render
+            // Se AdminGenerator gestisce il proprio stato 'client' dovremmo sincronizzarlo
+        } catch (e) {
+            toast.error("Errore durante la rimozione");
+        }
     };
 
     const handleGenerateCover = async (articleId, title) => {
@@ -1365,17 +1409,19 @@ const AdminGenerator = ({
                                         {planGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCcw className="w-4 h-4 mr-2" />}
                                         {plan?.topics?.length > 0 ? "Rigenera Piano" : "Crea Strategia"}
                                     </Button>
-                                    {plan?.topics?.length > 0 && (
+                                    {allPlanTopics.length > 0 && (
                                         <>
-                                            <Button 
-                                                variant="outline"
-                                                onClick={handleDeletePlan} 
-                                                disabled={deletingPlan} 
-                                                className="h-10 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                            >
-                                                {deletingPlan ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                                                Elimina Piano
-                                            </Button>
+                                            {plan?.topics?.length > 0 && (
+                                                <Button 
+                                                    variant="outline"
+                                                    onClick={handleDeletePlan} 
+                                                    disabled={deletingPlan} 
+                                                    className="h-10 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                                >
+                                                    {deletingPlan ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                                                    Elimina Piano
+                                                </Button>
+                                            )}
                                             <Button
                                                 onClick={handleBatchPlanGenerate}
                                                 disabled={generating || selectedPlanTopics.length === 0}
@@ -1401,7 +1447,7 @@ const AdminGenerator = ({
                                 </div>
                             )}
 
-                            {planLoading ? (
+                            {planLoading && (
                                 <div className="flex flex-col items-center justify-center py-32 space-y-4">
                                     <div className="relative">
                                         <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-500 rounded-full animate-spin"></div>
@@ -1409,7 +1455,9 @@ const AdminGenerator = ({
                                     </div>
                                     <p className="text-slate-500 font-medium animate-pulse text-sm">L'AI sta analizzando i dati del sito...</p>
                                 </div>
-                            ) : plan?.topics?.length > 0 ? (
+                            )}
+
+                            {!planLoading && allPlanTopics.length > 0 && (
                                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
                                     {/* Sidebar Toggle Button (Sticky) */}
                                     <Button 
@@ -1424,40 +1472,48 @@ const AdminGenerator = ({
 
                                     <div className={`${recentSidebarOpen ? 'lg:col-span-9' : 'lg:col-span-12'} space-y-8 transition-all duration-500`}>
                                         {/* Strategy Summary Stats */}
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
                                             {[
-                                                { label: 'Totale Strategy', val: plan.topics.length, icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-                                                { label: 'Già Pubblicati', val: plan.topics.filter(t => recentArticles.some(art => art.titolo?.toLowerCase() === t.titolo?.toLowerCase() || (art.keyword && art.keyword === t.keyword))).length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                                                { label: 'Da Creare', val: plan.topics.filter(t => !recentArticles.some(art => art.titolo?.toLowerCase() === t.titolo?.toLowerCase() || (art.keyword && art.keyword === t.keyword))).length, icon: Zap, color: 'text-orange-600', bg: 'bg-orange-50' },
-                                                { label: 'In Coda', val: selectedPlanTopics.length, icon: Clock, color: 'text-slate-600', bg: 'bg-slate-50' },
+                                                { label: 'Piano AI', val: plan?.topics?.length || 0, icon: Sparkles, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                                                { label: 'Da Freshness/GSC', val: config.editorial_queue?.length || 0, icon: ListPlus, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                                                { label: 'Selezionati', val: selectedPlanTopics.length, icon: MousePointerClick, color: 'text-orange-600', bg: 'bg-orange-50' },
+                                                { label: 'Pubblicati', val: recentArticles.length, icon: CheckCircle2, color: 'text-slate-400', bg: 'bg-white' },
                                             ].map((stat, i) => (
-                                                <div key={i} className={`p-4 rounded-2xl border border-slate-100 ${stat.bg} flex items-center gap-3`}>
-                                                    <div className={`p-2 rounded-lg bg-white shadow-sm ${stat.color}`}>
-                                                        <stat.icon className="w-4 h-4" />
+                                                <div key={i} className="flex flex-col">
+                                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                                        <stat.icon className={`w-3 h-3 ${stat.color}`} />
+                                                        <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">{stat.label}</span>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{stat.label}</p>
-                                                        <p className="text-xl font-black text-slate-900">{stat.val}</p>
-                                                    </div>
+                                                    <p className="text-xl font-black text-slate-900 leading-none">{stat.val}</p>
                                                 </div>
                                             ))}
                                         </div>
 
-                                        {/* Gruppi per Topic */}
+                                        <div className="flex items-center justify-between mb-4 px-1">
+                                            <h2 className="text-sm font-black text-slate-800 uppercase tracking-tighter flex items-center gap-2">
+                                                <ListPlus className="w-5 h-5 text-indigo-500" /> Elenco Articoli & Coda
+                                            </h2>
+                                            <div className="flex gap-2">
+                                                <Button variant="ghost" size="sm" onClick={selectAllPlanTopics} className="h-7 text-[10px] font-bold text-slate-500 border border-slate-200 rounded-lg hover:bg-white">
+                                                    {selectedPlanTopics.length === allPlanTopics.length ? 'Deseleziona' : 'Seleziona Tutto'}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                                                               {/* Gruppi per Topic */}
                                         {Object.entries(
-                                            plan.topics.reduce((acc, t) => {
-                                                const topic = t.topic || "Vari/Altri";
-                                                if (!acc[topic]) acc[topic] = [];
-                                                acc[topic].push(t);
+                                            allPlanTopics.reduce((acc, t) => {
+                                                const topicGroup = t.topic || "Vari/Altri";
+                                                if (!acc[topicGroup]) acc[topicGroup] = [];
+                                                acc[topicGroup].push(t);
                                                 return acc;
                                             }, {})
                                         ).map(([topicName, topicItems], topicIdx) => (
                                             <div key={topicName} className="space-y-4">
                                                 <div className="flex items-center gap-3 px-1">
                                                     <div className={`w-2 h-6 rounded-full ${['bg-indigo-500', 'bg-emerald-500', 'bg-orange-500', 'bg-pink-500', 'bg-sky-500'][topicIdx % 5]}`} />
-                                                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
                                                         {topicName}
-                                                        <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-[10px] py-0 h-4">
+                                                        <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-[10px] py-0 h-4 border-none font-black">
                                                             {topicItems.length} {topicItems.length === 1 ? 'articolo' : 'articoli'}
                                                         </Badge>
                                                     </h3>
@@ -1465,173 +1521,110 @@ const AdminGenerator = ({
                                                 
                                                 <div className="grid grid-cols-1 gap-3">
                                                     {topicItems.map((item, idx) => {
-                                                        const globalIndex = plan.topics.findIndex(t => t.titolo === item.titolo);
                                                         const isSelected = !!selectedPlanTopics.find(t => t.titolo === item.titolo);
-                                                        
-                                                        // Check status from results or recentArticles
                                                         const resultMatch = results.find(r => r.titolo?.toLowerCase() === item.titolo?.toLowerCase());
                                                         const recentMatch = recentArticles.find(art => art.titolo?.toLowerCase() === item.titolo?.toLowerCase());
                                                         const isPublished = !!recentMatch || resultMatch?.publish_status === 'success';
                                                         const isDraft = recentMatch?.stato === 'draft';
                                                         const isGenerating = resultMatch?.generation_status === 'running' || resultMatch?.publish_status === 'running';
+                                                        
+                                                        // Resolve global index for plan topics if not queue item
+                                                        const planIndex = !item.isQueueItem ? plan?.topics?.findIndex(t => t.titolo === item.titolo) : -1;
 
                                                         return (
                                                             <Card 
                                                                 key={idx} 
-                                                                className={`group transition-all duration-300 border-slate-200 hover:shadow-md ${isSelected ? 'border-indigo-300 bg-indigo-50/20' : 'hover:border-slate-300'} ${isPublished ? 'opacity-85 bg-slate-50/20' : ''}`}
+                                                                className={`group transition-all duration-300 border-slate-100 hover:shadow-lg hover:shadow-indigo-500/5 ${isSelected ? 'border-indigo-400 ring-1 ring-indigo-400/20 bg-indigo-50/10' : 'hover:border-slate-200'} ${isPublished ? 'bg-slate-50/30' : ''}`}
                                                             >
-                                                                <CardContent className="p-0">
-                                                                    <div className="flex items-stretch min-h-[90px]">
-                                                                        {/* Checkbox Overlay Left */}
+                                                                <CardContent className="p-0 overflow-hidden">
+                                                                    <div className="flex items-stretch h-16">
+                                                                        {/* Select Area */}
                                                                         <div 
                                                                             onClick={() => !isPublished && togglePlanTopic(item)}
-                                                                            className={`w-10 flex items-center justify-center cursor-pointer transition-colors ${isPublished ? 'cursor-not-allowed' : isSelected ? 'bg-indigo-100/50' : 'hover:bg-slate-50'}`}
+                                                                            className={`w-12 flex items-center justify-center cursor-pointer transition-all border-r border-slate-50 ${isPublished ? 'cursor-not-allowed bg-emerald-50 text-emerald-500/40' : isSelected ? 'bg-indigo-500 text-white' : 'hover:bg-slate-50 text-slate-200'}`}
                                                                         >
                                                                             {isPublished ? (
-                                                                                <div className={`p-1 rounded-full ${isDraft ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                                                                    <CheckCircle2 className="w-4 h-4" />
-                                                                                </div>
+                                                                                <CheckCircle2 className="w-4 h-4" />
                                                                             ) : isGenerating ? (
-                                                                                <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />
+                                                                                <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
                                                                             ) : (
-                                                                                <Checkbox checked={isSelected} disabled={isPublished} className={isSelected ? 'bg-indigo-600 border-indigo-600' : ''} />
+                                                                                <Checkbox checked={isSelected} className={`h-4 w-4 border-slate-200 ${isSelected ? 'border-none accent-white mb-0' : ''}`} />
                                                                             )}
                                                                         </div>
 
-                                                                        {/* Image */}
-                                                                        <div className="relative w-24 bg-slate-100 flex-shrink-0 border-r border-slate-100 overflow-hidden group/img">
+                                                                        {/* Mini Image */}
+                                                                        <div className="relative w-20 bg-slate-50 flex-shrink-0 overflow-hidden group/img">
                                                                             {(item.image_url || resultMatch?.image_url || item.stock_image_url) ? (
                                                                                 <img 
                                                                                     src={resultMatch?.image_url || item.image_url || item.stock_image_url} 
-                                                                                    alt="Cover" 
-                                                                                    className="w-full h-full object-cover transition-transform group-hover/img:scale-110" 
+                                                                                    alt="" 
+                                                                                    className="w-full h-full object-cover grayscale-[30%] group-hover/img:grayscale-0 transition-all duration-500 group-hover/img:scale-110" 
                                                                                 />
                                                                             ) : (
-                                                                                <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                                                                    {isGenerating ? <Loader2 className="w-6 h-6 animate-spin" /> : <ImageIcon className="w-6 h-6" />}
+                                                                                <div className="w-full h-full flex items-center justify-center text-slate-200">
+                                                                                    <ImageIcon className="w-4 h-4" />
                                                                                 </div>
                                                                             )}
                                                                             {!isPublished && (
-                                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                                                                    <Button 
-                                                                                        variant="ghost" 
-                                                                                        size="icon" 
-                                                                                        className="h-7 w-7 bg-white/20 hover:bg-white/40 text-white rounded-full"
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            setActivePlanImageIndex(globalIndex);
-                                                                                            setImgSearchQuery(item.keyword || item.titolo);
-                                                                                            handleImageSearch(30, item.keyword || item.titolo);
-                                                                                        }}
-                                                                                    >
-                                                                                        <Search className="w-3.5 h-3.5" />
+                                                                                <div className="absolute inset-0 bg-indigo-900/60 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 bg-white/20 hover:bg-white text-white hover:text-indigo-900 rounded-lg p-0"
+                                                                                        onClick={(e) => { e.stopPropagation(); setActivePlanImageIndex(planIndex); setImgSearchQuery(item.keyword || item.titolo); handleImageSearch(30, item.keyword || item.titolo); }}>
+                                                                                        <Search className="w-3 h-3" />
                                                                                     </Button>
-                                                                                    <Button 
-                                                                                        variant="ghost" 
-                                                                                        size="icon" 
-                                                                                        className="h-7 w-7 bg-white/20 hover:bg-white/40 text-white rounded-full"
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            generateAIImageForTopic(globalIndex);
-                                                                                        }}
-                                                                                    >
-                                                                                        {searchingImages && activePlanImageIndex === globalIndex ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                                                                                    </Button>
-                                                                                </div>
-                                                                            )}
-                                                                            {isPublished && (
-                                                                                <div className="absolute bottom-1 right-1">
-                                                                                    <Badge className={`${isDraft ? 'bg-amber-500' : 'bg-emerald-500'} text-white text-[8px] py-0 px-1 border-none shadow-sm`}>
-                                                                                        {isDraft ? 'DRAFT' : 'LIVE'}
-                                                                                    </Badge>
                                                                                 </div>
                                                                             )}
                                                                         </div>
 
-                                                                        {/* Content */}
-                                                                        <div className="flex-1 p-3 flex flex-col justify-between">
-                                                                            <div>
-                                                                                <div className="flex items-center gap-2 mb-1">
-                                                                                    <Badge className={`text-[9px] py-0 px-1.5 h-4 font-bold border-none ${
-                                                                                        item.funnel === 'TOFU' ? 'bg-sky-100 text-sky-700' : 
-                                                                                        item.funnel === 'MOFU' ? 'bg-indigo-100 text-indigo-700' : 
-                                                                                        'bg-purple-100 text-purple-700'
+                                                                        {/* Info */}
+                                                                        <div className="flex-1 min-w-0 flex items-center px-4 gap-4">
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <div className="flex items-center gap-2 mb-0.5">
+                                                                                    <Badge className={`text-[8px] px-1 py-0 h-3.5 border-none font-black ${
+                                                                                        item.funnel === 'TOFU' ? 'bg-sky-50 text-sky-600' : 
+                                                                                        item.funnel === 'MOFU' ? 'bg-indigo-50 text-indigo-600' : 
+                                                                                        'bg-purple-50 text-purple-600'
                                                                                     }`}>
                                                                                         {item.funnel}
                                                                                     </Badge>
-                                                                                    {item.keyword && <span className="text-[10px] font-mono text-slate-400">KW: {item.keyword}</span>}
-                                                                                    {isPublished && recentMatch?.wordpress_link && (
-                                                                                        <a href={recentMatch.wordpress_link} target="_blank" className="text-[9px] text-blue-500 flex items-center gap-0.5 hover:underline ml-auto">
-                                                                                            Link <ExternalLink className="w-2.5 h-2.5" />
-                                                                                        </a>
-                                                                                    )}
+                                                                                    {item.keyword && <span className="text-[9px] font-mono font-bold text-slate-400 truncate tracking-tight uppercase">KW: {item.keyword}</span>}
                                                                                 </div>
-                                                                                <h4 className={`text-sm font-bold leading-snug transition-colors ${isPublished ? 'text-slate-500' : 'text-slate-900 group-hover:text-indigo-600'}`}>{item.titolo}</h4>
-                                                                                <div className="flex items-center justify-between mt-1">
-                                                                                    <p className="text-[11px] text-slate-500 italic line-clamp-1 flex-1">{item.motivo}</p>
-                                                                                    {item.outline && item.outline.length > 0 && (
-                                                                                        <Button 
-                                                                                            variant="ghost" 
-                                                                                            size="sm" 
-                                                                                            onClick={(e) => { e.stopPropagation(); toggleOutline(globalIndex); }}
-                                                                                            className="h-5 px-1.5 text-[9px] hover:bg-slate-100 text-slate-400 gap-1"
-                                                                                        >
-                                                                                            {expandedOutlines[globalIndex] ? 'Nascondi Outline' : 'Vedi Outline SEO'}
-                                                                                            {expandedOutlines[globalIndex] ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <h4 className={`text-xs font-bold leading-none truncate ${isPublished ? 'text-slate-400' : 'text-slate-800'}`}>
+                                                                                        {item.titolo}
+                                                                                    </h4>
+                                                                                    {item.isQueueItem && <Badge variant="outline" className="text-[7px] h-3 px-1 border-emerald-200 text-emerald-600 font-bold bg-emerald-50">AUDIT</Badge>}
+                                                                                </div>
+                                                                                <p className="text-[10px] text-slate-400 truncate mt-1 italic leading-none">{item.motivo}</p>
+                                                                            </div>
+
+                                                                            {/* Mini Actions */}
+                                                                            <div className="flex items-center gap-1 flex-shrink-0">
+                                                                                {isPublished ? (
+                                                                                     <Badge variant="outline" className={`text-[8px] font-black h-4 px-1 ${isDraft ? 'border-amber-200 text-amber-600' : 'border-emerald-200 text-emerald-600'}`}>
+                                                                                        {isDraft ? 'DRAFT' : 'LIVE'}
+                                                                                     </Badge>
+                                                                                ) : (
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        {!item.isQueueItem && (
+                                                                                            <Input
+                                                                                                type="date"
+                                                                                                className="h-7 text-[10px] w-28 bg-white border-slate-200"
+                                                                                                value={item.scheduled_date ? item.scheduled_date.split('T')[0] : ''}
+                                                                                                onChange={(e) => {
+                                                                                                    const newTopics = [...plan.topics];
+                                                                                                    newTopics[planIndex] = { ...newTopics[planIndex], scheduled_date: e.target.value ? new Date(e.target.value).toISOString() : null };
+                                                                                                    setPlan({ ...plan, topics: newTopics });
+                                                                                                }}
+                                                                                            />
+                                                                                        )}
+                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-indigo-600 rounded-lg hover:bg-slate-50" onClick={() => handleUseTopicInGenerator(item)}>
+                                                                                            <PenTool className="w-3.5 h-3.5" />
                                                                                         </Button>
-                                                                                    )}
-                                                                                </div>
-                                                                                {expandedOutlines[globalIndex] && item.outline && (
-                                                                                    <div className="mt-3 p-2 bg-slate-100 rounded-lg border border-slate-200 animate-in fade-in slide-in-from-top-1 duration-200">
-                                                                                        <p className="text-[9px] font-black text-slate-400 mb-2 uppercase tracking-tight">Struttura Ottimizzata:</p>
-                                                                                        <div className="space-y-1.5">
-                                                                                            {item.outline.map((o, oi) => (
-                                                                                                <div key={oi} className="flex items-start gap-2">
-                                                                                                    <Badge variant="outline" className={`text-[8px] h-3.5 px-1 shrink-0 ${o.type === 'h1' ? 'bg-indigo-600 text-white border-indigo-600' : o.type === 'h2' ? 'bg-slate-700 text-white' : 'bg-slate-200 text-slate-600'}`}>
-                                                                                                        {o.type.toUpperCase()}
-                                                                                                    </Badge>
-                                                                                                    <span className="text-[10px] text-slate-700 leading-tight">{o.text}</span>
-                                                                                                </div>
-                                                                                            ))}
-                                                                                        </div>
+                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-500 rounded-lg hover:bg-slate-50" onClick={() => item.isQueueItem ? handleRemoveFromQueue(item.titolo) : removeTopicFromPlan(planIndex)}>
+                                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                                        </Button>
                                                                                     </div>
                                                                                 )}
-                                                                            </div>
-                                                                        </div>
-
-                                                                        {/* Actions Right */}
-                                                                        <div className="w-40 p-3 border-l border-slate-50 flex flex-col justify-between items-end bg-slate-50/30">
-                                                                            <div className="flex items-center gap-1">
-                                                                                <Button 
-                                                                                    variant="ghost" 
-                                                                                    size="icon" 
-                                                                                    className="h-7 w-7 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
-                                                                                    onClick={() => handleUseTopicInGenerator(item)}
-                                                                                    title="Carica nel generatore"
-                                                                                >
-                                                                                    <ChevronRight className="w-4 h-4" />
-                                                                                </Button>
-                                                                                <Button 
-                                                                                    variant="ghost" 
-                                                                                    size="icon" 
-                                                                                    className="h-7 w-7 text-slate-300 hover:text-red-500 hover:bg-red-50"
-                                                                                    onClick={() => removeTopicFromPlan(globalIndex)}
-                                                                                >
-                                                                                    <X className="w-3.5 h-3.5" />
-                                                                                </Button>
-                                                                            </div>
-                                                                            
-                                                                            <div className="w-full">
-                                                                                <Input
-                                                                                    type="date"
-                                                                                    className="h-7 text-[10px] w-full bg-white border-slate-200"
-                                                                                    value={item.scheduled_date ? item.scheduled_date.split('T')[0] : ''}
-                                                                                    onChange={(e) => {
-                                                                                        const newTopics = [...plan.topics];
-                                                                                        newTopics[globalIndex] = { ...newTopics[globalIndex], scheduled_date: e.target.value ? new Date(e.target.value).toISOString() : null };
-                                                                                        setPlan({ ...plan, topics: newTopics });
-                                                                                    }}
-                                                                                />
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -1764,7 +1757,9 @@ const AdminGenerator = ({
                                         </div>
                                     )}
                                 </div>
-                            ) : (
+                            )}
+
+                            {!planLoading && allPlanTopics.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-24 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-200/5 transition-colors hover:bg-slate-200/10">
                                     <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-6">
                                         <BrainCircuit className="w-10 h-10 text-slate-300" />
@@ -1808,7 +1803,7 @@ const AdminGenerator = ({
                             <div className="article-full-preview bg-white">
                                 <style dangerouslySetInnerHTML={{ __html: `
                                     .article-full-preview .hero-block {
-                                        background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('${fullPreview.image_url ? (fullPreview.image_url.startsWith('http') ? fullPreview.image_url : ((process.env.REACT_APP_BACKEND_URL || "http://localhost:8000") || '') + fullPreview.image_url + '?auth=' + localStorage.getItem('token')) : "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=2070"}');
+                                        background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('${fullPreview.image_url || "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=2070"}');
                                         background-size: cover;
                                         background-position: center;
                                         padding: 120px 40px;

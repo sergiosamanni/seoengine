@@ -23,9 +23,22 @@ export const KnowledgeBaseTab = ({ knowledge, setKnowledge, isAdmin, effectiveCl
 
   const addUrl = () => {
     const trimmed = currentUrl.trim();
-    if (trimmed && !scrapeUrls.includes(trimmed)) {
-      setScrapeUrls([...scrapeUrls, trimmed]);
+    if (!trimmed) return;
+    
+    // Support comma or space separated URLs
+    const urls = trimmed.split(/[\s,]+/).filter(u => u.startsWith('http'));
+    
+    if (urls.length > 0) {
+      setScrapeUrls(prev => {
+        const newUrls = [...prev];
+        urls.forEach(u => {
+          if (!newUrls.includes(u)) newUrls.push(u);
+        });
+        return newUrls;
+      });
       setCurrentUrl('');
+    } else if (trimmed.length > 0 && !trimmed.startsWith('http')) {
+      toast.error('Gli URL devono iniziare con http:// o https://');
     }
   };
 
@@ -48,18 +61,25 @@ export const KnowledgeBaseTab = ({ knowledge, setKnowledge, isAdmin, effectiveCl
   };
 
   const handleScrapeWebsite = async () => {
-    const finalUrls = [...scrapeUrls];
-    if (currentUrl.trim() && !finalUrls.includes(currentUrl.trim())) {
-      finalUrls.push(currentUrl.trim());
+    // Collect all URLs: from the list and from the input
+    let finalUrls = [...scrapeUrls];
+    const trimmedCurrent = currentUrl.trim();
+    
+    if (trimmedCurrent) {
+        const inputUrls = trimmedCurrent.split(/[\s,]+/).filter(u => u.startsWith('http'));
+        inputUrls.forEach(u => {
+            if (!finalUrls.includes(u)) finalUrls.push(u);
+        });
     }
 
     if (finalUrls.length === 0) { 
-      toast.error('Inserisci almeno un URL'); 
+      toast.error('Inserisci almeno un URL valido (che inizi con http)'); 
       return; 
     }
 
     setScraping(true);
     setScrapeResult(null);
+    if (trimmedCurrent) setCurrentUrl(''); // Clear input if it was used
     try {
       const res = await axios.post(`${API}/clients/${effectiveClientId}/scrape-website`, {
         urls: finalUrls
