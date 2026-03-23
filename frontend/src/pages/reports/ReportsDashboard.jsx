@@ -50,13 +50,13 @@ export const ReportsDashboard = () => {
 
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-100 pb-8">
         <div>
-            <h1 className="text-3xl font-black text-indigo-600 tracking-tighter uppercase mb-1">Reportistica SEO</h1>
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Gestione centralizzata report mensili</p>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Reportistica SEO</h1>
+            <p className="text-slate-400 font-medium uppercase tracking-widest text-[9px]">Gestione centralizzata report mensili</p>
         </div>
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
           <Input 
             placeholder="Cerca cliente..." 
             className="pl-10 h-10 border-slate-100 bg-white focus:bg-white transition-all text-sm rounded-xl font-bold shadow-sm" 

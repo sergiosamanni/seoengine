@@ -111,25 +111,25 @@ export const ReportEditPage = () => {
         }
       `}</style>
 
-      <div className="flex items-center justify-between no-print">
+      <div className="flex items-center justify-between no-print border-b border-slate-100 pb-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/reports/client/${report.client_id}`)} className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold uppercase tracking-tighter text-[10px]">
-            <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Annulla
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/reports/client/${report.client_id}`)} className="h-8 w-8 p-0 rounded-full bg-slate-50 text-slate-400 hover:text-slate-600">
+            <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase leading-tight">{report.title}</h1>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Editor Report Dinamico</p>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">{report.title}</h1>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-none">Editor Report Mensile</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-            <Button onClick={() => window.print()} variant="outline" className="h-10 px-4 rounded-xl font-black uppercase tracking-widest text-[10px] bg-white border-slate-200">
-                <Printer className="w-4 h-4 mr-2 text-blue-500" /> Esporta PDF
+            <Button onClick={() => window.print()} variant="ghost" size="sm" className="h-8 px-3 rounded-lg font-bold uppercase tracking-tight text-[9px] text-slate-500 hover:bg-slate-50">
+                <Printer className="w-3.5 h-3.5 mr-1.5" /> PDF
             </Button>
-            <Button onClick={() => setIsDeleteConfirmOpen(true)} variant="outline" className="h-10 px-4 rounded-xl font-black uppercase tracking-widest text-[10px] bg-white border-red-200 text-red-500 hover:bg-red-50">
-                <Trash2 className="w-4 h-4 mr-2" /> Elimina
+            <Button onClick={() => setIsDeleteConfirmOpen(true)} variant="ghost" size="sm" className="h-8 px-3 rounded-lg font-bold uppercase tracking-tight text-[9px] text-red-300 hover:text-red-500 hover:bg-red-50">
+                <Trash2 className="w-3.5 h-3.5" />
             </Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 h-10 px-6 rounded-xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-blue-100">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />} Aggiorna Report
+            <Button onClick={handleSave} disabled={saving} size="sm" className="bg-blue-600 hover:bg-blue-700 h-9 px-4 rounded-xl font-bold uppercase tracking-tight text-[10px] shadow-sm ml-2">
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />} Salva Report
             </Button>
         </div>
       </div>
