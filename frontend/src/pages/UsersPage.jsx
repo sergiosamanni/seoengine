@@ -59,6 +59,7 @@ export const UsersPage = () => {
   const [selectedClientIds, setSelectedClientIds] = useState([]);
   const [assigning, setAssigning] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(null);
+  const [clientSearch, setClientSearch] = useState('');
   
   // Create User State
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -333,39 +334,76 @@ export const UsersPage = () => {
       </Card>
 
       {/* Dialogs - Consistent Minimal Style */}
-      <Dialog open={!!assignDialog} onOpenChange={(open) => { if (!open) { setAssignDialog(null); setSelectedClientIds([]); } }}>
-        <DialogContent className="rounded-2xl border-[#f1f3f6] max-w-md p-0 overflow-hidden">
-          <DialogHeader className="p-8 bg-slate-50 border-b border-[#f1f3f6]">
-            <DialogTitle className="text-lg font-bold">Gestisci Accesso Siti</DialogTitle>
-            <DialogDescription className="text-xs font-medium text-slate-400 uppercase tracking-widest mt-1">
-              Seleziona i siti gestibili da {assignDialog?.name}
-            </DialogDescription>
+      <Dialog open={!!assignDialog} onOpenChange={(open) => { if (!open) { setAssignDialog(null); setSelectedClientIds([]); setClientSearch(''); } }}>
+        <DialogContent className="rounded-3xl border-[#f1f3f6] max-w-xl p-0 overflow-hidden shadow-2xl">
+          <DialogHeader className="p-8 bg-slate-900 border-b border-[#f1f3f6] text-white">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                  <Plus className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold tracking-tight">Associa Siti Web</DialogTitle>
+                <DialogDescription className="text-xs font-medium text-slate-400 uppercase tracking-widest mt-0.5">
+                  Permessi per {assignDialog?.name}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="p-0">
-             <ScrollArea className="h-[300px] p-8">
-                <div className="space-y-4">
-                    {clients.map(c => (
-                        <div key={c.id} className="flex items-center space-x-3 p-3 rounded-xl border border-slate-50 hover:bg-slate-50 transition-all">
-                            <Checkbox 
-                                id={`assign-${c.id}`} 
-                                checked={selectedClientIds.includes(c.id)}
-                                onCheckedChange={(checked) => {
-                                    if (checked) setSelectedClientIds([...selectedClientIds, c.id]);
-                                    else setSelectedClientIds(selectedClientIds.filter(id => id !== c.id));
-                                }}
-                            />
-                            <label htmlFor={`assign-${c.id}`} className="text-xs font-bold text-slate-700 cursor-pointer flex-1">
-                                {c.nome}
-                                <span className="block text-[9px] text-slate-400 font-medium uppercase tracking-tighter">{c.sito_web?.replace('https://','')}</span>
-                            </label>
+          <div className="p-8 space-y-4">
+              <div className="relative group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                <Input 
+                  placeholder="Cerca dominio o cliente..." 
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  className="pl-10 h-11 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-medium transition-all focus:bg-white"
+                />
+              </div>
+
+              <ScrollArea className="h-[320px] pr-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {clients.filter(c => 
+                        c.nome.toLowerCase().includes(clientSearch.toLowerCase()) || 
+                        c.sito_web?.toLowerCase().includes(clientSearch.toLowerCase())
+                    ).map(c => (
+                        <div 
+                          key={c.id} 
+                          onClick={() => {
+                            if (selectedClientIds.includes(c.id)) setSelectedClientIds(selectedClientIds.filter(id => id !== c.id));
+                            else setSelectedClientIds([...selectedClientIds, c.id]);
+                          }}
+                          className={`flex items-center space-x-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                            selectedClientIds.includes(c.id) 
+                            ? 'bg-blue-50 border-blue-200 shadow-sm ring-1 ring-blue-100' 
+                            : 'bg-white border-slate-100 hover:border-slate-200'
+                          }`}
+                        >
+                            <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${selectedClientIds.includes(c.id) ? 'bg-blue-600 border-blue-600' : 'bg-slate-50 border-slate-200'}`}>
+                                {selectedClientIds.includes(c.id) && <CheckCircle2 className="w-3 h-3 text-white" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className={`text-[11px] font-bold truncate ${selectedClientIds.includes(c.id) ? 'text-blue-700' : 'text-slate-700'}`}>{c.nome}</p>
+                                <p className="text-[9px] text-slate-400 font-medium tracking-tight truncate">{c.sito_web?.replace('https://','')}</p>
+                            </div>
                         </div>
                     ))}
                 </div>
-             </ScrollArea>
+              </ScrollArea>
+              
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                  {selectedClientIds.length} siti selezionati
+                </p>
+                {selectedClientIds.length > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedClientIds([])} className="h-6 text-[9px] font-bold uppercase tracking-widest text-red-400 hover:text-red-500 hover:bg-red-50 px-2">
+                    Deseleziona tutti
+                  </Button>
+                )}
+              </div>
           </div>
-          <DialogFooter className="p-6 bg-slate-50 border-t border-[#f1f3f6] gap-2 flex-row sm:justify-end">
-            <Button variant="ghost" className="text-xs font-bold uppercase tracking-widest text-slate-400 h-10 px-6 rounded-xl" onClick={() => setAssignDialog(null)}>Annulla</Button>
-            <Button onClick={assignUser} disabled={assigning} className="bg-slate-900 h-10 px-8 rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-slate-200" data-testid="assign-confirm-btn">
+          <DialogFooter className="p-8 bg-slate-50 border-t border-[#f1f3f6] gap-3 flex-row sm:justify-end">
+            <Button variant="ghost" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 h-10 px-6 rounded-xl" onClick={() => setAssignDialog(null)}>Annulla</Button>
+            <Button onClick={assignUser} disabled={assigning} className="bg-slate-900 h-10 px-8 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-slate-200" data-testid="assign-confirm-btn">
               {assigning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Salva Permessi'}
             </Button>
           </DialogFooter>
@@ -373,78 +411,110 @@ export const UsersPage = () => {
       </Dialog>
 
       {/* NEW: Create User Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="rounded-3xl border-[#f1f3f6] max-w-md p-0 overflow-hidden shadow-2xl">
-            <DialogHeader className="p-10 bg-slate-900 text-white">
-                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-6">
-                    <UserPlus className="w-6 h-6 text-white" />
+      <Dialog open={createDialogOpen} onOpenChange={(open) => { setCreateDialogOpen(open); if(!open) setClientSearch(''); }}>
+        <DialogContent className="rounded-3xl border-[#f1f3f6] max-w-xl p-0 overflow-hidden shadow-2xl">
+            <DialogHeader className="p-8 bg-slate-900 text-white">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                        <UserPlus className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <DialogTitle className="text-xl font-bold tracking-tight">Crea Nuovo Utente</DialogTitle>
+                        <DialogDescription className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-0.5 opacity-60">
+                            Definisci le credenziali e il ruolo
+                        </DialogDescription>
+                    </div>
                 </div>
-                <DialogTitle className="text-2xl font-bold tracking-tight">Crea Nuovo Utente</DialogTitle>
-                <DialogDescription className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2 opacity-60">
-                    Definisci le credenziali e il ruolo
-                </DialogDescription>
             </DialogHeader>
-            <div className="p-10 space-y-6">
-                <div className="grid grid-cols-1 gap-6">
+            <div className="p-8 space-y-6">
+                <div className="grid grid-cols-1 gap-5">
                     <div className="space-y-2">
                         <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Nome Completo</Label>
                         <Input 
                             value={newUser.name} 
                             onChange={e => setNewUser({...newUser, name: e.target.value})}
                             placeholder="Es: Mario Rossi" 
-                            className="h-12 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-medium"
+                            className="h-11 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-medium focus:bg-white"
                         />
                     </div>
-                    <div className="space-y-2">
-                        <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Email Aziendale</Label>
-                        <Input 
-                            value={newUser.email} 
-                            onChange={e => setNewUser({...newUser, email: e.target.value})}
-                            placeholder="mario@esempio.it" 
-                            className="h-12 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-medium"
-                        />
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Email Aziendale</Label>
+                            <Input 
+                                value={newUser.email} 
+                                onChange={e => setNewUser({...newUser, email: e.target.value})}
+                                placeholder="mario@esempio.it" 
+                                className="h-11 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-medium focus:bg-white"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Password Accesso</Label>
+                            <Input 
+                                type="password"
+                                value={newUser.password} 
+                                onChange={e => setNewUser({...newUser, password: e.target.value})}
+                                placeholder="••••••••" 
+                                className="h-11 border-slate-100 bg-slate-50/50 rounded-xl px-4 font-medium focus:bg-white"
+                            />
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Password</Label>
-                        <Input 
-                            type="password"
-                            value={newUser.password} 
-                            onChange={e => setNewUser({...newUser, password: e.target.value})}
-                            placeholder="••••••••" 
-                            className="h-12 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-medium"
-                        />
-                    </div>
+
                     <div className="space-y-2">
                         <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Ruolo Sistema</Label>
                         <Select value={newUser.role} onValueChange={v => setNewUser({...newUser, role: v})}>
-                            <SelectTrigger className="h-12 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-bold">
+                            <SelectTrigger className="h-11 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-bold">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-slate-100 shadow-xl">
-                                <SelectItem value="client" className="text-xs font-bold py-3">Cliente (Limitato ai suoi siti)</SelectItem>
-                                <SelectItem value="admin" className="text-xs font-bold py-3">Admin (Accesso totale)</SelectItem>
+                                <SelectItem value="client" className="text-xs font-bold py-2.5">Cliente (Accesso Limitato)</SelectItem>
+                                <SelectItem value="admin" className="text-xs font-bold py-2.5">Administrator (Accesso Totale)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
                     {newUser.role === 'client' && (
-                        <div className="space-y-3">
-                            <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Associa Siti Web</Label>
-                            <ScrollArea className="h-[200px] rounded-2xl border border-slate-50 bg-slate-50/30 p-4">
-                                <div className="space-y-3">
-                                    {clients.map(c => (
-                                        <div key={c.id} className="flex items-center space-x-3 p-2 hover:bg-white rounded-lg transition-all">
-                                            <Checkbox 
-                                                id={`new-assign-${c.id}`} 
-                                                checked={newUser.client_ids.includes(c.id)}
-                                                onCheckedChange={(checked) => {
-                                                    if (checked) setNewUser({...newUser, client_ids: [...newUser.client_ids, c.id]});
-                                                    else setNewUser({...newUser, client_ids: newUser.client_ids.filter(id => id !== c.id)});
-                                                }}
-                                            />
-                                            <label htmlFor={`new-assign-${c.id}`} className="text-[11px] font-bold text-slate-600 cursor-pointer flex-1">
-                                                {c.nome}
-                                            </label>
+                        <div className="space-y-3 pt-2">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Associa Siti Web</Label>
+                                <span className="text-[9px] text-blue-500 font-bold uppercase px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100">{newUser.client_ids.length} selezionati</span>
+                            </div>
+                            
+                            <div className="relative group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                <Input 
+                                    placeholder="Cerca dominio o cliente..." 
+                                    value={clientSearch}
+                                    onChange={(e) => setClientSearch(e.target.value)}
+                                    className="pl-10 h-10 border-slate-100 bg-slate-50/50 rounded-xl px-5 text-[11px] font-medium transition-all focus:bg-white"
+                                />
+                            </div>
+
+                            <ScrollArea className="h-[220px] rounded-2xl border border-slate-50 bg-slate-50/30 p-4 shadow-inner">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {clients.filter(c => 
+                                        c.nome.toLowerCase().includes(clientSearch.toLowerCase()) || 
+                                        c.sito_web?.toLowerCase().includes(clientSearch.toLowerCase())
+                                    ).map(c => (
+                                        <div 
+                                            key={c.id} 
+                                            onClick={() => {
+                                                if (newUser.client_ids.includes(c.id)) setNewUser({...newUser, client_ids: newUser.client_ids.filter(id => id !== c.id)});
+                                                else setNewUser({...newUser, client_ids: [...newUser.client_ids, c.id]});
+                                            }}
+                                            className={`flex items-center space-x-2.5 p-2.5 rounded-xl border transition-all cursor-pointer ${
+                                                newUser.client_ids.includes(c.id) 
+                                                ? 'bg-white border-blue-200 shadow-sm ring-1 ring-blue-50' 
+                                                : 'opacity-70 border-transparent hover:opacity-100 hover:bg-white hover:border-slate-100'
+                                            }`}
+                                        >
+                                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${newUser.client_ids.includes(c.id) ? 'bg-blue-600 border-blue-600' : 'bg-slate-200 border-slate-300'}`}>
+                                                {newUser.client_ids.includes(c.id) && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-[10px] font-bold truncate ${newUser.client_ids.includes(c.id) ? 'text-blue-700' : 'text-slate-600'}`}>{c.nome}</p>
+                                                <p className="text-[8px] text-slate-400 font-medium truncate tracking-tight">{c.sito_web?.replace('https://','')}</p>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -453,10 +523,10 @@ export const UsersPage = () => {
                     )}
                 </div>
             </div>
-            <DialogFooter className="p-8 bg-slate-50 border-t border-[#f1f3f6] gap-3 flex-row">
-                <Button variant="ghost" className="flex-1 text-[10px] font-black uppercase tracking-widest text-slate-400 h-14 rounded-2xl" onClick={() => setCreateDialogOpen(false)}>Annulla</Button>
-                <Button onClick={handleCreateUser} disabled={creating} className="flex-1 bg-slate-900 text-white h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-200 active:scale-95 transition-all">
-                    {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Crea Account'}
+            <DialogFooter className="p-8 bg-slate-50 border-t border-[#f1f3f6] gap-3 flex-row sm:justify-end">
+                <Button variant="ghost" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 h-11 px-6 rounded-xl" onClick={() => setCreateDialogOpen(false)}>Annulla</Button>
+                <Button onClick={handleCreateUser} disabled={creating} className="bg-slate-900 text-white h-11 px-10 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-slate-200 active:scale-95 transition-all">
+                    {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Shield className="w-3.5 h-3.5 mr-2" />} Crea Account
                 </Button>
             </DialogFooter>
         </DialogContent>
