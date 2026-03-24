@@ -8,6 +8,7 @@ import {
   Loader2, FileText, History, ChevronDown, Trash2, ExternalLink, Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmationModal } from '../ui/confirmation-modal';
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
@@ -17,6 +18,10 @@ export const ArticleHistory = ({ effectiveClientId, getAuthHeaders }) => {
   const [open, setOpen] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [expandedContent, setExpandedContent] = useState(null);
+  
+  // Deletion States
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [articleToDelete, setArticleToDelete] = useState(null);
 
   const fetchArticles = async () => {
     if (articles.length > 0 && !open) { setOpen(true); return; }
@@ -40,13 +45,21 @@ export const ArticleHistory = ({ effectiveClientId, getAuthHeaders }) => {
     } catch (e) { setExpandedContent(null); }
   };
 
+  const confirmDelete = (id) => {
+    setArticleToDelete(id);
+    setIsConfirmOpen(true);
+  };
+
   const deleteArticle = async (id) => {
-    if (!window.confirm('Eliminare questo articolo?')) return;
     try {
       await axios.delete(`${API}/articles/${id}`, { headers: getAuthHeaders() });
       setArticles(articles.filter(a => a.id !== id));
       toast.success('Articolo eliminato');
     } catch (e) { toast.error('Errore eliminazione'); }
+    finally {
+      setIsConfirmOpen(false);
+      setArticleToDelete(null);
+    }
   };
 
   return (
@@ -105,7 +118,7 @@ export const ArticleHistory = ({ effectiveClientId, getAuthHeaders }) => {
                                 </a>
                               </Button>
                             )}
-                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteArticle(a.id); }} className="h-8 w-8 rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50">
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); confirmDelete(a.id); }} className="h-8 w-8 rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50">
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
                           </div>
@@ -138,6 +151,13 @@ export const ArticleHistory = ({ effectiveClientId, getAuthHeaders }) => {
           </CardContent>
         </Card>
       )}
+      <ConfirmationModal
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={() => deleteArticle(articleToDelete)}
+        title="Elimina Articolo"
+        description="Sei sicuro di voler eliminare definitivamente questo articolo? L'azione non può essere annullata."
+      />
     </div>
   );
 };

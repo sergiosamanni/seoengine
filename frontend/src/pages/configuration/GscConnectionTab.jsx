@@ -9,6 +9,7 @@ import {
     BarChart3, CheckCircle2, Unlink, Loader2, Save, Key, Globe, Info, AlertCircle 
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmationModal } from '../../components/ui/confirmation-modal';
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
@@ -20,6 +21,7 @@ export const GscConnectionTab = ({ clientId, getAuthHeaders, isAdmin }) => {
     const [siteUrl, setSiteUrl] = useState('');
     const [clientIdInput, setClientIdInput] = useState('');
     const [clientSecretInput, setClientSecretInput] = useState('');
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
     const fetchStatus = async () => {
         try {
@@ -88,7 +90,6 @@ export const GscConnectionTab = ({ clientId, getAuthHeaders, isAdmin }) => {
     };
 
     const handleDisconnect = async () => {
-        if (!window.confirm('Disconnettere Google Search Console?')) return;
         try {
             await axios.post(`${API}/clients/${clientId}/gsc-disconnect`, {}, { 
                 headers: getAuthHeaders() 
@@ -97,6 +98,8 @@ export const GscConnectionTab = ({ clientId, getAuthHeaders, isAdmin }) => {
             fetchStatus();
         } catch (error) {
             toast.error('Errore disconnessione');
+        } finally {
+            setIsConfirmOpen(false);
         }
     };
 
@@ -117,7 +120,7 @@ export const GscConnectionTab = ({ clientId, getAuthHeaders, isAdmin }) => {
                                 <p className="text-sm text-emerald-600 truncate max-w-md">{status.site_url}</p>
                             </div>
                         </div>
-                        <Button variant="outline" size="sm" onClick={handleDisconnect} className="text-red-500 border-red-200 hover:bg-red-50">
+                        <Button variant="outline" size="sm" onClick={() => setIsConfirmOpen(true)} className="text-red-500 border-red-200 hover:bg-red-50">
                             <Unlink className="w-4 h-4 mr-2" />Disconnetti
                         </Button>
                     </CardContent>
@@ -221,6 +224,14 @@ export const GscConnectionTab = ({ clientId, getAuthHeaders, isAdmin }) => {
                     </p>
                 </CardContent>
             </Card>
+
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={handleDisconnect}
+                title="Disconnetti GSC"
+                description="Sei sicuro di voler disconnettere Google Search Console per questo cliente? L'accesso ai dati di traffico verrà interrotto."
+            />
         </div>
     );
 };

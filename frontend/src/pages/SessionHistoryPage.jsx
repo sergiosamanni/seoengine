@@ -43,6 +43,7 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { ConfirmationModal } from '../components/ui/confirmation-modal';
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
@@ -52,8 +53,11 @@ export const SessionHistoryPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState([]);
-  const [selectedSession, setSelectedSession] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
+  
+  // Deletion States
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState(null);
 
   const effectiveClientId = isAdmin ? clientId : user?.client_id;
 
@@ -90,9 +94,12 @@ export const SessionHistoryPage = () => {
     }
   };
 
-  const handleDelete = async (sessionId) => {
-    if (!window.confirm('Sei sicuro di voler eliminare questa sessione?')) return;
+  const confirmDelete = (sessionId) => {
+    setSessionToDelete(sessionId);
+    setIsConfirmOpen(true);
+  };
 
+  const handleDelete = async (sessionId) => {
     try {
       await axios.delete(`${API}/clients/${effectiveClientId}/seo-sessions/${sessionId}`, {
         headers: getAuthHeaders()
@@ -101,6 +108,9 @@ export const SessionHistoryPage = () => {
       fetchSessions();
     } catch (error) {
       toast.error('Errore nell\'eliminazione');
+    } finally {
+      setIsConfirmOpen(false);
+      setSessionToDelete(null);
     }
   };
 
@@ -249,7 +259,7 @@ export const SessionHistoryPage = () => {
                               Ripristina
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onClick={() => handleDelete(session.id)}
+                              onClick={() => confirmDelete(session.id)}
                               className="text-red-600 focus:text-red-600"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
@@ -380,6 +390,13 @@ export const SessionHistoryPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmationModal
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={() => handleDelete(sessionToDelete)}
+        title="Elimina Sessione"
+        description="Sei sicuro di voler eliminare definitivamente questa sessione? L'azione non può essere annullata."
+      />
     </div>
   );
 };

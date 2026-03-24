@@ -57,6 +57,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
+import { ConfirmationModal } from '../components/ui/confirmation-modal';
 import { toast } from 'sonner';
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
@@ -99,6 +100,12 @@ export const ClientsPage = () => {
     attivo: true
   });
   const [newSiteInput, setNewSiteInput] = useState('');
+  
+  // Deletion States
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deletingClientId, setDeletingClientId] = useState(null);
+  const [workspaceConfirmOpen, setWorkspaceConfirmOpen] = useState(false);
+  const [workspaceToDelete, setWorkspaceToDelete] = useState(null);
 
   const fetchClients = async () => {
     try {
@@ -147,9 +154,12 @@ export const ClientsPage = () => {
     }
   };
 
-  const handleDelete = async (clientId) => {
-    if (!window.confirm('Sei sicuro di voler eliminare questo cliente?')) return;
+  const confirmDelete = (clientId) => {
+    setDeletingClientId(clientId);
+    setDeleteConfirmOpen(true);
+  };
 
+  const handleDelete = async (clientId) => {
     try {
       await axios.delete(`${API}/clients/${clientId}`, {
         headers: getAuthHeaders()
@@ -158,6 +168,29 @@ export const ClientsPage = () => {
       fetchClients();
     } catch (error) {
       toast.error('Errore durante l\'eliminazione');
+    } finally {
+      setDeleteConfirmOpen(false);
+      setDeletingClientId(null);
+    }
+  };
+
+  const confirmWorkspaceDelete = (client) => {
+    setWorkspaceToDelete(client);
+    setWorkspaceConfirmOpen(true);
+  };
+
+  const handleWorkspaceDelete = async (clientId) => {
+    try {
+      await axios.delete(`${API}/clients/${clientId}`, {
+        headers: getAuthHeaders()
+      });
+      toast.success('Workspace eliminato');
+      fetchClients();
+    } catch (e) {
+      toast.error('Errore');
+    } finally {
+      setWorkspaceConfirmOpen(false);
+      setWorkspaceToDelete(null);
     }
   };
 
@@ -493,7 +526,7 @@ export const ClientsPage = () => {
                                     </DropdownMenuItem>
                                     <div className="h-px bg-[#f1f3f6] my-1.5 mx-1" />
                                     <DropdownMenuItem
-                                      onClick={() => { if (window.confirm('Eliminare questo workspace?')) handleDelete(client.id); }}
+                                      onClick={() => confirmWorkspaceDelete(client)}
                                       className="rounded-lg text-xs font-semibold p-2 text-red-500 focus:text-red-600 focus:bg-red-50"
                                     >
                                       <Trash2 className="w-3.5 h-3.5 mr-2" />
@@ -514,6 +547,22 @@ export const ClientsPage = () => {
           })}
         </Accordion>
       )}
+      {/* Delete Confirmations */}
+      <ConfirmationModal
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={() => handleDelete(deletingClientId)}
+        title="Elimina Cliente"
+        description={`Sei sicuro di voler eliminare il cliente selezionato? Questa azione è irreversibile e comporterà la perdita di tutti i dati associati.`}
+      />
+
+      <ConfirmationModal
+        isOpen={workspaceConfirmOpen}
+        onClose={() => setWorkspaceConfirmOpen(false)}
+        onConfirm={() => handleWorkspaceDelete(workspaceToDelete?.id)}
+        title="Elimina Workspace"
+        description={`Stai per eliminare il workspace "${workspaceToDelete?.nome}". L'azione non può essere annullata.`}
+      />
     </div>
   );
 };

@@ -41,6 +41,7 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { ConfirmationModal } from '../components/ui/confirmation-modal';
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
@@ -56,6 +57,10 @@ export const ArticlesPage = () => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [clients, setClients] = useState([]);
   const [clientFilter, setClientFilter] = useState('all');
+  
+  // Delete Confirmation
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [articleToDelete, setArticleToDelete] = useState(null);
 
   const fetchArticles = async () => {
     try {
@@ -163,9 +168,12 @@ export const ArticlesPage = () => {
     }
   };
 
-  const handleDelete = async (articleId) => {
-    if (!window.confirm('Sei sicuro di voler eliminare questo articolo?')) return;
+  const confirmDelete = (articleId) => {
+    setArticleToDelete(articleId);
+    setDeleteConfirmOpen(true);
+  };
 
+  const handleDelete = async (articleId) => {
     try {
       await axios.delete(`${API}/articles/${articleId}`, {
         headers: getAuthHeaders()
@@ -174,6 +182,9 @@ export const ArticlesPage = () => {
       fetchArticles();
     } catch (error) {
       toast.error('Errore durante l\'eliminazione');
+    } finally {
+      setDeleteConfirmOpen(false);
+      setArticleToDelete(null);
     }
   };
 
@@ -391,7 +402,7 @@ export const ArticlesPage = () => {
                           )}
                           <div className="h-px bg-[#f1f3f6] my-1.5 mx-1" />
                           <DropdownMenuItem 
-                            onClick={() => handleDelete(article.id)}
+                            onClick={() => confirmDelete(article.id)}
                             className="rounded-lg text-xs font-semibold p-2 text-red-500 focus:text-red-600 focus:bg-red-50"
                           >
                             <Trash2 className="w-3.5 h-3.5 mr-2" />
@@ -522,6 +533,13 @@ export const ArticlesPage = () => {
           </Card>
         </div>
       )}
+      <ConfirmationModal
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={() => handleDelete(articleToDelete)}
+        title="Elimina Articolo"
+        description="Sei sicuro di voler eliminare definitivamente questo articolo? L'azione non può essere annullata."
+      />
     </div>
   );
 };

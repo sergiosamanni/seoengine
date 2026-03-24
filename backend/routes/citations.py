@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 import pandas as pd
 import io
 import logging
+from fastapi.responses import StreamingResponse
 
 from database import db
 from auth import get_current_user, require_admin
@@ -116,6 +117,7 @@ async def toggle_citation(toggle: CitationToggle, current_user: dict = Depends(g
         update_data = {
             "date": toggle.date or datetime.now().strftime("%d-%m-%Y"),
             "notes": toggle.notes,
+            "link": toggle.link,
             "updated_at": now
         }
         await db.citations.update_one({"id": existing["id"]}, {"$set": update_data})
@@ -135,7 +137,42 @@ async def toggle_citation(toggle: CitationToggle, current_user: dict = Depends(g
             "date": toggle.date or datetime.now().strftime("%d-%m-%Y"),
             "status": True,
             "notes": toggle.notes,
+            "link": toggle.link,
             "created_at": now
         }
         await db.citations.insert_one(doc)
         return CitationResponse(**doc)
+
+@router.get("/portals/template")
+async def get_portal_template(current_user: dict = Depends(require_admin)):
+    """Genera un file Excel di esempio per l'importazione dei portali."""
+    df = pd.DataFrame([
+        {
+            "name": "Esempio Portale 1 (es: Pagine Gialle)", 
+            "url": "https://www.paginegialle.it", 
+            "category": "directory"
+        },
+        {
+            "name": "Esempio Portale 2 (es: Cylex)", 
+            "url": "https://www.cylex-italia.it", 
+            "category": "directory"
+        }
+    ])
+    
+    output = io.BytesIO()
+    # Use pandas with xlsxwriter engine to create an Excel file in memory
+    try:
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name='Templates')
+    except Exception as e:
+        # Fallback to basic openpyxl if xlsxwriter is not present
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Templates')
+            
+    output.seek(0)
+    
+    return StreamingResponse(
+        output, 
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=template_portali.xlsx"}
+    )

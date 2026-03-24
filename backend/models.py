@@ -271,6 +271,7 @@ class CitationToggle(BaseModel):
     date: Optional[str] = None
     status: bool = True
     notes: Optional[str] = None
+    link: Optional[str] = None
 
 
 class CitationResponse(BaseModel):
@@ -280,4 +281,5 @@ class CitationResponse(BaseModel):
     date: str
     status: bool
     notes: Optional[str] = None
+    link: Optional[str] = None
     created_at: str

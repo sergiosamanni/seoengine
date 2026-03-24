@@ -8,6 +8,25 @@ from routes.auth_users import get_current_user
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
+async def get_citations_for_report(client_id: str, report_date: str):
+    """Retrieve citations for a specific client and month (MM-YYYY)."""
+    # Citation date format is DD-MM-YYYY
+    # Report date format is MM-YYYY
+    citations = await db.citations.find({
+        "client_id": client_id,
+        "date": {"$regex": f".*-{report_date}$"}
+    }, {"_id": 0}).to_list(100)
+    
+    # Enrich with portal names
+    portal_ids = list(set([c["portal_id"] for c in citations]))
+    portals = await db.portals.find({"id": {"$in": portal_ids}}, {"_id": 0}).to_list(100)
+    portal_map = {p["id"]: p["name"] for p in portals}
+    
+    for c in citations:
+        c["portal_name"] = portal_map.get(c["portal_id"], "N/A")
+        
+    return citations
+
 @router.post("/{client_id}", response_model=ReportResponse)
 async def create_report(client_id: str, report: ReportCreate, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin":
@@ -20,13 +39,19 @@ async def create_report(client_id: str, report: ReportCreate, current_user: dict
     
     now = datetime.utcnow().isoformat()
     report_dict = report.dict()
+    
+    # Auto-inject citations for the selected month
+    citations = await get_citations_for_report(client_id, report_dict["date"])
+    if "modules" not in report_dict or report_dict["modules"] is None:
+        report_dict["modules"] = {}
+    report_dict["modules"]["citations_local"] = citations
+
     report_dict.update({
         "id": str(uuid.uuid4()),
         "client_id": client_id,
         "created_at": now,
         "updated_at": now,
-        "is_archived": False,
-        "modules": report_dict.get("modules") or {}
+        "is_archived": False
     })
     
     await db.reports.insert_one(report_dict)
@@ -54,6 +79,11 @@ async def get_report_detail(report_id: str, current_user: dict = Depends(get_cur
     if current_user["role"] != "admin" and report["client_id"] not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso negato")
     
+    # Refresh citations module on fetch to ensure it's up to date
+    current_citations = await get_citations_for_report(report["client_id"], report["date"])
+    if "modules" not in report: report["modules"] = {}
+    report["modules"]["citations_local"] = current_citations
+    
     return report
 
 @router.put("/{report_id}", response_model=ReportResponse)
@@ -71,6 +101,10 @@ async def update_report(report_id: str, report_update: ReportUpdate, current_use
     await db.reports.update_one({"id": report_id}, {"$set": update_data})
     
     updated = await db.reports.find_one({"id": report_id})
+    # Also refresh citations if date or client changed (or just always)
+    refreshed_citations = await get_citations_for_report(updated["client_id"], updated["date"])
+    updated["modules"]["citations_local"] = refreshed_citations
+    
     return updated
 
 @router.delete("/{report_id}")
