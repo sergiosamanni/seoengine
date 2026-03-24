@@ -11,7 +11,7 @@ import {
 import { ScrollArea, ScrollBar } from '../components/ui/scroll-area';
 import { 
   MapPin, Plus, Search, FileDown, FileUp, Loader2, CheckCircle2, 
-  Trash2, ExternalLink, Filter, Globe, X, Check
+  Trash2, ExternalLink, Filter, Globe, X, Check, Users
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
@@ -26,10 +26,13 @@ export const CitationsPage = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [clientSearch, setClientSearch] = useState('');
+  const [clientModalSearch, setClientModalSearch] = useState('');
+  const [visibleClientIds, setVisibleClientIds] = useState([]);
   
   // Modals
   const [isPortalModalOpen, setIsPortalModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isClientSelectModalOpen, setIsClientSelectModalOpen] = useState(false);
   const [newPortal, setNewPortal] = useState({ name: '', url: '', category: 'directory' });
   const [toggling, setToggling] = useState({}); // { portalId_clientId: true }
   const [importing, setImporting] = useState(false);
@@ -49,6 +52,9 @@ export const CitationsPage = () => {
       setPortals(pRes.data);
       setClients(cRes.data);
       setCitations(citRes.data);
+      if (visibleClientIds.length === 0) {
+        setVisibleClientIds(cRes.data.map(c => c.id));
+      }
     } catch (e) {
       toast.error('Errore nel caricamento dei dati');
     } finally {
@@ -121,6 +127,7 @@ export const CitationsPage = () => {
   );
 
   const filteredClients = clients.filter(c => 
+    visibleClientIds.includes(c.id) &&
     c.nome.toLowerCase().includes(clientSearch.toLowerCase())
   );
 
@@ -134,6 +141,9 @@ export const CitationsPage = () => {
             <p className="text-slate-400 font-medium uppercase tracking-widest text-[9px]">Presenza digitale nei portali di settore e locali</p>
         </div>
         <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIsClientSelectModalOpen(true)} className="h-9 px-4 rounded-xl font-bold text-[10px] uppercase tracking-widest border-slate-200 bg-white shadow-sm">
+                <Users className="w-3.5 h-3.5 mr-2" /> Gestisci Clienti
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setIsImportModalOpen(true)} className="h-9 px-4 rounded-xl font-bold text-[10px] uppercase tracking-widest border-slate-200 bg-white shadow-sm">
                 <FileUp className="w-3.5 h-3.5 mr-2" /> Importa Excel
             </Button>
@@ -310,6 +320,72 @@ export const CitationsPage = () => {
                     )}
                 </div>
             </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* CLIENT SELECT DIALOG */}
+      <Dialog open={isClientSelectModalOpen} onOpenChange={setIsClientSelectModalOpen}>
+        <DialogContent className="rounded-3xl border-slate-100 max-w-lg p-0 overflow-hidden shadow-2xl">
+            <DialogHeader className="p-8 bg-slate-900 text-white">
+                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-6">
+                    <Users className="w-6 h-6 text-white" />
+                </div>
+                <DialogTitle className="text-xl font-bold tracking-tight">Gestisci Clienti Visibili</DialogTitle>
+                <DialogDescription className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1 opacity-60">
+                    Scegli quali colonne mostrare nella tabella delle citazioni
+                </DialogDescription>
+            </DialogHeader>
+            <div className="p-0">
+                <div className="p-4 border-b border-slate-100">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
+                        <Input 
+                            placeholder="Cerca cliente..." 
+                            className="h-10 pl-9 border-slate-100 bg-slate-50/50 rounded-xl text-xs font-bold"
+                            value={clientModalSearch}
+                            onChange={(e) => setClientModalSearch(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <ScrollArea className="h-[400px]">
+                    <div className="p-4 space-y-2">
+                        {clients.filter(c => c.nome.toLowerCase().includes(clientModalSearch.toLowerCase())).map(c => (
+                            <div 
+                                key={c.id} 
+                                onClick={() => {
+                                    if (visibleClientIds.includes(c.id)) {
+                                        setVisibleClientIds(prev => prev.filter(id => id !== c.id));
+                                    } else {
+                                        setVisibleClientIds(prev => [...prev, c.id]);
+                                    }
+                                }}
+                                className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${
+                                    visibleClientIds.includes(c.id)
+                                    ? 'bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-200'
+                                    : 'bg-white border-slate-100 text-slate-600 hover:border-slate-200'
+                                }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${visibleClientIds.includes(c.id) ? 'bg-white/10' : 'bg-slate-50'}`}>
+                                        <Globe className={`w-4 h-4 ${visibleClientIds.includes(c.id) ? 'text-white' : 'text-slate-400'}`} />
+                                    </div>
+                                    <span className="text-xs font-black tracking-tight">{c.nome}</span>
+                                </div>
+                                {visibleClientIds.includes(c.id) ? (
+                                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                                ) : (
+                                    <div className="w-5 h-5 rounded-full border-2 border-slate-100" />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+            </div>
+            <DialogFooter className="p-8 bg-slate-50 border-t border-slate-100">
+                <Button className="w-full h-12 rounded-xl font-bold uppercase tracking-widest text-[10px] bg-slate-900 shadow-xl shadow-slate-200" onClick={() => setIsClientSelectModalOpen(false)}>
+                    Conferma Selezione ({visibleClientIds.length})
+                </Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
