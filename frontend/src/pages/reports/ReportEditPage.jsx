@@ -138,7 +138,16 @@ export const ReportEditPage = () => {
         <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-2">{report.title}</h1>
         <div className="flex justify-between items-center">
             <p className="text-blue-600 font-black uppercase tracking-widest text-sm">Report SEO Mensile</p>
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Data Report: {report.date}</p>
+            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">
+                Data Report: {(() => {
+                    try {
+                        const d = new Date(report.date);
+                        return new Intl.DateTimeFormat('it-IT', { month: '2-digit', year: 'numeric' }).format(d);
+                    } catch (e) {
+                        return report.date;
+                    }
+                })()}
+            </p>
         </div>
       </div>
 
@@ -241,7 +250,7 @@ const AttivitaForm = ({ module, data, updateData }) => {
                 {items.map((item, i) => (
                     <div key={i} className="flex items-center gap-3 group">
                         <Input value={item.title} onChange={(e) => setItem(i, 'title', e.target.value)} placeholder="Titolo attività (es: Articolo Blog...)" className="flex-1 h-9 rounded-xl text-xs font-bold" />
-                        <Input type="date" value={item.date} onChange={(e) => setItem(i, 'date', e.target.value)} className="w-36 h-9 rounded-xl text-xs font-bold" />
+                        <Input type="date" value={item.date ? item.date.split('T')[0] : ''} onChange={(e) => setItem(i, 'date', e.target.value)} className="w-36 h-9 rounded-xl text-xs font-bold" />
                         <Button variant="ghost" size="icon" onClick={() => removeItem(i)} className="h-9 w-9 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl"><Trash2 className="w-4 h-4" /></Button>
                     </div>
                 ))}
@@ -285,7 +294,7 @@ const CitazioniForm = ({ module, data, updateData }) => {
                         <div className="space-y-1 relative">
                             <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Data</Label>
                             <div className="flex items-center gap-2">
-                                <Input type="date" value={item.date} onChange={(e) => setItem(i, 'date', e.target.value)} className="h-9 rounded-xl text-xs font-bold" />
+                                <Input type="date" value={item.date ? item.date.split('T')[0] : ''} onChange={(e) => setItem(i, 'date', e.target.value)} className="h-9 rounded-xl text-xs font-bold" />
                                 <Button variant="ghost" size="icon" onClick={() => removeItem(i)} className="h-9 w-9 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl"><Trash2 className="w-4 h-4" /></Button>
                             </div>
                         </div>
@@ -332,7 +341,7 @@ const GmbForm = ({ module, data, updateData }) => {
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Data</Label>
-                                <Input type="date" value={item.date} onChange={(e) => setItem(i, 'date', e.target.value)} className="h-9 rounded-xl text-xs font-bold" />
+                                <Input type="date" value={item.date ? item.date.split('T')[0] : ''} onChange={(e) => setItem(i, 'date', e.target.value)} className="h-9 rounded-xl text-xs font-bold" />
                             </div>
                         </div>
                         <div className="space-y-1">

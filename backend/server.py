@@ -61,8 +61,24 @@ async def startup():
     except Exception as e:
         logger.warning(f"Storage init failed (will retry on first upload): {e}")
 
+    # Start Autopilot Engine
+    try:
+        from services.autopilot_service import AutopilotService
+        AutopilotService.start()
+    except Exception as e:
+        logger.error(f"Autopilot start failed: {e}")
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
     from database import client
     client.close()
+    
+    # Shutdown Autopilot Engine
+    try:
+        from services.autopilot_service import AutopilotService
+        if AutopilotService._scheduler.running:
+            AutopilotService._scheduler.shutdown()
+            logger.info("Autopilot Scheduler shut down")
+    except Exception as e:
+        logger.error(f"Autopilot shutdown failed: {e}")

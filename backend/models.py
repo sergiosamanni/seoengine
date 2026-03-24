@@ -92,6 +92,18 @@ class ContentStrategy(BaseModel):
     note_speciali: Optional[str] = None
 
 
+class AutopilotConfig(BaseModel):
+    enabled: bool = False
+    strategy: str = "editorial_plan_first" # editorial_plan_first, keyword_combinations
+    frequency: str = "weekly" # daily, weekly, biweekly, monthly
+    day_of_week: int = 1 # 0-6 (Mon-Sun)
+    time_of_day: str = "09:00"
+    auto_publish: bool = True
+    max_articles_per_run: int = 1
+    last_run: Optional[str] = None
+    next_run: Optional[str] = None
+
+
 class GSCConfig(BaseModel):
     site_url: Optional[str] = None
     enabled: Optional[bool] = False
@@ -112,6 +124,7 @@ class ClientConfiguration(BaseModel):
     advanced_prompt: Optional[AdvancedPrompt] = None
     content_strategy: Optional[ContentStrategy] = None
     gsc: Optional[GSCConfig] = None
+    autopilot: Optional[AutopilotConfig] = None
     gmb_url: Optional[str] = None
 
 
@@ -230,7 +243,7 @@ class SimpleGenerateRequest(BaseModel):
 
 class ReportCreate(BaseModel):
     title: str
-    date: str  # "MM-YYYY"
+    date: str  # ISO 8601 (YYYY-MM-DDTHH:MM:SSZ)
     modules: Optional[Dict[str, Any]] = None
 
 
@@ -269,7 +282,7 @@ class PortalResponse(BaseModel):
 class CitationToggle(BaseModel):
     portal_id: str
     client_id: str
-    date: Optional[str] = None
+    date: Optional[str] = None  # ISO 8601
     status: bool = True
     notes: Optional[str] = None
     link: Optional[str] = None

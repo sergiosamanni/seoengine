@@ -107,7 +107,7 @@ export const CitationsPage = () => {
       portalName,
       clientName,
       link: current?.link || '',
-      date: current?.date || new Date().toLocaleDateString('it-IT').replace(/\//g, '-'),
+      date: current?.date || new Date().toISOString(),
       notes: current?.notes || '',
       status: !!current
     });
@@ -376,7 +376,14 @@ export const CitationsPage = () => {
                                                         {citation && (
                                                             <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-full whitespace-nowrap">
                                                                 <p className="text-[7px] font-bold text-emerald-600/50 uppercase tracking-tighter tabular-nums">
-                                                                    {citation.date?.split('-').slice(0,2).join('/') || 'ACTIVE'}
+                                                                    {(() => {
+                                                                        try {
+                                                                            const d = new Date(citation.date);
+                                                                            return new Intl.DateTimeFormat('it-IT', { day: '2-digit', month: '2-digit' }).format(d);
+                                                                        } catch (e) {
+                                                                            return citation.date?.split('-').slice(0,2).join('/') || 'ACTIVE';
+                                                                        }
+                                                                    })()}
                                                                 </p>
                                                             </div>
                                                         )}
@@ -572,11 +579,11 @@ export const CitationsPage = () => {
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Data Creazione (gg-mm-aaaa)</label>
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Data Creazione</label>
                         <Input 
-                            value={activeToggle.date}
+                            type="date"
+                            value={activeToggle.date ? activeToggle.date.split('T')[0] : ''}
                             onChange={e => setActiveToggle({...activeToggle, date: e.target.value})}
-                            placeholder="es: 24-03-2026"
                             className="h-12 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-bold text-xs"
                         />
                     </div>

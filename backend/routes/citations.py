@@ -115,7 +115,7 @@ async def toggle_citation(toggle: CitationToggle, current_user: dict = Depends(g
         # Update
         now = datetime.now(timezone.utc).isoformat()
         update_data = {
-            "date": toggle.date or datetime.now().strftime("%d-%m-%Y"),
+            "date": toggle.date or now,
             "notes": toggle.notes,
             "link": toggle.link,
             "updated_at": now
@@ -134,7 +134,7 @@ async def toggle_citation(toggle: CitationToggle, current_user: dict = Depends(g
             "id": citation_id,
             "portal_id": toggle.portal_id,
             "client_id": toggle.client_id,
-            "date": toggle.date or datetime.now().strftime("%d-%m-%Y"),
+            "date": toggle.date or now,
             "status": True,
             "notes": toggle.notes,
             "link": toggle.link,

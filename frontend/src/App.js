@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ClientProvider } from './contexts/ClientContext';
 import { Toaster } from './components/ui/sonner';
 import { DashboardLayout } from './components/DashboardLayout';
 import { LoginPage } from './pages/LoginPage';
@@ -67,7 +68,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppRoutes />
+        <ClientProvider>
+          <AppRoutes />
+        </ClientProvider>
         <Toaster position="top-right" richColors />
       </AuthProvider>
     </Router>

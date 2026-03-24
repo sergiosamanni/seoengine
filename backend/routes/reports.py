@@ -9,12 +9,14 @@ from routes.auth_users import get_current_user
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 async def get_citations_for_report(client_id: str, report_date: str):
-    """Retrieve citations for a specific client and month (MM-YYYY)."""
-    # Citation date format is DD-MM-YYYY
-    # Report date format is MM-YYYY
+    """Retrieve citations for a specific client and month from ISO date string."""
+    # report_date is YYYY-MM-DDTHH:MM:SSZ or similar
+    # We want to match citations in the same year and month
+    month_prefix = report_date[:7] # YYYY-MM
+    
     citations = await db.citations.find({
         "client_id": client_id,
-        "date": {"$regex": f".*-{report_date}$"}
+        "date": {"$regex": f"^{month_prefix}"}
     }, {"_id": 0}).to_list(100)
     
     # Enrich with portal names
@@ -37,9 +39,10 @@ async def create_report(client_id: str, report: ReportCreate, current_user: dict
     if not client:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
     
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     report_dict = report.dict()
     
+    # Ensure date is valid ISO or at least has the prefix we need
     # Auto-inject citations for the selected month
     citations = await get_citations_for_report(client_id, report_dict["date"])
     if "modules" not in report_dict or report_dict["modules"] is None:
@@ -65,8 +68,7 @@ async def get_client_reports(client_id: str, current_user: dict = Depends(get_cu
     
     cursor = db.reports.find({"client_id": client_id})
     reports = await cursor.to_list(length=100)
-    # Sort by date descending (assuming MM-YYYY format, needs better sort or date obj)
-    # For now simple sort on created_at or title
+    # ISO strings are naturally sortable
     reports.sort(key=lambda x: x["date"], reverse=True)
     return reports
 
@@ -96,13 +98,15 @@ async def update_report(report_id: str, report_update: ReportUpdate, current_use
         raise HTTPException(status_code=404, detail="Report non trovato")
     
     update_data = {k: v for k, v in report_update.dict().items() if v is not None}
-    update_data["updated_at"] = datetime.utcnow().isoformat()
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     await db.reports.update_one({"id": report_id}, {"$set": update_data})
     
     updated = await db.reports.find_one({"id": report_id})
-    # Also refresh citations if date or client changed (or just always)
+    # Also refresh citations
     refreshed_citations = await get_citations_for_report(updated["client_id"], updated["date"])
+    if "modules" not in updated or updated["modules"] is None:
+        updated["modules"] = {}
     updated["modules"]["citations_local"] = refreshed_citations
     
     return updated

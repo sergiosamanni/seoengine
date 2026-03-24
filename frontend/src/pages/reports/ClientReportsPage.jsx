@@ -47,7 +47,8 @@ export const ClientReportsPage = () => {
     e.preventDefault();
     if (!newReportDate) return;
     
-    // Format title as "Report Mensile - MM-YYYY"
+    // Convert YYYY-MM to ISO YYYY-MM-01T00:00:00Z
+    const isoDate = `${newReportDate}-01T00:00:00Z`;
     const [year, month] = newReportDate.split('-');
     const formattedDate = `${month}-${year}`;
     const title = `Report Mensile - ${formattedDate}`;
@@ -55,7 +56,7 @@ export const ClientReportsPage = () => {
     try {
       const res = await axios.post(`${API}/reports/${clientId}`, {
         title,
-        date: formattedDate,
+        date: isoDate,
         modules: {}
       }, { headers: getAuthHeaders() });
       toast.success('Report creato');
@@ -163,7 +164,16 @@ export const ClientReportsPage = () => {
                                     <div className="w-1 bg-slate-100 group-hover:bg-blue-400 transition-colors" />
                                     <div className="flex-1 flex items-center justify-between px-4">
                                         <div className="min-w-0">
-                                            <h5 className="font-bold text-slate-800 uppercase tracking-tight text-[12px] group-hover:text-blue-600 transition-colors truncate">{report.date}</h5>
+                                            <h5 className="font-bold text-slate-800 uppercase tracking-tight text-[12px] group-hover:text-blue-600 transition-colors truncate">
+                                                {(() => {
+                                                    try {
+                                                        const d = new Date(report.date);
+                                                        return new Intl.DateTimeFormat('it-IT', { month: '2-digit', year: 'numeric' }).format(d);
+                                                    } catch (e) {
+                                                        return report.date;
+                                                    }
+                                                })()}
+                                            </h5>
                                             <p className="text-[8px] text-slate-400 font-medium uppercase tracking-widest truncate">Creato: {new Date(report.created_at).toLocaleDateString('it-IT')}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
