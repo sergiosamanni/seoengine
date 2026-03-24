@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import {
-  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X, Globe
+  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X, Globe, MapPin
 } from 'lucide-react';
 import axios from 'axios';
 import {
@@ -37,6 +37,7 @@ export const DashboardLayout = ({ children }) => {
   const adminNav = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'Utenti', icon: Users, path: '/users' },
+    { label: 'Citazioni', icon: MapPin, path: '/citations' },
     { label: 'Activity Log', icon: Activity, path: '/activity-log' },
   ];
   const clientNav = [

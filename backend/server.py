@@ -20,6 +20,7 @@ from routes.gsc import router as gsc_router
 from routes.uploads import router as uploads_router
 from routes.freshness import router as freshness_router
 from routes.reports import router as reports_router
+from routes.citations import router as citations_router
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(auth_router)
@@ -29,6 +30,7 @@ api_router.include_router(gsc_router)
 api_router.include_router(uploads_router)
 api_router.include_router(freshness_router)
 api_router.include_router(reports_router)
+api_router.include_router(citations_router)
 
 
 @api_router.get("/")

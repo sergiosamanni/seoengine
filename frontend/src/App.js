@@ -9,6 +9,7 @@ import { GeneratorPage } from './pages/GeneratorPage';
 import { ActivityLogPage } from './pages/ActivityLogPage';
 import { UsersPage } from './pages/UsersPage';
 import { ClientReportsPage } from './pages/reports/ClientReportsPage';
+import { CitationsPage } from './pages/CitationsPage';
 import { ReportEditPage } from './pages/reports/ReportEditPage';
 import './App.css';
 
@@ -41,6 +42,7 @@ function AppRoutes() {
       {/* Admin: Reports section (Direct access via client cards) */}
       <Route path="/reports/client/:clientId" element={<ProtectedRoute adminOnly><ClientReportsPage /></ProtectedRoute>} />
       <Route path="/reports/:reportId" element={<ProtectedRoute adminOnly><ReportEditPage /></ProtectedRoute>} />
+      <Route path="/citations" element={<ProtectedRoute adminOnly><CitationsPage /></ProtectedRoute>} />
 
       {/* Shared: Activity Log */}
       <Route path="/activity-log" element={<ProtectedRoute><ActivityLogPage /></ProtectedRoute>} />

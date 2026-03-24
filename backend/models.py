@@ -249,3 +249,35 @@ class ReportResponse(BaseModel):
     updated_at: str
     is_archived: bool = False
     modules: Dict[str, Any] = {}
+
+
+class PortalCreate(BaseModel):
+    name: str
+    url: Optional[str] = None
+    category: Optional[str] = "directory"
+
+
+class PortalResponse(BaseModel):
+    id: str
+    name: str
+    url: Optional[str] = None
+    category: str
+    created_at: str
+
+
+class CitationToggle(BaseModel):
+    portal_id: str
+    client_id: str
+    date: Optional[str] = None
+    status: bool = True
+    notes: Optional[str] = None
+
+
+class CitationResponse(BaseModel):
+    id: str
+    portal_id: str
+    client_id: str
+    date: str
+    status: bool
+    notes: Optional[str] = None
+    created_at: str
