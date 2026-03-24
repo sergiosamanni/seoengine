@@ -112,6 +112,7 @@ class ClientConfiguration(BaseModel):
     advanced_prompt: Optional[AdvancedPrompt] = None
     content_strategy: Optional[ContentStrategy] = None
     gsc: Optional[GSCConfig] = None
+    gmb_url: Optional[str] = None
 
 
 class ClientResponse(BaseModel):

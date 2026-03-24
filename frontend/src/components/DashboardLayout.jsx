@@ -37,7 +37,8 @@ export const DashboardLayout = ({ children }) => {
   const adminNav = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'Utenti', icon: Users, path: '/users' },
-    { label: 'Citazioni', icon: MapPin, path: '/citations' },
+    { label: 'GMB', icon: MapPin, path: '/gmb' },
+    { label: 'Citazioni', icon: Globe, path: '/citations' },
     { label: 'Activity Log', icon: Activity, path: '/activity-log' },
   ];
   const clientNav = [
