@@ -144,6 +144,52 @@ async def remove_site_from_client(client_id: str, request: dict, current_user: d
     return {"message": "Sito rimosso"}
 
 
+# ============== KB DOCUMENT UPLOAD ==============
+
+@router.post("/clients/{client_id}/upload-kb-document")
+async def upload_kb_document(client_id: str, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    filename = file.filename
+    content = await file.read()
+    
+    from doc_parser import extract_content_from_file
+    from helpers import extract_structured_kb_with_llm
+    
+    try:
+        # 1. Parse document text
+        text = await extract_content_from_file(content, filename)
+        
+        # 2. Extract structured Knowledge Base fields with LLM
+        client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente non trovato")
+            
+        config = client.get("configuration", {})
+        llm_config = config.get("llm", {}) or config.get("openai", {})
+        
+        if not llm_config.get("api_key"):
+            raise HTTPException(status_code=400, detail="Chiave API LLM mancante nella configurazione del cliente")
+            
+        provider = llm_config.get("provider", "openai")
+        model = llm_config.get("modello", "gpt-4o")
+        
+        # Prepare content for LLM (limit if too large)
+        kb_data_raw = {"raw_text": text[:10000]} # Limit extraction input
+        
+        refined_info = await extract_structured_kb_with_llm(kb_data_raw, provider, llm_config["api_key"], model)
+        
+        return {
+            "status": "success",
+            "extracted_data": refined_info,
+            "filename": filename
+        }
+    except Exception as e:
+        logger.error(f"KB document processing error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============== SCRAPE WEBSITE FOR KB ==============
 
 @router.post("/clients/{client_id}/scrape-website")

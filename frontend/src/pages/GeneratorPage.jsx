@@ -45,7 +45,7 @@ export const GeneratorPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState('generate');
+  const [activeTab, setActiveTab] = useState('config');
 
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
@@ -55,8 +55,10 @@ export const GeneratorPage = () => {
       setActiveTab('config');
     } else if (location.pathname.endsWith('/gsc')) {
       setActiveTab('gsc');
-    } else {
+    } else if (location.pathname.endsWith('/generate')) {
       setActiveTab('generate');
+    } else {
+      setActiveTab('config');
     }
   }, [location.pathname, searchParams]);
 
@@ -199,20 +201,24 @@ export const GeneratorPage = () => {
 
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
         <TabsList className="w-full justify-start bg-transparent p-0 h-auto flex-wrap mb-10 border-b border-[#f1f3f6] rounded-none gap-6">
+          {isAdmin && (
+            <>
+              <TabsTrigger value="config" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all">
+                Configurazione Workspace
+              </TabsTrigger>
+              <TabsTrigger value="gsc" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all">
+                Dashboard Search Console
+              </TabsTrigger>
+            </>
+          )}
           <TabsTrigger value="generate" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all">
             Genera Contenuti
           </TabsTrigger>
           {isAdmin && (
             <>
-              <TabsTrigger value="gsc" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all">
-                Dashboard Search Console
-              </TabsTrigger>
               <TabsTrigger value="freshness" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3 text-emerald-500" />
                 Freshness & Link Interni
-              </TabsTrigger>
-              <TabsTrigger value="config" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all">
-                Configurazione Workspace
               </TabsTrigger>
               <TabsTrigger value="autopilot" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5 ">
                 <Zap className="w-3 h-3 text-emerald-500 fill-current" />
@@ -222,25 +228,6 @@ export const GeneratorPage = () => {
           )}
         </TabsList>
 
-        <TabsContent value="generate" className="mt-0 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {isAdmin ? (
-            <AdminGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
-          ) : (
-            <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
-          )}
-          <div className="pt-8 border-t border-[#f1f3f6]">
-            <ArticleHistory effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="gsc" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <GscDataTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} addToQueue={addToEditorialQueue} />
-        </TabsContent>
-
-        <TabsContent value="freshness" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <FreshnessTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} addToQueue={addToEditorialQueue} />
-        </TabsContent>
-
         <TabsContent value="config">
             <div className="grid grid-cols-1 gap-8">
                 <Tabs defaultValue="kb" className="w-full">
@@ -249,7 +236,6 @@ export const GeneratorPage = () => {
                         <TabsTrigger value="tono" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">Tono & Stile</TabsTrigger>
                         <TabsTrigger value="seo" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">SEO Settings</TabsTrigger>
                         <TabsTrigger value="wp" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">WordPress</TabsTrigger>
-                        <TabsTrigger value="combinations" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2 text-indigo-600">Keyword Combinations</TabsTrigger>
                         <TabsTrigger value="gsc_setup" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">Google Link</TabsTrigger>
                     </TabsList>
 
@@ -265,14 +251,30 @@ export const GeneratorPage = () => {
                     <TabsContent value="wp" className="m-0 animate-in fade-in duration-300">
                         <WordPressTab wordpress={wordpress} setWordpress={setWordpress} />
                     </TabsContent>
-                    <TabsContent value="combinations" className="m-0 animate-in fade-in duration-300">
-                        <KeywordsTab keywords={client?.configuration?.keyword_combinations || {}} setKeywords={(k) => updateConfiguration(effectiveClientId, { ...client.configuration, keyword_combinations: k })} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
-                    </TabsContent>
                     <TabsContent value="gsc_setup" className="m-0 animate-in fade-in duration-300">
                         <GscConnectionTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} isAdmin={isAdmin} />
                     </TabsContent>
                 </Tabs>
             </div>
+        </TabsContent>
+
+        <TabsContent value="gsc" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <GscDataTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} addToQueue={addToEditorialQueue} />
+        </TabsContent>
+
+        <TabsContent value="generate" className="mt-0 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {isAdmin ? (
+            <AdminGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
+          ) : (
+            <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
+          )}
+          <div className="pt-8 border-t border-[#f1f3f6]">
+            <ArticleHistory effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="freshness" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <FreshnessTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} addToQueue={addToEditorialQueue} />
         </TabsContent>
 
         <TabsContent value="autopilot" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">

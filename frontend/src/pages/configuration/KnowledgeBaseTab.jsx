@@ -115,86 +115,124 @@ export const KnowledgeBaseTab = ({ knowledge, setKnowledge, isAdmin, effectiveCl
 
   return (
     <div className="space-y-6">
-      {/* Website Scraper (Admin only) */}
+      {/* Knowledge Base Input Sources (Admin only) */}
       {isAdmin && (
-        <Card className="border-blue-200 bg-blue-50/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="w-5 h-5 text-blue-600" />
-              Estrai dati dal sito web
-            </CardTitle>
-            <CardDescription>Inserisci l'URL del sito del cliente per estrarre automaticamente le informazioni</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                value={currentUrl}
-                onChange={(e) => setCurrentUrl(e.target.value)}
-                placeholder="Es: https://www.example.com/chi-siamo"
-                disabled={scraping}
-                onKeyDown={(e) => e.key === 'Enter' && addUrl()}
-              />
-              <Button variant="outline" size="icon" onClick={addUrl} disabled={scraping}>
-                <Plus className="w-4 h-4" />
-              </Button>
-              <Button onClick={handleScrapeWebsite} disabled={scraping} className="bg-blue-600 hover:bg-blue-700 whitespace-nowrap">
-                {scraping ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-                {scraping ? 'Analisi...' : 'Analizza tutto'}
-              </Button>
-            </div>
-            
-            {scrapeUrls.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {scrapeUrls.map((u, i) => (
-                  <Badge key={i} variant="secondary" className="pl-2 pr-1 py-1 bg-blue-50 text-blue-700 border-blue-100">
-                    <span className="max-w-[200px] truncate">{u}</span>
-                    <button onClick={() => removeUrl(u)} className="ml-1 p-0.5 hover:bg-blue-200 rounded-full transition-colors">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </Badge>
-                ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="border-blue-200 bg-blue-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-blue-600" />
+                Estrai dati dal sito web
+              </CardTitle>
+              <CardDescription>Inserisci l'URL del sito del cliente per estrarre automaticamente le informazioni</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  value={currentUrl}
+                  onChange={(e) => setCurrentUrl(e.target.value)}
+                  placeholder="Es: https://www.example.com/chi-siamo"
+                  disabled={scraping}
+                  onKeyDown={(e) => e.key === 'Enter' && addUrl()}
+                />
+                <Button variant="outline" size="icon" onClick={addUrl} disabled={scraping}>
+                  <Plus className="w-4 h-4" />
+                </Button>
+                <Button onClick={handleScrapeWebsite} disabled={scraping} className="bg-blue-600 hover:bg-blue-700 whitespace-nowrap">
+                  {scraping ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                  {scraping ? 'Analisi...' : 'Analizza tutto'}
+                </Button>
               </div>
-            )}
-            {scrapeResult && (
-              <div className="p-4 bg-white rounded-lg border border-blue-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-sm text-slate-900">
-                    {scrapeResult.pagine_analizzate?.length || 0} pagine analizzate
-                  </p>
-                  <Button size="sm" onClick={applyScrapeData} className="bg-blue-600" data-testid="apply-scrape-btn">
-                    <Sparkles className="w-4 h-4 mr-1" /> Applica dati
-                  </Button>
+              
+              {scrapeUrls.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {scrapeUrls.map((u, i) => (
+                    <Badge key={i} variant="secondary" className="pl-2 pr-1 py-1 bg-blue-50 text-blue-700 border-blue-100">
+                      <span className="max-w-[200px] truncate">{u}</span>
+                      <button onClick={() => removeUrl(u)} className="ml-1 p-0.5 hover:bg-blue-200 rounded-full transition-colors">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
                 </div>
-                {scrapeResult.citta_principale && (
-                  <p className="text-sm text-slate-600">Citta rilevata: <strong>{scrapeResult.citta_principale}</strong></p>
-                )}
-                {scrapeResult.raw_meta_descriptions?.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 mb-1">Meta descriptions trovate:</p>
-                    {scrapeResult.raw_meta_descriptions.slice(0, 2).map((md, i) => (
-                      <p key={i} className="text-xs text-slate-600 bg-slate-50 p-2 rounded mb-1 line-clamp-2">{md}</p>
-                    ))}
+              )}
+              {scrapeResult && (
+                <div className="p-4 bg-white rounded-lg border border-blue-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-sm text-slate-900">
+                      {scrapeResult.pagine_analizzate?.length || 0} pagine analizzate
+                    </p>
+                    <Button size="sm" onClick={applyScrapeData} className="bg-blue-600" data-testid="apply-scrape-btn">
+                      <Sparkles className="w-4 h-4 mr-1" /> Applica dati
+                    </Button>
                   </div>
-                )}
-                {scrapeResult.raw_headings?.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 mb-1">Headings trovati ({scrapeResult.raw_headings.length}):</p>
-                    <div className="flex flex-wrap gap-1">
-                      {scrapeResult.raw_headings.slice(0, 8).map((h, i) => (
-                        <Badge key={i} variant="outline" className="text-xs">{h}</Badge>
-                      ))}
+                  {scrapeResult.citta_principale && (
+                    <p className="text-sm text-slate-600">Citta rilevata: <strong>{scrapeResult.citta_principale}</strong></p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-emerald-200 bg-emerald-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-emerald-600" />
+                Carica Documenti
+              </CardTitle>
+              <CardDescription>Carica PDF, DOCX, CSV o XLSX per istruire l'AI sul business</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div 
+                  className="border-2 border-dashed border-emerald-200 rounded-xl p-8 text-center bg-white/50 hover:bg-white transition-colors cursor-pointer relative"
+                  onClick={() => document.getElementById('kb-file-upload').click()}
+                >
+                  <input
+                    id="kb-file-upload"
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.docx,.doc,.xlsx,.xls,.csv"
+                    onChange={async (e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      
+                      setScraping(true);
+                      try {
+                        const res = await axios.post(`${API}/clients/${effectiveClientId}/upload-kb-document`, formData, {
+                          headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' }
+                        });
+                        setScrapeResult(res.data.extracted_data);
+                        toast.success(`Dati estratti con successo da ${file.name}`);
+                      } catch (error) {
+                        toast.error(error.response?.data?.detail || 'Errore durante il caricamento');
+                      } finally {
+                        setScraping(false);
+                      }
+                    }}
+                  />
+                  {scraping ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+                      <p className="text-sm font-medium text-emerald-700">Elaborazione documento...</p>
                     </div>
-                  </div>
-                )}
-                {scrapeResult.contatti && Object.keys(scrapeResult.contatti).length > 0 && (
-                  <p className="text-xs text-slate-600">
-                    Contatti: {scrapeResult.contatti.email && `Email: ${scrapeResult.contatti.email}`} {scrapeResult.contatti.telefono && `Tel: ${scrapeResult.contatti.telefono}`}
-                  </p>
-                )}
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-1">
+                        <Plus className="w-6 h-6 text-emerald-600" />
+                      </div>
+                      <p className="text-sm font-medium text-slate-700">Clicca per caricare un file</p>
+                      <p className="text-xs text-slate-400">Supporta PDF, DOCX, CSV, Excel</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
