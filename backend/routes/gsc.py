@@ -11,7 +11,11 @@ from auth import get_current_user, require_admin
 logger = logging.getLogger("server")
 router = APIRouter()
 
-GSC_SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
+GSC_SCOPES = [
+    "https://www.googleapis.com/auth/webmasters.readonly",
+    "https://www.googleapis.com/auth/webmasters", # For sitemap submission
+    "https://www.googleapis.com/auth/indexing"    # For Indexing API
+]
 GSC_OAUTH_CLIENT_ID = os.environ.get("GSC_OAUTH_CLIENT_ID", "")
 GSC_OAUTH_CLIENT_SECRET = os.environ.get("GSC_OAUTH_CLIENT_SECRET", "")
 
@@ -462,3 +466,118 @@ async def gsc_strategic_suggestions(client_id: str, request: dict, current_user:
         logger.error(f"Errore generazione suggerimenti GSC: {e}")
         raise HTTPException(status_code=500, detail="Errore nell'elaborazione dei suggerimenti con l'AI")
 
+@router.post("/clients/{client_id}/gsc/index-url")
+async def gsc_index_url(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
+    """Request indexing for a specific URL using the Google Indexing API."""
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+        
+    url = request.get("url")
+    if not url:
+        raise HTTPException(status_code=400, detail="URL mancante")
+        
+    client_doc = await db.clients.find_one({"id": client_id}, {"configuration.gsc": 1})
+    tokens = (client_doc.get("configuration", {}) or {}).get("gsc", {}).get("tokens")
+    
+    if not tokens:
+        raise HTTPException(status_code=400, detail="GSC non connesso per questo cliente.")
+        
+    try:
+        import google.oauth2.credentials
+        from googleapiclient.discovery import build
+        from google.auth.transport.requests import Request
+        
+        creds = google.oauth2.credentials.Credentials(
+            token=tokens["token"],
+            refresh_token=tokens.get("refresh_token"),
+            token_uri=tokens.get("token_uri", "https://oauth2.googleapis.com/token"),
+            client_id=tokens.get("client_id"),
+            client_secret=tokens.get("client_secret")
+        )
+        
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            # Save new tokens
+            new_tokens = {
+                "token": creds.token, "refresh_token": creds.refresh_token,
+                "token_uri": creds.token_uri, "client_id": creds.client_id,
+                "client_secret": creds.client_secret,
+                "expiry": creds.expiry.isoformat() if creds.expiry else None
+            }
+            await db.clients.update_one({"id": client_id}, {"$set": {"configuration.gsc.tokens": new_tokens}})
+
+        # Use Indexing API
+        indexing_service = build("indexing", "v3", credentials=creds)
+        body = {
+            "url": url,
+            "type": "URL_UPDATED"
+        }
+        result = indexing_service.urlNotifications().publish(body=body).execute()
+        
+        return {"message": "Richiesta di indicizzazione inviata con successo", "details": result}
+    except Exception as e:
+        logger.error(f"Errore Indexing API per {url}: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore Indexing API: {str(e)}")
+
+
+@router.post("/clients/{client_id}/gsc/submit-sitemap")
+async def gsc_submit_sitemap(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
+    """Submit a sitemap to Google Search Console."""
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+        
+    sitemap_url = request.get("sitemap_url")
+    
+    client_doc = await db.clients.find_one({"id": client_id}, {"configuration": 1})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+        
+    config = client_doc.get("configuration", {}) or {}
+    gsc_config = config.get("gsc", {})
+    seo_config = config.get("seo", {})
+    
+    # Priorità: URL da request -> URL da configurazione SEO -> Fallback manuale errore
+    if not sitemap_url:
+        sitemap_url = seo_config.get("sitemap_url")
+        
+    if not sitemap_url:
+        raise HTTPException(status_code=400, detail="Sitemap URL non configurato per questo cliente.")
+        
+    tokens = gsc_config.get("tokens")
+    site_url = gsc_config.get("site_url")
+    
+    if not tokens or not site_url:
+        raise HTTPException(status_code=400, detail="GSC non connesso o URL sito non configurato.")
+        
+    try:
+        import google.oauth2.credentials
+        from googleapiclient.discovery import build
+        from google.auth.transport.requests import Request
+        
+        creds = google.oauth2.credentials.Credentials(
+            token=tokens["token"],
+            refresh_token=tokens.get("refresh_token"),
+            token_uri=tokens.get("token_uri", "https://oauth2.googleapis.com/token"),
+            client_id=tokens.get("client_id"),
+            client_secret=tokens.get("client_secret")
+        )
+        
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            # Save new tokens omitted for brevity here if we assume the previous call or similar logic handles it, but better be safe
+            new_tokens = {
+                "token": creds.token, "refresh_token": creds.refresh_token,
+                "token_uri": creds.token_uri, "client_id": creds.client_id,
+                "client_secret": creds.client_secret,
+                "expiry": creds.expiry.isoformat() if creds.expiry else None
+            }
+            await db.clients.update_one({"id": client_id}, {"$set": {"configuration.gsc.tokens": new_tokens}})
+
+        # Google Search Console API (webmasters)
+        service = build("searchconsole", "v1", credentials=creds)
+        service.sitemaps().submit(siteUrl=site_url, feedpath=sitemap_url).execute()
+        
+        return {"message": "Sitemap inviata con successo"}
+    except Exception as e:
+        logger.error(f"Errore Sitemap submission per {sitemap_url}: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore invio Sitemap: {str(e)}")

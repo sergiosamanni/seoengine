@@ -28,7 +28,13 @@ async def get_freshness_candidates(client_id: str, current_user: dict = Depends(
         
     # Get pages from Sitemap 
     # Usually Sitemap is used to find external pages not in db that need update/internal linking
-    sitemap_url = client.get("configuration", {}).get("seo", {}).get("sitemap_url") 
+    config = client.get("configuration", {})
+    sitemap_url = config.get("seo", {}).get("sitemap_url") 
+    if not sitemap_url:
+        site_url = config.get("gsc", {}).get("site_url") or config.get("wordpress", {}).get("url_api", "").split("/wp-json")[0]
+        if site_url:
+            sitemap_url = site_url.rstrip("/") + "/sitemap.xml"
+            
     sitemap_links = []
     if sitemap_url:
         try:

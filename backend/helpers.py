@@ -224,10 +224,10 @@ async def generate_with_rotation(llm_config: dict, system_prompt: str, user_prom
     # List of configs to try in order
     rotation_queue = []
     
-    # 1. Primary from config
+    # 1. Primary from config (only if key exists)
     primary_provider = llm_config.get("provider", "openai")
-    primary_key = llm_config.get("api_key")
-    primary_model = llm_config.get("modello", "gpt-4-turbo-preview")
+    primary_key = llm_config.get("api_key") or llm_config.get("openai_api_key")
+    primary_model = llm_config.get("modello") or llm_config.get("model") or "gpt-4-turbo-preview"
     
     if primary_key:
         rotation_queue.append({
@@ -237,28 +237,29 @@ async def generate_with_rotation(llm_config: dict, system_prompt: str, user_prom
         })
     
     # 2. Check for alternative keys in config or env
-    keys = {
+    env_keys = {
         "google": llm_config.get("google_api_key") or os.environ.get("GOOGLE_API_KEY"),
         "groq": llm_config.get("groq_api_key") or os.environ.get("GROQ_API_KEY"),
         "deepseek": llm_config.get("deepseek_api_key") or os.environ.get("DEEPSEEK_API_KEY"),
-        "openai": llm_config.get("api_key") # Already has primary or alternative
+        "openai": llm_config.get("api_key") or llm_config.get("openai_api_key") or os.environ.get("OPENAI_API_KEY")
     }
     
     # Models to try for each free provider
-    free_models = {
+    provider_models = {
         "google": "gemini-1.5-flash",
         "groq": "llama-3.3-70b-versatile",
         "deepseek": "deepseek-chat",
         "openai": "gpt-4o-mini"
     }
 
-    # Add available free providers to rotation (if they aren't the primary one already)
-    for prov in ["google", "groq", "deepseek", "openai"]:
-        if keys.get(prov) and prov != primary_provider:
+    # Add available providers to rotation (excluding if already primary and added)
+    for prov in ["deepseek", "groq", "google", "openai"]:
+        key = env_keys.get(prov)
+        if key and (prov != primary_provider or not primary_key):
              rotation_queue.append({
                  "provider": prov,
-                 "api_key": keys[prov],
-                 "model": free_models[prov]
+                 "api_key": key,
+                 "model": provider_models[prov]
              })
              
     last_err = None
@@ -1446,6 +1447,12 @@ async def get_internal_linking_context(client_id: str, config: dict, target_keyw
     # 2. Fetch from Sitemap
     # Check multiple possible config locations
     sitemap_url = config.get("seo", {}).get("sitemap_url") or config.get("knowledge_base", {}).get("sitemap_url")
+    if not sitemap_url:
+        # Fallback to standard sitemap.xml if possible
+        site_url = config.get("gsc", {}).get("site_url") or config.get("wordpress", {}).get("url_api", "").split("/wp-json")[0]
+        if site_url:
+            sitemap_url = site_url.rstrip("/") + "/sitemap.xml"
+            
     sitemap_links = []
     if sitemap_url:
         sitemap_links = await get_sitemap_links(sitemap_url)

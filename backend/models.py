@@ -297,3 +297,26 @@ class CitationResponse(BaseModel):
     notes: Optional[str] = None
     link: Optional[str] = None
     created_at: str
+
+
+# ============== CHAT MODELS ==============
+
+class ChatMessage(BaseModel):
+    role: str  # user, assistant, system
+    content: str
+    timestamp: str
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class ChatSessionCreate(BaseModel):
+    title: Optional[str] = "Nuova Conversazione"
+
+
+class ChatSessionResponse(BaseModel):
+    id: str
+    client_id: str
+    user_id: str
+    title: str
+    created_at: str
+    updated_at: str
+    last_message: Optional[str] = None

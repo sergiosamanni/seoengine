@@ -52,6 +52,21 @@ export const SEOSettingsTab = ({ seo, setSeo }) => {
             </div>
           </div>
 
+          <div className="space-y-3">
+            <Label className="text-xs font-bold text-slate-600 ml-1 flex items-center gap-2">
+              Sitemap URL
+              <Globe className="w-3 h-3 text-slate-400" />
+            </Label>
+            <Input 
+              type="url" 
+              placeholder="https://www.tuosito.it/sitemap_index.xml" 
+              value={config.sitemap_url || ''} 
+              onChange={(e) => update('sitemap_url', e.target.value)}
+              className="h-14 bg-slate-50 border-none rounded-2xl px-5 font-bold"
+            />
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest pl-1">URL Assoluto della sitemap per indicizzazione e linking interno</p>
+          </div>
+
           <div className="flex items-center justify-between p-6 bg-slate-50 rounded-[1.5rem] border border-slate-100">
             <div className="space-y-0.5">
               <Label className="text-xs font-bold text-slate-900">FAQ Schema & Section</Label>

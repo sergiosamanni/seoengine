@@ -8,7 +8,8 @@ import { Badge } from '../../components/ui/badge';
 import { 
     BarChart3, CheckCircle2, Unlink, Loader2, Save, Key, Globe, Info, AlertCircle 
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { Alert, AlertDescription } from '../../components/ui/alert';
+import { Separator } from '../../components/ui/separator';
 import { ConfirmationModal } from '../../components/ui/confirmation-modal';
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
@@ -236,7 +237,5 @@ export const GscConnectionTab = ({ clientId, getAuthHeaders, isAdmin }) => {
     );
 };
 
-// UI helper
-const Separator = ({ className }) => <div className={`h-px bg-slate-200 ${className}`} />;
 
 export default GscConnectionTab;

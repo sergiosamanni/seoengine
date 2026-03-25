@@ -9,7 +9,7 @@ import {
 } from '../../components/ui/select';
 import {
   BarChart3, Loader2, RefreshCw, ExternalLink, TrendingUp, Sparkles,
-  MousePointerClick, Eye, Target, AlertTriangle, CheckCircle2, Globe
+  MousePointerClick, Eye, Target, AlertTriangle, CheckCircle2, Globe, Send
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -151,8 +151,29 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
     const [days, setDays] = useState('28');
     const [gscConnected, setGscConnected] = useState(false);
     
+    const [sitemapLoading, setSitemapLoading] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
     const [aiStrategy, setAiStrategy] = useState(null);
+
+    const submitSitemap = async () => {
+        if (!data || !clientId) return;
+        setSitemapLoading(true);
+        
+        // Use configured sitemap_url or fallback to /sitemap.xml
+        const configuredSitemap = client?.configuration?.seo?.sitemap_url;
+        const sitemapUrl = configuredSitemap || `${client?.configuration?.gsc?.site_url?.replace(/\/$/, '')}/sitemap.xml`;
+        
+        try {
+            await axios.post(`${API}/clients/${clientId}/gsc/submit-sitemap`, { sitemap_url: sitemapUrl }, {
+                headers: getAuthHeaders()
+            });
+            toast.success("Sitemap inviata con successo!");
+        } catch (error) {
+            toast.error(error.response?.data?.detail || "Errore nell'invio della sitemap");
+        } finally {
+            setSitemapLoading(false);
+        }
+    };
 
     const fetchData = React.useCallback(async () => {
         setLoading(true);
@@ -443,6 +464,37 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
                                 </CardContent>
                             </Card>
                         </div>
+                    </div>
+
+                    {/* INDEXING TOOLS SECTION */}
+                    <div className="mt-8">
+                        <div className="flex items-center gap-3 mb-4 px-2">
+                             <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center border border-emerald-100">
+                                <Globe className="w-3.5 h-3.5 text-emerald-500" />
+                            </div>
+                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Strumenti di Indicizzazione</h4>
+                        </div>
+                        <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm">
+                            <CardContent className="p-6">
+                                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                                    <div className="flex-1">
+                                        <p className="text-xs font-bold text-slate-900 mb-1 tracking-tight">Invia Sitemap a Google</p>
+                                        <p className="text-[10px] text-slate-500 leading-relaxed max-w-md">
+                                            Notifica Google che la tua sitemap è stata aggiornata. Il sistema userà l'URL predefinito 
+                                            <span className="font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded ml-1">/sitemap.xml</span>
+                                        </p>
+                                    </div>
+                                    <Button 
+                                        onClick={submitSitemap} 
+                                        disabled={sitemapLoading || !data}
+                                        className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black uppercase tracking-widest text-[9px] h-10 px-6"
+                                    >
+                                        {sitemapLoading ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Send className="w-3 h-3 mr-2" />}
+                                        Invia Sitemap Ora
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 </>
             ) : (

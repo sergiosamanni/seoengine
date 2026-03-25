@@ -18,11 +18,9 @@ class BaseAgent:
     async def chat(self, system_prompt: str, user_prompt: str) -> str:
         """Helper to call LLM with agent's config."""
         try:
-            response = await generate_with_llm(
-                provider=self.llm_config.get("provider", "openai"),
-                api_key=self.llm_config.get("api_key"),
-                model=self.llm_config.get("model") or self.llm_config.get("modello") or "gpt-4-turbo-preview",
-                temperature=self.llm_config.get("temperature") or self.llm_config.get("temperatura") or 0.7,
+            # Use rotation logic to handle multiple providers and fallbacks
+            response = await generate_with_rotation(
+                llm_config=self.llm_config,
                 system_prompt=system_prompt,
                 user_prompt=user_prompt
             )

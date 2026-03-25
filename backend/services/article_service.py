@@ -9,6 +9,9 @@ from helpers import (
     publish_to_wordpress, log_activity, get_internal_linking_context,
     generate_internal_link_update, update_wordpress_post
 )
+import google.oauth2.credentials
+from googleapiclient.discovery import build
+from google.auth.transport.requests import Request
 
 logger = logging.getLogger("server")
 
@@ -171,6 +174,9 @@ class ArticleService:
                             seo_metadata.get("focus_keyword", ""), wp_res.get("link", ""), 
                             wp_config, wp_type
                         ))
+
+                        # Trigger automatic indexing
+                        asyncio.create_task(cls._request_gsc_indexing(client_id, wp_res.get("link", "")))
                     except Exception as e:
                         await db.articles.update_one({"id": article_id}, {"$set": {"stato": "publish_failed", "publish_error": str(e)}})
                         res_item["publish_status"] = "failed"
@@ -278,6 +284,9 @@ class ArticleService:
                             seo_metadata.get("focus_keyword", ""), wp_res.get("link", ""), 
                             wp_config, wp_type
                         ))
+
+                        # Trigger automatic indexing
+                        asyncio.create_task(cls._request_gsc_indexing(client_id, wp_res.get("link", "")))
                     except Exception as e:
                         await db.articles.update_one({"id": article_id}, {"$set": {"stato": "publish_failed", "publish_error": str(e)}})
                         res_item["publish_status"] = "failed"
@@ -329,3 +338,41 @@ class ArticleService:
                         logger.info(f"Back-linked '{old['titolo']}' to '{new_title}'")
         except Exception as e:
             logger.warning(f"Back-linking failed: {e}")
+    @classmethod
+    async def _request_gsc_indexing(cls, client_id: str, url: str):
+        """Silently request indexing for a new URL if GSC is connected."""
+        if not url: return
+        try:
+            client_doc = await db.clients.find_one({"id": client_id}, {"configuration.gsc": 1})
+            gsc_config = (client_doc.get("configuration", {}) or {}).get("gsc", {})
+            tokens = gsc_config.get("tokens")
+            
+            if not tokens or not gsc_config.get("connected"):
+                return
+
+            creds = google.oauth2.credentials.Credentials(
+                token=tokens["token"],
+                refresh_token=tokens.get("refresh_token"),
+                token_uri=tokens.get("token_uri", "https://oauth2.googleapis.com/token"),
+                client_id=tokens.get("client_id"),
+                client_secret=tokens.get("client_secret")
+            )
+            
+            if creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+                new_tokens = {
+                    "token": creds.token, "refresh_token": creds.refresh_token,
+                    "token_uri": creds.token_uri, "client_id": creds.client_id,
+                    "client_secret": creds.client_secret,
+                    "expiry": creds.expiry.isoformat() if creds.expiry else None
+                }
+                await db.clients.update_one({"id": client_id}, {"$set": {"configuration.gsc.tokens": new_tokens}})
+
+            indexing_service = build("indexing", "v3", credentials=creds)
+            body = {"url": url, "type": "URL_UPDATED"}
+            indexing_service.urlNotifications().publish(body=body).execute()
+            
+            await log_activity(client_id, "gsc_index_request", "success", {"url": url})
+            logger.info(f"Auto-GSC indexing requested for {url}")
+        except Exception as e:
+            logger.warning(f"Auto-GSC indexing failed for {url}: {e}")

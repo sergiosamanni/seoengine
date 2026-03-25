@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Card, CardContent } from '../components/ui/card';
 import {
   AlertCircle, Loader2, ArrowLeft, Settings, PenTool, BarChart3, 
-  Key, FileText, Sparkles, Globe, History, Save, Zap
+  Key, FileText, Sparkles, Globe, History, Save, Zap, MessageCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -30,6 +30,7 @@ import { AutopilotTab } from './configuration/AutopilotTab';
 import { GscConnectionTab } from './configuration/GscConnectionTab';
 import { GscDataTab } from './configuration/GscDataTab';
 import FreshnessTab from './client-workspace/FreshnessTab';
+import SeoChatTab from './client-workspace/SeoChatTab';
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
@@ -224,6 +225,10 @@ export const GeneratorPage = () => {
                 <Zap className="w-3 h-3 text-emerald-500 fill-current" />
                 Autopilot
               </TabsTrigger>
+              <TabsTrigger value="chat" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5 ">
+                <MessageCircle className="w-3 h-3 text-blue-500" />
+                SEO Chat
+              </TabsTrigger>
             </>
           )}
         </TabsList>
@@ -285,6 +290,10 @@ export const GeneratorPage = () => {
                     Attiva / Salva Configurazione Autopilot
                 </Button>
             </div>
+        </TabsContent>
+
+        <TabsContent value="chat" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <SeoChatTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} />
         </TabsContent>
       </Tabs>
     </div>

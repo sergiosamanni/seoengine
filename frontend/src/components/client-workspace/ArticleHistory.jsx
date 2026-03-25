@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
 import {
-  Loader2, FileText, History, ChevronDown, Trash2, ExternalLink, Eye
+  Loader2, FileText, History, ChevronDown, Trash2, ExternalLink, Eye, Search
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmationModal } from '../ui/confirmation-modal';
@@ -62,6 +62,18 @@ export const ArticleHistory = ({ effectiveClientId, getAuthHeaders }) => {
     }
   };
 
+  const requestIndexing = async (e, url) => {
+    e.stopPropagation();
+    if (!url) return;
+    const tId = toast.loading('Invio richiesta indicizzazione...');
+    try {
+      await axios.post(`${API}/clients/${effectiveClientId}/gsc/index-url`, { url }, { headers: getAuthHeaders() });
+      toast.success('Richiesta inviata con successo!', { id: tId });
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Errore durante l\'invio', { id: tId });
+    }
+  };
+
   return (
     <div className="mt-12 pt-12 border-t border-[#f1f3f6] animate-fade-in">
       <div className="flex items-center justify-between mb-6 px-2">
@@ -112,11 +124,16 @@ export const ArticleHistory = ({ effectiveClientId, getAuthHeaders }) => {
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
                             {a.wordpress_link && (
-                              <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50">
-                                <a href={a.wordpress_link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
-                                  <ExternalLink className="w-3.5 h-3.5" />
-                                </a>
-                              </Button>
+                              <>
+                                <Button variant="ghost" size="icon" onClick={(e) => requestIndexing(e, a.wordpress_link)} className="h-8 w-8 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50" title="Richiedi Indicizzazione">
+                                  <Search className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50">
+                                  <a href={a.wordpress_link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                  </a>
+                                </Button>
+                              </>
                             )}
                             <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); confirmDelete(a.id); }} className="h-8 w-8 rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50">
                               <Trash2 className="w-3.5 h-3.5" />
