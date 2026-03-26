@@ -73,6 +73,14 @@ async def startup():
     except Exception as e:
         logger.error(f"Autopilot start failed: {e}")
 
+    # Seed initial data
+    try:
+        from routes.auth_users import seed_data
+        await seed_data()
+        logger.info("Database seeding checked/completed")
+    except Exception as e:
+        logger.error(f"Seeding failed: {e}")
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

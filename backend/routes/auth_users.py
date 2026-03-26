@@ -95,7 +95,7 @@ async def seed_data():
         now = datetime.now(timezone.utc).isoformat()
         await db.users.insert_one({
             "id": admin_id, "email": os.environ.get("ADMIN_SEED_EMAIL", "admin@seoengine.it"),
-            "password": hash_password(os.environ.get("ADMIN_SEED_PASSWORD", "changeme")),
+            "password": hash_password(os.environ.get("ADMIN_SEED_PASSWORD", "admin123")),
             "name": "Admin SEO", "role": "admin", "client_ids": [], "created_at": now
         })
     return {"message": "Seed completato"}
