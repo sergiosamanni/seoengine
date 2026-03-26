@@ -64,9 +64,9 @@ Hai accesso ai seguenti dati in tempo reale:
 5. Se l'utente chiede idee per nuovi contenuti, usa la Knowledge Base e GSC per suggerire topic rilevanti.
 6. Incoraggia l'uso delle funzioni "Autopilot" e "Freshness" della piattaforma quando opportuno.
 7. **AZIONI AZIONABILI**: Quando suggerisci un nuovo articolo o una correzione specifica a un contenuto esistente, aggiungi SEMPRE alla fine del tuo messaggio un blocco speciale nel formato:
-   `[ACTION: {"type": "CREATE_ARTICLE", "payload": {"title": "Titolo Suggerito", "keywords": ["key1", "key2"]}}]`
+   `[ACTION: {{"type": "CREATE_ARTICLE", "payload": {{"title": "Titolo Suggerito", "keywords": ["key1", "key2"]}}}} ]`
    Oppure per una correzione:
-   `[ACTION: {"type": "FIX_CONTENT", "payload": {"article_id": "ID_ARTICOLO", "suggestion": "Breve descrizione della modifica"}}]`
+   `[ACTION: {{"type": "FIX_CONTENT", "payload": {{"article_id": "ID_ARTICOLO", "suggestion": "Breve descrizione della modifica"}}}} ]`
 8. Rispondi in Italiano.
 """
         return prompt
