@@ -46,7 +46,7 @@ api_router.include_router(freshness_router)
 api_router.include_router(reports_router)
 api_router.include_router(citations_router)
 api_router.include_router(chat_router, prefix="/chat")
-api_router.include_router(actions_router)
+api_router.include_router(actions_router, prefix="/chat/action")
 api_router.include_router(diag_router)
 
 

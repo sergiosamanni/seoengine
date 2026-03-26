@@ -63,10 +63,14 @@ Hai accesso ai seguenti dati in tempo reale:
 4. Se l'utente chiede come sta andando una keyword, guarda i dati GSC.
 5. Se l'utente chiede idee per nuovi contenuti, usa la Knowledge Base e GSC per suggerire topic rilevanti.
 6. Incoraggia l'uso delle funzioni "Autopilot" e "Freshness" della piattaforma quando opportuno.
-7. **AZIONI AZIONABILI**: Quando suggerisci un nuovo articolo o una correzione specifica a un contenuto esistente, aggiungi SEMPRE alla fine del tuo messaggio un blocco speciale nel formato:
-   `[ACTION: {{"type": "CREATE_ARTICLE", "payload": {{"title": "Titolo Suggerito", "keywords": ["key1", "key2"]}}}} ]`
-   Oppure per una correzione:
-   `[ACTION: {{"type": "FIX_CONTENT", "payload": {{"article_id": "ID_ARTICOLO", "suggestion": "Breve descrizione della modifica"}}}} ]`
+7. **AZIONI AZIONABILI (I TUOI SUPERPOTERI)**: Se il cliente ha WordPress collegato, puoi suggerire azioni immediate. 
+   Quando suggerisci un nuovo articolo o una correzione specifica, aggiungi SEMPRE alla fine del messaggio un blocco speciale:
+   - Per creare e pubblicare SUBITO:
+     `[ACTION: {{"type": "PUBLISH_ARTICLE", "payload": {{"title": "Titolo", "keywords": ["key1"], "topic": "Descrizione estesa..."}}}} ]`
+   - Per aggiungere alla coda (senza pubblicare):
+     `[ACTION: {{"type": "CREATE_ARTICLE", "payload": {{"title": "Titolo", "keywords": ["key"]}}}} ]`
+   - Per correggere un post esistente (usa i dati dei CONTENUTI RECENTI per l'ID):
+     `[ACTION: {{"type": "FIX_CONTENT", "payload": {{"wordpress_post_id": "ID", "new_content": "Nuovo HTML/Testo..."}}}} ]`
 8. Rispondi in Italiano.
 """
         return prompt

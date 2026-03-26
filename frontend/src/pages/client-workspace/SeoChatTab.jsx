@@ -122,7 +122,7 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
             newMessages[messageIndex] = { ...newMessages[messageIndex], executionLoading: true };
             setMessages(newMessages);
 
-            const res = await axios.post(`${API}/clients/${clientId}/chat/execute-action`, action, { headers: getAuthHeaders() });
+            const res = await axios.post(`${API}/chat/action/execute`, { ...action, client_id: clientId }, { headers: getAuthHeaders() });
             
             toast.success(res.data.message || "Azione eseguita con successo");
             
@@ -178,7 +178,8 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                 <div className="flex items-center gap-2">
                                     <Sparkles className="w-3 h-3 text-amber-500" />
                                     <span className="text-[10px] font-bold uppercase tracking-tight text-slate-600">
-                                        {actionData.type === 'CREATE_ARTICLE' ? 'Suggerimento Articolo' : 'Suggerimento Ottimizzazione'}
+                                        {actionData.type === 'PUBLISH_ARTICLE' ? 'Pubblicazione Immediata' : 
+                                         actionData.type === 'CREATE_ARTICLE' ? 'Suggerimento Articolo' : 'Suggerimento Ottimizzazione'}
                                     </span>
                                 </div>
                                 {messages[msgIndex]?.executed && (
@@ -188,7 +189,7 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                 )}
                             </div>
                             <div className="p-4 space-y-3">
-                                {actionData.type === 'CREATE_ARTICLE' && (
+                                {(actionData.type === 'CREATE_ARTICLE' || actionData.type === 'PUBLISH_ARTICLE') && (
                                     <div className="space-y-2">
                                         <div className="text-[11px] font-bold text-slate-900">{actionData.payload.title}</div>
                                         <div className="flex flex-wrap gap-1">
@@ -226,6 +227,7 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                     )}
                                     {messages[msgIndex]?.executionLoading ? 'Esecuzione...' : 
                                      messages[msgIndex]?.executed ? 'Azione Completata' : 
+                                     actionData.type === 'PUBLISH_ARTICLE' ? 'Pubblica ORA su WP' :
                                      actionData.type === 'CREATE_ARTICLE' ? 'Crea Bozza Ora' : 'Applica Modifica'}
                                 </Button>
                             </div>
