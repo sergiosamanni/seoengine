@@ -94,12 +94,16 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
         setLoading(true);
 
         try {
-            const url = `${API}/clients/${clientId}/chat/sessions/${currentSession.id}/message`;
+            const url = `${API}/chat/message`;
             console.log("SENDING CHAT MESSAGE TO:", url);
-            console.log("CLIENT ID:", clientId);
-            console.log("SESSION ID:", currentSession.id);
-            console.log("PAYLOAD:", { content: textToSend });
-            const res = await axios.post(url, { content: textToSend }, { headers: getAuthHeaders() });
+            const payload = { 
+                client_id: clientId, 
+                session_id: currentSession.id, 
+                content: textToSend 
+            };
+            console.log("PAYLOAD:", payload);
+            
+            const res = await axios.post(url, payload, { headers: getAuthHeaders() });
             setMessages(prev => [...prev, res.data]);
         } catch (e) {
             toast.error("Errore esperto SEO");

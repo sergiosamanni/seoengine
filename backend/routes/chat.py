@@ -34,16 +34,21 @@ async def get_chat_messages(client_id: str, session_id: str, current_user: dict 
     messages = await ChatService.get_session_messages(session_id)
     return [ChatMessage(**m) for m in messages]
 
-@router.post("/clients/{client_id}/chat/sessions/{session_id}/message", response_model=ChatMessage)
-async def send_message(client_id: str, session_id: str, request: dict, current_user: dict = Depends(get_current_user)):
+@router.post("/message", response_model=ChatMessage)
+async def send_message(request: dict, current_user: dict = Depends(get_current_user)):
+    client_id = request.get("client_id")
+    session_id = request.get("session_id")
+    content = request.get("content")
+    
+    print(f"DEBUG: FLAT ROUTE POST message. cid={client_id}, sid={session_id}")
+    
+    if not client_id or not session_id or not content:
+        raise HTTPException(status_code=400, detail="Mancano parametri (client_id, session_id, content)")
+
     if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     
-    print(f"DEBUG: ROUTE POST message. cid={client_id}, sid={session_id}")
     try:
-        content = request.get("content")
-        if not content:
-            raise HTTPException(status_code=400, detail="Contenuto messaggio richiesto")
         user_id = current_user.get("id") or current_user.get("sub") or "user"
         msg = await ChatService.process_user_message(client_id, session_id, user_id, content)
         return msg
