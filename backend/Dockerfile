@@ -6,6 +6,8 @@ WORKDIR /app
 # Install system dependencies if needed (e.g., for some python packages)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    ca-certificates \
+    libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install
