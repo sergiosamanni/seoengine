@@ -49,7 +49,7 @@ async def send_message(client_id: str, session_id: str, request: dict, current_u
         return msg
     except ValueError as e:
         print(f"DEBUG: Chat ValueError: {e}")
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         print(f"DEBUG: Chat Error: {e}")
         import traceback
