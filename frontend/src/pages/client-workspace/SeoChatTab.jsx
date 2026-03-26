@@ -4,7 +4,7 @@ import { API_URL as API } from '../../config';
 import { 
     Send, Loader2, User, Bot, Sparkles, MessageCircle, 
     Plus, History, Maximize2, Hash, FileText, BarChart2,
-    PieChart, Zap, X, AlertCircle
+    PieChart, Zap, X, AlertCircle, CheckCircle2, ArrowRight
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
@@ -104,18 +104,122 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
         }
     };
 
-    const renderMessageContent = (content) => {
+    const handleExecuteAction = async (action, messageIndex) => {
+        try {
+            // Optimistic update of the message to show loading in the card
+            const newMessages = [...messages];
+            newMessages[messageIndex] = { ...newMessages[messageIndex], executionLoading: true };
+            setMessages(newMessages);
+
+            const res = await axios.post(`${API}/clients/${clientId}/chat/execute-action`, action, { headers: getAuthHeaders() });
+            
+            toast.success(res.data.message || "Azione eseguita con successo");
+            
+            // Mark as executed
+            newMessages[messageIndex] = { 
+                ...newMessages[messageIndex], 
+                executionLoading: false, 
+                executed: true,
+                executionResult: res.data.message 
+            };
+            setMessages(newMessages);
+        } catch (e) {
+            toast.error("Errore durante l'esecuzione dell'azione");
+            console.error("Action execution error:", e);
+            const newMessages = [...messages];
+            newMessages[messageIndex] = { ...newMessages[messageIndex], executionLoading: false };
+            setMessages(newMessages);
+        }
+    };
+
+    const renderMessageContent = (content, msgIndex) => {
         if (typeof content === 'string') {
-            // Semplice parsing per il grassetto **testo**
-            const parts = content.split(/(\*\*.*?\*\*)/g);
+            // Parse ACTION first
+            const actionMatch = content.match(/\[ACTION:\s*({.*?})\]/);
+            let displayContent = content;
+            let actionData = null;
+
+            if (actionMatch) {
+                try {
+                    actionData = JSON.parse(actionMatch[1]);
+                    displayContent = content.replace(actionMatch[0], '').trim();
+                } catch (e) {
+                    console.error("Failed to parse action JSON", e);
+                }
+            }
+
+            // Simple parsing for bold **text**
+            const parts = displayContent.split(/(\*\*.*?\*\*)/g);
             return (
-                <div className="whitespace-pre-wrap">
-                    {parts.map((p, i) => {
-                        if (p.startsWith('**') && p.endsWith('**')) {
-                            return <strong key={i} className="font-extrabold text-slate-900">{p.slice(2, -2)}</strong>;
-                        }
-                        return p;
-                    })}
+                <div className="space-y-4">
+                    <div className="whitespace-pre-wrap">
+                        {parts.map((p, i) => {
+                            if (p.startsWith('**') && p.endsWith('**')) {
+                                return <strong key={i} className="font-extrabold text-slate-900">{p.slice(2, -2)}</strong>;
+                            }
+                            return p;
+                        })}
+                    </div>
+
+                    {actionData && (
+                        <Card className="mt-4 border-slate-200 bg-white shadow-sm overflow-hidden">
+                            <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="w-3 h-3 text-amber-500" />
+                                    <span className="text-[10px] font-bold uppercase tracking-tight text-slate-600">
+                                        {actionData.type === 'CREATE_ARTICLE' ? 'Suggerimento Articolo' : 'Suggerimento Ottimizzazione'}
+                                    </span>
+                                </div>
+                                {messages[msgIndex]?.executed && (
+                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] font-bold uppercase px-1">
+                                        Eseguito
+                                    </Badge>
+                                )}
+                            </div>
+                            <div className="p-4 space-y-3">
+                                {actionData.type === 'CREATE_ARTICLE' && (
+                                    <div className="space-y-2">
+                                        <div className="text-[11px] font-bold text-slate-900">{actionData.payload.title}</div>
+                                        <div className="flex flex-wrap gap-1">
+                                            {actionData.payload.keywords?.map((kw, idx) => (
+                                                <Badge key={idx} variant="secondary" className="bg-slate-100 text-slate-500 hover:bg-slate-100 text-[8px] font-medium border-none px-1.5 py-0">
+                                                    #{kw}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {actionData.type === 'FIX_CONTENT' && (
+                                    <div className="text-[10px] text-slate-600 italic">
+                                        {actionData.payload.suggestion}
+                                    </div>
+                                )}
+
+                                <Button 
+                                    size="sm"
+                                    disabled={messages[msgIndex]?.executed || messages[msgIndex]?.executionLoading}
+                                    onClick={() => handleExecuteAction(actionData, msgIndex)}
+                                    className={`w-full h-8 text-[10px] font-bold uppercase tracking-tight gap-2 transition-all ${
+                                        messages[msgIndex]?.executed 
+                                        ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-50 border border-emerald-100' 
+                                        : 'bg-slate-900 text-white hover:bg-slate-800'
+                                    }`}
+                                >
+                                    {messages[msgIndex]?.executionLoading ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : messages[msgIndex]?.executed ? (
+                                        <CheckCircle2 className="w-3 h-3" />
+                                    ) : (
+                                        <Zap className="w-3 h-3" />
+                                    )}
+                                    {messages[msgIndex]?.executionLoading ? 'Esecuzione...' : 
+                                     messages[msgIndex]?.executed ? 'Azione Completata' : 
+                                     actionData.type === 'CREATE_ARTICLE' ? 'Crea Bozza Ora' : 'Applica Modifica'}
+                                </Button>
+                            </div>
+                        </Card>
+                    )}
                 </div>
             );
         }
@@ -207,7 +311,7 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                         {m.role === 'user' ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
                                     </div>
                                     <div className={`p-3 rounded-2xl text-[11px] leading-relaxed transition-all ${m.role === 'user' ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-700 font-medium'}`}>
-                                        {renderMessageContent(m.content)}
+                                        {renderMessageContent(m.content, idx)}
                                     </div>
                                 </div>
                             </div>
