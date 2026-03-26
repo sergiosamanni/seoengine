@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../../config';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Zap, Loader2, Sparkles, AlertCircle, Clock, Link2, Search, ExternalLink, CalendarClock, RefreshCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 const FreshnessTab = ({ clientId, getAuthHeaders, client, addToQueue }) => {
     const [loading, setLoading] = useState(true);

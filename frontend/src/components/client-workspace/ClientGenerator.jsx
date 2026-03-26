@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../../config';
 import { Card, CardContent, CardDescription } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -16,7 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 export const ClientGenerator = ({ client: initialClient, effectiveClientId, getAuthHeaders, navigate }) => {
   const [step, setStep] = useState(1);

@@ -1,5 +1,8 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 
-client = AsyncIOMotorClient(os.environ["MONGO_URL"])
-db = client[os.environ["DB_NAME"]]
+MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
+DB_NAME = os.environ.get("DB_NAME", "seoengine")
+
+client = AsyncIOMotorClient(MONGO_URL)
+db = client[DB_NAME]

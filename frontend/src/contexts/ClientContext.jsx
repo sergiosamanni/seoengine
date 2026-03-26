@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../config';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 const ClientContext = createContext(null);
 

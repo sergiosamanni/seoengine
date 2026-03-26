@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../config';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -23,7 +24,7 @@ import {
   Filter
 } from 'lucide-react';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 const ACTION_LABELS = {
   batch_start: 'Avvio batch',

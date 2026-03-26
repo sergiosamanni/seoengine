@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    restart: always
+
+  # For Option A, we don't need MongoDB here as it will be on Atlas, 
+  # but we can keep it for local testing if needed.
+  # mongodb:
+  #   image: mongo:latest
+  #   ports:
+  #     - "27017:27017"
+  #   volumes:
+  #     - mongo_data:/data/db
+
+# volumes:
+#   mongo_data:

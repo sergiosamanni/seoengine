@@ -7,6 +7,7 @@ import {
   LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X, Globe, MapPin
 } from 'lucide-react';
 import axios from 'axios';
+import { API_URL as API } from '../config';
 import {
   Select,
   SelectContent,
@@ -15,7 +16,7 @@ import {
   SelectValue,
 } from './ui/select';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 export const DashboardLayout = ({ children }) => {
   const { user, isAdmin, logout, switchClient, getAuthHeaders } = useAuth();

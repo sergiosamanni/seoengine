@@ -1,5 +1,6 @@
 import React from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../../config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -16,7 +17,7 @@ import {
 import { Search, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 export const SerpAnalysisTab = ({ effectiveClientId, getAuthHeaders }) => {
   const [serpKeyword, setSerpKeyword] = React.useState('');

@@ -29,8 +29,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://italiarentalsi.it",
-    ] + [o for o in os.environ.get('CORS_ORIGINS', '').split(',') if o],
+    ] + [o.strip() for o in os.environ.get('CORS_ORIGINS', '').split(',') if o.strip()],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -49,6 +48,10 @@ api_router.include_router(chat_router)
 @api_router.get("/")
 async def root():
     return {"message": "Programmatic SEO Engine API", "version": "2.0"}
+
+@api_router.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 app.include_router(api_router)
 

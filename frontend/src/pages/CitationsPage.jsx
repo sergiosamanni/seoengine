@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../config';
 import { 
   Card, CardContent, CardHeader, CardTitle, CardDescription 
 } from '../components/ui/card';
@@ -20,7 +21,7 @@ import { ConfirmationModal } from '../components/ui/confirmation-modal';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 const AGENZIE = [
   { id: 'all', label: 'Tutte le agenzie', color: 'bg-slate-900 text-white', dot: 'bg-slate-400' },

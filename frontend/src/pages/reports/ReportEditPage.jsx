@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../../config';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -16,7 +17,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 const MODULE_DEFS = [
   { id: 'attivita', label: 'Attività Svolte', icon: Layout, description: 'Articoli, Landing Page, Categorie, Automatismi e Altro' },

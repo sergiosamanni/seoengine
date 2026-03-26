@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import config, { API_URL as API } from '../../config';
 import {
     Card, CardContent, CardDescription, CardHeader, CardTitle
 } from '../ui/card';
@@ -26,7 +27,7 @@ import { Switch } from '../ui/switch';
 import { ContentStrategyTab } from '../../pages/configuration/ContentStrategyTab';
 import { KeywordsTab } from '../../pages/configuration/KeywordsTab';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000") || 'http://localhost:8000'}/api`;
+
 
 const AdminGenerator = ({
     client, effectiveClientId, getAuthHeaders, navigate, initialData, onDataUsed
@@ -405,7 +406,7 @@ const AdminGenerator = ({
                 url: imgUrl, 
                 client_id: effectiveClientId 
             }, { headers: getAuthHeaders() });
-            const backendUrl = (process.env.REACT_APP_BACKEND_URL || "http://localhost:8000") || "http://localhost:8000";
+            const backendUrl = config.API_URL.replace('/api', '');
             const imageUrlFull = `${backendUrl}/api/uploads/files/${res.data.id}?auth=${token}`;
 
             if (activePlanImageIndex !== null) {
@@ -449,7 +450,7 @@ const AdminGenerator = ({
             });
             setSingleSelectedImage({ 
                 id: res.data.id, 
-                url: `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api/uploads/files/${res.data.id}?auth=${token}` 
+                url: `${API}/uploads/files/${res.data.id}?auth=${token}` 
             });
             toast.success("Immagine caricata");
         } catch (error) {

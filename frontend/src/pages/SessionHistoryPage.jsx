@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../config';
 import { useAuth } from '../contexts/AuthContext';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -45,7 +46,7 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { ConfirmationModal } from '../components/ui/confirmation-modal';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 export const SessionHistoryPage = () => {
   const { getAuthHeaders, isAdmin, user } = useAuth();

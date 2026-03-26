@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../../config';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -10,7 +11,7 @@ import {
 import { toast } from 'sonner';
 import { ConfirmationModal } from '../ui/confirmation-modal';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 export const ArticleHistory = ({ effectiveClientId, getAuthHeaders }) => {
   const [articles, setArticles] = useState([]);

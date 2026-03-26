@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../../config';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -7,7 +8,7 @@ import { Search, Folder, Loader2, ChevronDown, ChevronRight, FileText, Globe } f
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 const AGENZIE = [
   { id: 'personali', label: 'Personali', color: 'bg-yellow-500' },

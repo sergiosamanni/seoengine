@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../../config';
 import { 
     Send, Loader2, User, Bot, Sparkles, MessageCircle, 
     Plus, History, Maximize2, Hash, FileText, BarChart2,
@@ -12,7 +13,7 @@ import { ScrollArea } from '../../components/ui/scroll-area';
 import { Badge } from '../../components/ui/badge';
 import { toast } from 'sonner';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQueue, onRequestStrategicAnalysis }) => {
     const [sessions, setSessions] = useState([]);

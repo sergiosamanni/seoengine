@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../config';
 import { useAuth } from '../contexts/AuthContext';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
@@ -12,7 +13,7 @@ import { ApiKeysTab } from './configuration/ApiKeysTab';
 import { KnowledgeBaseTab } from './configuration/KnowledgeBaseTab';
 import { ToneStyleTab } from './configuration/ToneStyleTab';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 export const ConfigurationPage = () => {
   const { getAuthHeaders, isAdmin, user } = useAuth();

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../config';
 import { useAuth } from '../contexts/AuthContext';
 import { useClient } from '../contexts/ClientContext';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -32,7 +33,7 @@ import { GscDataTab } from './configuration/GscDataTab';
 import FreshnessTab from './client-workspace/FreshnessTab';
 import SeoChatTab from './client-workspace/SeoChatTab';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 export const GeneratorPage = () => {
   const { getAuthHeaders, user, isAdmin } = useAuth();

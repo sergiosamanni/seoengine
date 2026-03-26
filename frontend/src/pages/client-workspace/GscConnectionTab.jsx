@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../../config';
 import {
     Loader2, Save, CheckCircle2, AlertTriangle,
     Unlink, ExternalLink, ChevronDown, ChevronUp,
@@ -12,7 +13,7 @@ import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { toast } from 'sonner';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 const CopyButton = ({ text }) => {
     const [copied, setCopied] = useState(false);

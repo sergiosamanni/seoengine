@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
+import { API_URL as API } from '../../config';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -24,7 +25,7 @@ import { toast } from 'sonner';
 // Components
 import SeoChatTab from '../client-workspace/SeoChatTab';
 
-const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
+
 
 export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => {
     const [loading, setLoading] = useState(false);
