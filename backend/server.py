@@ -23,6 +23,7 @@ from routes.reports import router as reports_router
 from routes.citations import router as citations_router
 from routes.chat import router as chat_router
 from routes.actions import router as actions_router
+from routes.diag import router as diag_router
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,6 +47,7 @@ api_router.include_router(reports_router)
 api_router.include_router(citations_router)
 api_router.include_router(chat_router)
 api_router.include_router(actions_router)
+api_router.include_router(diag_router)
 
 
 @app.get("/")
