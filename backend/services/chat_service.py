@@ -36,20 +36,40 @@ class ChatService:
 
     @staticmethod
     async def get_session_messages(session_id: str) -> List[Dict]:
-        session = await db.chat_sessions.find_one({"id": session_id}, {"messages": 1, "_id": 0})
+        from bson import ObjectId
+        query = {"id": session_id}
+        # Try finding by 'id' field first
+        session = await db.chat_sessions.find_one(query, {"messages": 1, "_id": 0})
+        
+        # Fallback to _id if session_id looks like a MongoDB ObjectId
+        if not session and len(session_id) == 24:
+            try:
+                session = await db.chat_sessions.find_one({"_id": ObjectId(session_id)}, {"messages": 1, "_id": 0})
+            except: pass
+            
         if not session:
             return []
         return session.get("messages", [])
 
     @staticmethod
     async def process_user_message(client_id: str, session_id: str, user_id: str, content: str) -> Dict[str, Any]:
+        from bson import ObjectId
+        
+        # Robust Session Lookup
         session = await db.chat_sessions.find_one({"id": session_id})
+        if not session and len(session_id) == 24:
+            try: session = await db.chat_sessions.find_one({"_id": ObjectId(session_id)})
+            except: pass
         if not session:
-            raise ValueError("Sessione non trovata")
+            raise ValueError(f"Sessione non trovata (ID: {session_id})")
             
+        # Robust Client Lookup
         client = await db.clients.find_one({"id": client_id})
+        if not client and len(client_id) == 24:
+            try: client = await db.clients.find_one({"_id": ObjectId(client_id)})
+            except: pass
         if not client:
-            raise ValueError("Cliente non trovato")
+            raise ValueError(f"Cliente non trovato (ID: {client_id})")
             
         config = client.get("configuration", {})
         
