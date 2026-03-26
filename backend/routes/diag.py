@@ -19,7 +19,7 @@ async def db_check():
     
     if unrent:
         cid = unrent.get("id")
-        sessions = await db.chat_sessions.find({"client_id": cid}, {"title": 1, "id": 1, "_id": 1}).to_list(10)
+        sessions = await db.chat_sessions.find({"client_id": cid}, {"title": 1, "id": 1, "_id": 1, "user_id": 1}).to_list(10)
         res["unrent_sessions"] = [{k: str(v) if k == "_id" else v for k, v in s.items()} for s in sessions]
         
         # Test the EXACT query used in chat service
@@ -28,6 +28,14 @@ async def db_check():
         res["test_session_direct_lookup"] = "FOUND" if session_direct else "NOT FOUND"
         if session_direct:
             res["test_session_details"] = {k: str(v) if k == "_id" else v for k, v in session_direct.items() if k != "messages"}
+            uid = session_direct.get("user_id")
+            res["test_session_user_id"] = uid
+            user_doc = await db.users.find_one({"id": uid})
+            res["test_session_user_lookup"] = "FOUND" if user_doc else "NOT FOUND"
+            
+    # Check all users
+    users = await db.users.find({}, {"email": 1, "id": 1}).to_list(10)
+    res["sample_users"] = users
         
     # Check if repair log exists
     import os
