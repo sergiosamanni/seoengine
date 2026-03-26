@@ -38,8 +38,8 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
     const fetchSessions = async () => {
         try {
             setLoadingSessions(true);
-            const res = await axios.get(`${API}/clients/${clientId}/chat/sessions`, { headers: getAuthHeaders() });
-            const data = Array.isArray(res.data) ? res.data : [];
+            const res = await axios.get(`${API}/chat/sessions?client_id=${clientId}`, { headers: getAuthHeaders() });
+            const data = res.data.sessions || res.data;
             setSessions(data);
             if (data.length > 0 && !currentSession) {
                 handleSelectSession(data[0]);
@@ -51,21 +51,25 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
         }
     };
 
-    const handleSelectSession = async (session) => {
-        if (!session?.id) return;
-        setCurrentSession(session);
+    const fetchMessages = async (sessionId) => {
         try {
-            const res = await axios.get(`${API}/clients/${clientId}/chat/sessions/${session.id}/messages`, { headers: getAuthHeaders() });
-            setMessages(Array.isArray(res.data) ? res.data : []);
+            const res = await axios.get(`${API}/chat/sessions/${sessionId}/messages`, { headers: getAuthHeaders() });
+            setMessages(res.data);
             setShowSidebar(false);
         } catch (e) {
             toast.error("Errore caricamento messaggi");
         }
     };
 
+    const handleSelectSession = async (session) => {
+        if (!session?.id) return;
+        setCurrentSession(session);
+        await fetchMessages(session.id);
+    };
+
     const handleNewSession = async () => {
         try {
-            const res = await axios.post(`${API}/clients/${clientId}/chat/sessions`, { title: `Chat ${new Date().toLocaleDateString()}` }, { headers: getAuthHeaders() });
+            const res = await axios.post(`${API}/chat/sessions`, { client_id: clientId }, { headers: getAuthHeaders() });
             setSessions([res.data, ...sessions]);
             setCurrentSession(res.data);
             setMessages([]);
@@ -95,13 +99,11 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
 
         try {
             const url = `${API}/chat/message`;
-            console.log("SENDING CHAT MESSAGE TO:", url);
             const payload = { 
                 client_id: clientId, 
                 session_id: currentSession.id, 
                 content: textToSend 
             };
-            console.log("PAYLOAD:", payload);
             
             const res = await axios.post(url, payload, { headers: getAuthHeaders() });
             setMessages(prev => [...prev, res.data]);
