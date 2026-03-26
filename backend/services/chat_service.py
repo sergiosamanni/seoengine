@@ -48,6 +48,7 @@ class ChatService:
             except: pass
             
         if not session:
+            print(f"DEBUG: Session not found for ID: {session_id}")
             return []
         return session.get("messages", [])
 
@@ -55,12 +56,15 @@ class ChatService:
     async def process_user_message(client_id: str, session_id: str, user_id: str, content: str) -> Dict[str, Any]:
         from bson import ObjectId
         
+        print(f"DEBUG: Entering process_user_message. client={client_id}, session={session_id}, user={user_id}")
+        
         # Robust Session Lookup
         session = await db.chat_sessions.find_one({"id": session_id})
         if not session and len(session_id) == 24:
             try: session = await db.chat_sessions.find_one({"_id": ObjectId(session_id)})
             except: pass
         if not session:
+            print(f"DEBUG: Session not found (ID: {session_id})")
             raise ValueError(f"Sessione non trovata (ID: {session_id})")
             
         # Robust Client Lookup

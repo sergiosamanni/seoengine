@@ -35,21 +35,23 @@ async def get_chat_messages(client_id: str, session_id: str, current_user: dict 
     return [ChatMessage(**m) for m in messages]
 
 @router.post("/clients/{client_id}/chat/sessions/{session_id}/message", response_model=ChatMessage)
-async def send_chat_message(client_id: str, session_id: str, request: dict, current_user: dict = Depends(get_current_user)):
+async def send_message(client_id: str, session_id: str, request: dict, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     
-    logger.info(f"Chat request for client {client_id}, session {session_id}")
-    content = request.get("content")
-    if not content:
-        raise HTTPException(status_code=400, detail="Contenuto messaggio richiesto")
-    
+    print(f"DEBUG: ROUTE POST message. cid={client_id}, sid={session_id}")
     try:
-        response = await ChatService.process_user_message(client_id, session_id, current_user["user_id"], content)
-        return ChatMessage(**response)
+        content = request.get("content")
+        if not content:
+            raise HTTPException(status_code=400, detail="Contenuto messaggio richiesto")
+        user_id = current_user.get("id") or current_user.get("sub") or "user"
+        msg = await ChatService.process_user_message(client_id, session_id, user_id, content)
+        return msg
     except ValueError as e:
-        logger.error(f"Chat ValueError: {e}")
+        print(f"DEBUG: Chat ValueError: {e}")
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        logger.error(f"Errore Chat: {e}")
-        raise HTTPException(status_code=500, detail="Errore durante l'elaborazione del messaggio")
+        print(f"DEBUG: Chat Error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
