@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -8,142 +8,23 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../../components/ui/select';
 import {
+  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
+} from '../../components/ui/accordion';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
+} from '../../components/ui/dialog';
+import {
   BarChart3, Loader2, RefreshCw, ExternalLink, TrendingUp, Sparkles,
-  MousePointerClick, Eye, Target, AlertTriangle, CheckCircle2, Globe, Send
+  MousePointerClick, Eye, Target, Globe, Send,
+  Zap, ChevronRight, LayoutDashboard, Search, MessageSquare, PanelRightClose, PanelRightOpen,
+  ChevronDown, ChevronUp, MessageCircle, ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { 
-    ResponsiveContainer, AreaChart, Area, XAxis, YAxis, 
-    CartesianGrid, Tooltip, LineChart, Line 
-} from 'recharts';
+
+// Components
+import SeoChatTab from '../client-workspace/SeoChatTab';
 
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
-
-const GscTrendChart = ({ data }) => {
-    if (!data || data.length === 0) return null;
-    
-    // Formattazione data YYYYMMDD -> DD/MM
-    const chartData = data.map(d => ({
-        ...d,
-        formattedDate: `${d.date.substring(6,8)}/${d.date.substring(4,6)}`
-    }));
-
-    return (
-        <Card className="border-slate-100 shadow-sm rounded-2xl overflow-hidden p-4 bg-white">
-            <div className="flex items-center justify-between mb-2 px-1">
-                <div>
-                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-tighter">Andamento Traffico</h4>
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Click e Impressioni</p>
-                </div>
-            </div>
-            <div className="h-[180px] w-full mt-2">
-                <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
-                        <defs>
-                            <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15}/>
-                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                            </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis 
-                            dataKey="formattedDate" 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{fontSize: 9, fontWeight: 800, fill: '#cbd5e1'}}
-                            minTickGap={40}
-                        />
-                        <YAxis 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{fontSize: 9, fontWeight: 800, fill: '#cbd5e1'}}
-                        />
-                        <Tooltip 
-                            contentStyle={{borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold'}}
-                            itemStyle={{padding: '0'}}
-                            labelStyle={{marginBottom: '4px', color: '#64748b'}}
-                        />
-                        <Area 
-                            type="monotone" 
-                            dataKey="clicks" 
-                            name="Click" 
-                            stroke="#6366f1" 
-                            strokeWidth={3} 
-                            fillOpacity={1} 
-                            fill="url(#colorClicks)" 
-                            animationDuration={1500}
-                        />
-                        <Area 
-                            type="monotone" 
-                            dataKey="impressions" 
-                            name="Impressioni" 
-                            stroke="#10b981" 
-                            strokeWidth={2} 
-                            fill="transparent" 
-                            strokeDasharray="5 5"
-                            animationDuration={2000}
-                        />
-                    </AreaChart>
-                </ResponsiveContainer>
-            </div>
-        </Card>
-    );
-};
-
-const GscPositionChart = ({ data }) => {
-    if (!data || data.length === 0) return null;
-    
-    const chartData = data.map(d => ({
-        ...d,
-        formattedDate: `${d.date.substring(6,8)}/${d.date.substring(4,6)}`
-    }));
-
-    return (
-        <Card className="border-slate-100 shadow-sm rounded-2xl overflow-hidden p-4 bg-white">
-            <div className="flex items-center justify-between mb-2 px-1">
-                <div>
-                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-tighter">Posizionamento Medio</h4>
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Trend Ranking</p>
-                </div>
-            </div>
-            <div className="h-[180px] w-full mt-2">
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis 
-                            dataKey="formattedDate" 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{fontSize: 9, fontWeight: 800, fill: '#cbd5e1'}}
-                            minTickGap={40}
-                        />
-                        <YAxis 
-                            reversed 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{fontSize: 9, fontWeight: 800, fill: '#cbd5e1'}}
-                            domain={['dataMin - 1', 'dataMax + 1']}
-                        />
-                        <Tooltip 
-                            contentStyle={{borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold'}}
-                            itemStyle={{padding: '0'}}
-                            labelStyle={{marginBottom: '4px', color: '#64748b'}}
-                        />
-                        <Line 
-                            type="monotone" 
-                            dataKey="position" 
-                            name="Posizione" 
-                            stroke="#f43f5e" 
-                            strokeWidth={3} 
-                            dot={false}
-                            animationDuration={2500}
-                        />
-                    </LineChart>
-                </ResponsiveContainer>
-            </div>
-        </Card>
-    );
-};
 
 export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => {
     const [loading, setLoading] = useState(false);
@@ -151,15 +32,21 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
     const [days, setDays] = useState('28');
     const [gscConnected, setGscConnected] = useState(false);
     
+    // Limits for gradual expansion
+    const [kwLimit, setKwLimit] = useState(25);
+    const [pgLimit, setPgLimit] = useState(25);
+    const [isChatOpen, setIsChatOpen] = useState(false);
+
+    // Sorting State
+    const [kwSort, setKwSort] = useState({ field: 'clicks', order: 'desc' });
+    const [pgSort, setPgSort] = useState({ field: 'clicks', order: 'desc' });
+    
     const [sitemapLoading, setSitemapLoading] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
-    const [aiStrategy, setAiStrategy] = useState(null);
 
     const submitSitemap = async () => {
         if (!data || !clientId) return;
         setSitemapLoading(true);
-        
-        // Use configured sitemap_url or fallback to /sitemap.xml
         const configuredSitemap = client?.configuration?.seo?.sitemap_url;
         const sitemapUrl = configuredSitemap || `${client?.configuration?.gsc?.site_url?.replace(/\/$/, '')}/sitemap.xml`;
         
@@ -167,9 +54,9 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
             await axios.post(`${API}/clients/${clientId}/gsc/submit-sitemap`, { sitemap_url: sitemapUrl }, {
                 headers: getAuthHeaders()
             });
-            toast.success("Sitemap inviata con successo!");
+            toast.success("Sitemap inviata");
         } catch (error) {
-            toast.error(error.response?.data?.detail || "Errore nell'invio della sitemap");
+            toast.error(error.response?.data?.detail || "Errore");
         } finally {
             setSitemapLoading(false);
         }
@@ -183,15 +70,12 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
             });
             setData(resp.data);
             setGscConnected(true);
-            setAiStrategy(null); 
+            setKwLimit(25);
+            setPgLimit(25);
         } catch (error) {
-            if (error.response?.status === 401) {
-                setGscConnected(false);
-                toast.error('Sessione GSC scaduta. Riconnettiti nella scheda Configurazione.');
-            } else {
-                setGscConnected(false);
-                // Silence common 400s if not connected
-                if (error.response?.status !== 400) toast.error('Errore caricamento dati GSC');
+            setGscConnected(false);
+            if (error.response?.status !== 400 && error.response?.status !== 401) {
+                toast.error('Errore caricamento dati GSC');
             }
         } finally {
             setLoading(false);
@@ -202,24 +86,52 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
         if (clientId) fetchData();
     }, [clientId, fetchData]);
 
-    const handleApplySuggestion = (sugg) => {
-        if(addToQueue) {
-            addToQueue(`[STRATEGIA] ${sugg.keyword} - ${sugg.title}`);
-        }
+    // Sorting logic for Keywords
+    const sortedKeywords = useMemo(() => {
+        if (!data?.keywords) return [];
+        return [...data.keywords].sort((a, b) => {
+            const valA = a[kwSort.field];
+            const valB = b[kwSort.field];
+            if (kwSort.order === 'asc') return valA - valB;
+            return valB - valA;
+        });
+    }, [data?.keywords, kwSort]);
+
+    // Sorting logic for Pages
+    const sortedPages = useMemo(() => {
+        if (!data?.pages) return [];
+        return [...data.pages].sort((a, b) => {
+            const valA = a[pgSort.field];
+            const valB = b[pgSort.field];
+            if (pgSort.order === 'asc') return valA - valB;
+            return valB - valA;
+        });
+    }, [data?.pages, pgSort]);
+
+    const handleKwSort = (field) => {
+        setKwSort(prev => ({
+            field,
+            order: prev.field === field && prev.order === 'desc' ? 'asc' : 'desc'
+        }));
+    };
+
+    const handlePgSort = (field) => {
+        setPgSort(prev => ({
+            field,
+            order: prev.field === field && prev.order === 'desc' ? 'asc' : 'desc'
+        }));
     };
 
     const requestAiStrategy = async () => {
         if(!data) return;
         setAiLoading(true);
-        setAiStrategy(null);
         try {
-            const resp = await axios.post(`${API}/clients/${clientId}/gsc-strategic-suggestions`, { gsc_data: data }, {
+            await axios.post(`${API}/clients/${clientId}/gsc-strategic-suggestions`, { gsc_data: data }, {
                 headers: getAuthHeaders()
             });
-            setAiStrategy(resp.data.suggestions || []);
-            toast.success("Strategia AI elaborata!");
+            toast.success("Analisi Completata");
         } catch (error) {
-            toast.error("Errore nell'elaborazione strategica AI");
+            toast.error("Errore analisi AI");
         } finally {
             setAiLoading(false);
         }
@@ -229,283 +141,261 @@ export const GscDataTab = ({ clientId, getAuthHeaders, client, addToQueue }) => 
 
     if (!gscConnected && !loading) {
         return (
-            <Card className="border-slate-200">
+            <Card className="border-slate-100 shadow-none">
                 <CardContent className="py-12 text-center">
-                    <BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Google Search Console non connesso</h3>
-                    <p className="text-slate-500 max-w-lg mx-auto mb-6">
-                        Connetti il tuo account Google nella scheda **Configurazione** per visualizzare i dati di performance e posizionamento.
+                    <BarChart3 className="w-8 h-8 text-slate-200 mx-auto mb-3" />
+                    <h3 className="text-sm font-medium text-slate-900 mb-1">GSC non connesso</h3>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
+                        Connetti il tuo account nella scheda Configurazione.
                     </p>
                 </CardContent>
             </Card>
         );
     }
 
+    const SortIcon = ({ field, currentSort }) => {
+        if (currentSort.field !== field) return <ArrowUpDown className="w-2.5 h-2.5 ml-1 opacity-30" />;
+        return currentSort.order === 'asc' ? <ArrowUp className="w-2.5 h-2.5 ml-1 text-slate-900" /> : <ArrowDown className="w-2.5 h-2.5 ml-1 text-slate-900" />;
+    };
+
     return (
-        <div className="space-y-4 animate-fade-in">
-            {/* Header Section Compact */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3 px-5 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="flex flex-col gap-6 animate-in fade-in duration-500 h-full p-2 relative">
+            
+            {/* TOOLBAR */}
+            <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-950 flex items-center justify-center shadow-lg">
-                        <BarChart3 className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                        <h3 className="text-base font-black text-slate-900 tracking-tighter uppercase leading-tight">Performance di Ricerca</h3>
-                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{client?.nome} — Real-time Google Data</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
                     <Select value={days} onValueChange={(v) => setDays(v)}>
-                      <SelectTrigger className="w-[140px] h-8 rounded-lg border-slate-200 bg-slate-100/50 font-bold text-[10px] uppercase tracking-wider">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-lg border-slate-100 shadow-xl">
-                        <SelectItem value="7" className="text-[10px] font-bold">Ultimi 7 giorni</SelectItem>
-                        <SelectItem value="28" className="text-[10px] font-bold">Ultimi 28 giorni</SelectItem>
-                        <SelectItem value="90" className="text-[10px] font-bold">Ultimi 3 mesi</SelectItem>
-                      </SelectContent>
+                        <SelectTrigger className="w-[140px] h-8 text-[11px] border-slate-100 bg-white/50 shadow-none focus:ring-slate-100 rounded-lg">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-lg border-slate-100 text-[11px]">
+                            <SelectItem value="7">Ultimi 7 giorni</SelectItem>
+                            <SelectItem value="28">Ultimi 28 giorni</SelectItem>
+                            <SelectItem value="90">Ultimi 3 mesi</SelectItem>
+                        </SelectContent>
                     </Select>
-                    <Button variant="outline" size="sm" onClick={fetchData} disabled={loading} className="h-8 rounded-lg px-3 border-slate-200 font-bold text-[9px] uppercase tracking-widest hover:bg-slate-50">
-                      <RefreshCw className={`w-3 h-3 mr-1.5 ${loading ? 'animate-spin' : ''}`} /> Sincronizza
+                    
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={fetchData} 
+                        disabled={loading} 
+                        className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                    </Button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <Button 
+                        onClick={requestAiStrategy}
+                        disabled={aiLoading || !data}
+                        variant="outline"
+                        className="h-8 text-[10px] border-slate-100 bg-white rounded-lg px-3 flex items-center gap-2 hover:bg-slate-50"
+                    >
+                        {aiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3 text-amber-500 fill-amber-500" /> }
+                        ANALISI STRATEGICA
                     </Button>
                 </div>
             </div>
 
             {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 space-y-3">
-                    <div className="relative">
-                        <div className="w-12 h-12 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
-                    </div>
-                    <p className="text-slate-400 font-black uppercase tracking-widest text-[9px] animate-pulse">Sincronizzazione Google...</p>
+                <div className="flex flex-col items-center justify-center py-20">
+                    <Loader2 className="w-8 h-8 animate-spin text-slate-200" />
+                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-4">Caricamento dati...</p>
                 </div>
             ) : data ? (
-                <>
-                    {/* STATS GRID COMPACT */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {[
-                            { label: 'Click totali', value: data.totals?.total_clicks, icon: MousePointerClick, color: 'text-indigo-600', bg: 'bg-indigo-50/50', border: 'border-indigo-100/50' },
-                            { label: 'Impressioni', value: data.totals?.total_impressions, icon: Eye, color: 'text-emerald-600', bg: 'bg-emerald-50/50', border: 'border-emerald-100/50' },
-                            { label: 'CTR medio', value: `${data.totals?.avg_ctr}%`, icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-50/50', border: 'border-amber-100/50' },
-                            { label: 'Pos. media', value: data.totals?.avg_position, icon: Target, color: 'text-rose-500', bg: 'bg-rose-50/50', border: 'border-rose-100/50' },
-                        ].map(s => (
-                            <Card key={s.label} className={`border-none ${s.bg} shadow-sm overflow-hidden relative group h-20`}>
-                                <div className={`absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition-opacity`}>
-                                    <s.icon className="w-16 h-16" />
+                <ScrollArea className="flex-1">
+                    <div className="space-y-6 pr-1 max-w-5xl">
+                        {/* STATS */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {[
+                                { label: 'Click', value: data.totals?.total_clicks, icon: MousePointerClick, color: 'text-slate-600' },
+                                { label: 'Impressions', value: data.totals?.total_impressions, icon: Eye, color: 'text-slate-600' },
+                                { label: 'CTR', value: `${data.totals?.avg_ctr}%`, icon: TrendingUp, color: 'text-slate-600' },
+                                { label: 'Posiz.', value: data.totals?.avg_position, icon: Target, color: 'text-slate-600' },
+                            ].map(s => (
+                                <div key={s.label} className="bg-white border border-slate-100 rounded-xl p-3 flex flex-col gap-1">
+                                    <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">{s.label}</span>
+                                    <span className="text-xl font-semibold text-slate-900 tracking-tight">{s.value?.toLocaleString() || 0}</span>
                                 </div>
-                                <CardContent className="p-4 relative flex flex-col justify-between h-full">
-                                    <div className="flex items-center gap-1.5 opacity-60">
-                                        <s.icon className={`w-3 h-3 ${s.color}`} />
-                                        <span className="text-[8.5px] text-slate-500 uppercase tracking-widest font-black">{s.label}</span>
-                                    </div>
-                                    <p className="text-xl font-black text-slate-900 tracking-tighter leading-none">{s.value?.toLocaleString()}</p>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
 
-                    {/* TREND CHARTS GRID */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <GscTrendChart data={data.chart_data} />
-                        <GscPositionChart data={data.chart_data} />
-                    </div>
+                        {/* TABLES */}
+                        <Accordion type="single" collapsible defaultValue="keywords" className="space-y-3">
+                            <AccordionItem value="keywords" className="border-none">
+                                <div className="bg-white border border-slate-100 rounded-xl overflow-hidden">
+                                    <AccordionTrigger className="px-5 py-3 hover:no-underline hover:bg-slate-50/30 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <Target className="w-3.5 h-3.5 text-slate-400" />
+                                            <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-tight">Top Keywords</span>
+                                            <Badge variant="outline" className="text-[9px] px-1.5 h-4 border-slate-200 text-slate-400 bg-transparent">{data.keywords?.length || 0}</Badge>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="p-0 border-t border-slate-50">
+                                        <div className="px-0">
+                                            <table className="w-full text-[11px]">
+                                                <thead>
+                                                    <tr className="text-slate-400 text-left border-b border-slate-50">
+                                                        <th className="py-2.5 px-4 font-medium uppercase tracking-wider">Keyword</th>
+                                                        <th 
+                                                            className="py-2.5 px-4 font-medium uppercase tracking-wider text-right cursor-pointer hover:text-slate-900 transition-colors"
+                                                            onClick={() => handleKwSort('clicks')}
+                                                        >
+                                                            <div className="flex items-center justify-end">Click <SortIcon field="clicks" currentSort={kwSort} /></div>
+                                                        </th>
+                                                        <th 
+                                                            className="py-2.5 px-4 font-medium uppercase tracking-wider text-right cursor-pointer hover:text-slate-900 transition-colors"
+                                                            onClick={() => handleKwSort('position')}
+                                                        >
+                                                            <div className="flex items-center justify-end">Pos. <SortIcon field="position" currentSort={kwSort} /></div>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-50">
+                                                    {sortedKeywords.slice(0, kwLimit).map((kw, i) => (
+                                                        <tr key={i} className="hover:bg-slate-50/50">
+                                                            <td className="py-2 px-4 text-slate-700 font-medium">{kw.keyword}</td>
+                                                            <td className="py-2 px-4 text-right text-slate-900 font-semibold">{kw.clicks}</td>
+                                                            <td className="py-2 px-4 text-right">
+                                                                <span className={`inline-block w-6 text-center rounded text-[9px] font-bold ${kw.position <= 3 ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 bg-slate-50'}`}>
+                                                                    {kw.position}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                            
+                                            {data.keywords?.length > kwLimit && (
+                                                <Button 
+                                                    variant="ghost" 
+                                                    className="w-full py-2 h-auto text-[10px] font-bold text-slate-400 uppercase border-t border-slate-50 hover:bg-slate-50"
+                                                    onClick={() => setKwLimit(prev => prev + 25)}
+                                                >
+                                                    <div className="flex items-center gap-1"><ChevronDown className="w-3 h-3" /> Carica altri 25 ({kwLimit}/{data.keywords.length})</div>
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </AccordionContent>
+                                </div>
+                            </AccordionItem>
 
-                    {/* AI STRATEGY BANNER COMPACT */}
-                    <Card className="border-indigo-100 bg-gradient-to-r from-indigo-700 to-indigo-900 shadow-lg shadow-indigo-100 rounded-2xl overflow-hidden">
-                        <CardHeader className="p-4 flex flex-row items-center justify-between border-none space-y-0">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                                    <Sparkles className="w-5 h-5 text-white" />
+                            <AccordionItem value="pages" className="border-none">
+                                <div className="bg-white border border-slate-100 rounded-xl overflow-hidden">
+                                    <AccordionTrigger className="px-5 py-3 hover:no-underline hover:bg-slate-50/30 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <Globe className="w-3.5 h-3.5 text-slate-400" />
+                                            <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-tight">Top Pages</span>
+                                            <Badge variant="outline" className="text-[9px] px-1.5 h-4 border-slate-200 text-slate-400 bg-transparent">{data.pages?.length || 0}</Badge>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="p-0 border-t border-slate-50">
+                                        <div className="px-0">
+                                            <table className="w-full text-[11px]">
+                                                <thead>
+                                                    <tr className="text-slate-400 text-left border-b border-slate-50">
+                                                        <th className="py-2.5 px-4 font-medium uppercase tracking-wider">Path</th>
+                                                        <th 
+                                                            className="py-2.5 px-4 font-medium uppercase tracking-wider text-right cursor-pointer hover:text-slate-900 transition-colors"
+                                                            onClick={() => handlePgSort('clicks')}
+                                                        >
+                                                            <div className="flex items-center justify-end">Click <SortIcon field="clicks" currentSort={pgSort} /></div>
+                                                        </th>
+                                                        <th 
+                                                            className="py-2.5 px-4 font-medium uppercase tracking-wider text-right cursor-pointer hover:text-slate-900 transition-colors"
+                                                            onClick={() => handlePgSort('position')}
+                                                        >
+                                                            <div className="flex items-center justify-end">Pos. <SortIcon field="position" currentSort={pgSort} /></div>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-50">
+                                                    {sortedPages.slice(0, pgLimit).map((pg, i) => (
+                                                        <tr key={i} className="hover:bg-slate-50/50">
+                                                            <td className="py-2 px-4 truncate max-w-[200px]">
+                                                                <a href={pg.page} target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-slate-900">
+                                                                    {pg.page.replace(/https?:\/\/[^/]+/, '') || '/'}
+                                                                </a>
+                                                            </td>
+                                                            <td className="py-2 px-4 text-right text-slate-900 font-semibold">{pg.clicks}</td>
+                                                            <td className="py-2 px-4 text-right">
+                                                                <span className="text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 rounded">
+                                                                    {pg.position}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                            
+                                            {data.pages?.length > pgLimit && (
+                                                <Button 
+                                                    variant="ghost" 
+                                                    className="w-full py-2 h-auto text-[10px] font-bold text-slate-400 uppercase border-t border-slate-50 hover:bg-slate-50"
+                                                    onClick={() => setPgLimit(prev => prev + 25)}
+                                                >
+                                                    <div className="flex items-center gap-1"><ChevronDown className="w-3 h-3" /> Carica altri 25 ({pgLimit}/{data.pages.length})</div>
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </AccordionContent>
                                 </div>
-                                <div>
-                                    <CardTitle className="text-sm font-black text-white tracking-tighter uppercase">Consulto Strategico AI</CardTitle>
-                                    <CardDescription className="text-indigo-100/70 font-medium text-[10px]">Trend di Google, suggerimenti automatici e ottimizzazioni.</CardDescription>
-                                </div>
+                            </AccordionItem>
+                        </Accordion>
+
+                        {/* Indexing Trigger */}
+                        <div className="bg-slate-950 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div className="text-center md:text-left">
+                                <h4 className="text-white text-sm font-semibold mb-1">Index Request</h4>
+                                <p className="text-slate-400 text-[10px] uppercase tracking-wider">Invia la tua sitemap per accelerare l'indicizzazione.</p>
                             </div>
                             <Button 
-                                onClick={requestAiStrategy} 
-                                disabled={aiLoading} 
-                                className="bg-white hover:bg-slate-50 text-indigo-700 shadow-md font-black uppercase tracking-widest text-[9px] h-9 px-5 rounded-xl border-none active:scale-95"
+                                onClick={submitSitemap} 
+                                disabled={sitemapLoading}
+                                className="bg-white hover:bg-slate-100 text-slate-950 rounded-lg text-xs font-bold h-9 px-6 transition-all"
                             >
-                                {aiLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1.5" /> : <Sparkles className="w-3 h-3 mr-1.5" />}
-                                Analizza Dati
+                                {sitemapLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Send className="w-3.5 h-3.5 mr-2" />}
+                                SUBMIT XML
                             </Button>
-                        </CardHeader>
-                        {aiStrategy && (
-                            <CardContent className="p-6 pt-2">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                                    {aiStrategy.map((s, idx) => (
-                                        <div key={idx} className="bg-white/5 backdrop-blur-sm border border-white/10 p-5 rounded-2xl flex items-center justify-between group/item hover:bg-white/10 transition-colors">
-                                            <div className="min-w-0 pr-4">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Badge className={s.type === 'new_article' ? "bg-emerald-400/20 text-emerald-300 border-none text-[8px] font-black uppercase tracking-widest px-1.5 h-4" : "bg-amber-400/20 text-amber-300 border-none text-[8px] font-black uppercase tracking-widest px-1.5 h-4"}>
-                                                        {s.type === 'new_article' ? 'Nuovo' : 'Ottimizzazione'}
-                                                    </Badge>
-                                                    <span className="font-mono text-[10px] text-white/40 font-bold tracking-tighter truncate max-w-[150px]">{s.keyword}</span>
-                                                </div>
-                                                <h4 className="font-bold text-white text-sm tracking-tight mb-1">{s.title}</h4>
-                                                <p className="text-[10px] text-white/50 leading-relaxed line-clamp-2">{s.reason}</p>
-                                            </div>
-                                            <Button 
-                                                size="sm" 
-                                                onClick={() => handleApplySuggestion(s)} 
-                                                variant="outline" 
-                                                className="bg-white/10 border-white/10 text-white hover:bg-white hover:text-indigo-900 rounded-xl font-black uppercase tracking-widest text-[9px] h-9 h-9 transition-all"
-                                            >
-                                                Applica
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        )}
-                        {!aiStrategy && <div className="h-4" />}
-                    </Card>
-
-                    {/* DATA TABLES */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* KEYWORDS */}
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between px-2">
-                                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                                    <Target className="w-4 h-4 text-indigo-500" /> Top Keyword
-                                </h4>
-                                <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-[10px] font-black border-none px-2 h-5">
-                                    {data.keywords?.length || 0} POSIZIONATE
-                                </Badge>
-                            </div>
-                            <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden">
-                                <CardContent className="p-0">
-                                    <ScrollArea className="h-[480px]">
-                                        <table className="w-full text-sm border-separate border-spacing-0">
-                                            <thead className="sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b border-slate-50">
-                                                <tr className="text-slate-400 text-[9px] text-left uppercase font-black tracking-widest">
-                                                    <th className="py-4 px-6 border-b border-slate-50">Keyword</th>
-                                                    <th className="py-4 px-4 border-b border-slate-50 text-right">Click</th>
-                                                    <th className="py-4 px-4 border-b border-slate-50 text-right">CTR</th>
-                                                    <th className="py-4 px-6 border-b border-slate-50 text-right">Pos.</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {(data.keywords || []).map((kw, i) => (
-                                                    <tr key={i} className="group hover:bg-slate-50 transition-colors">
-                                                        <td className="py-3 px-6 border-b border-slate-50 font-bold text-slate-700 text-xs">
-                                                            {kw.keyword}
-                                                        </td>
-                                                        <td className="py-3 px-4 border-b border-slate-50 text-right text-indigo-600 font-black text-xs">
-                                                            {kw.clicks}
-                                                        </td>
-                                                        <td className="py-3 px-4 border-b border-slate-50 text-right text-slate-400 font-bold text-[10px]">
-                                                            {kw.ctr}%
-                                                        </td>
-                                                        <td className="py-3 px-6 border-b border-slate-50 text-right">
-                                                            <div className="flex justify-end">
-                                                                <div className={`px-2 py-0.5 rounded-lg text-[10px] font-black border shadow-sm ${
-                                                                    kw.position <= 3 ? 'bg-emerald-500 border-emerald-400 text-white' : 
-                                                                    kw.position <= 10 ? 'bg-amber-500 border-amber-400 text-white' : 
-                                                                    'bg-slate-50 border-slate-200 text-slate-500'
-                                                                }`}>
-                                                                    {kw.position}
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </ScrollArea>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        {/* PAGES */}
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between px-2">
-                                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                                    <Globe className="w-4 h-4 text-emerald-500" /> Top Pagine
-                                </h4>
-                                <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-[10px] font-black border-none px-2 h-5">
-                                    {data.pages?.length || 0} CON TRAFFICO
-                                </Badge>
-                            </div>
-                            <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden">
-                                <CardContent className="p-0">
-                                    <ScrollArea className="h-[480px]">
-                                        <table className="w-full text-sm border-separate border-spacing-0">
-                                            <thead className="sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b border-slate-50">
-                                                <tr className="text-slate-400 text-[9px] text-left uppercase font-black tracking-widest">
-                                                    <th className="py-4 px-6 border-b border-slate-50">URL</th>
-                                                    <th className="py-4 px-6 border-b border-slate-50 text-right">Click</th>
-                                                    <th className="py-4 px-6 border-b border-slate-50 text-right">Pos. Media</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {(data.pages || []).map((pg, i) => (
-                                                    <tr key={i} className="group hover:bg-slate-50 transition-colors">
-                                                        <td className="py-3 px-6 border-b border-slate-50">
-                                                            <a href={pg.page} target="_blank" rel="noopener noreferrer"
-                                                                className="text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-2 group/link text-xs max-w-[200px] truncate">
-                                                                {pg.page.replace(/https?:\/\/[^/]+/, '') || '/'}
-                                                                <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
-                                                            </a>
-                                                        </td>
-                                                        <td className="py-3 px-6 border-b border-slate-50 text-right text-emerald-600 font-black text-xs">
-                                                            {pg.clicks}
-                                                        </td>
-                                                        <td className="py-3 px-6 border-b border-slate-50 text-right">
-                                                            <span className="text-[10px] font-black text-slate-500 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100 italic">
-                                                                {pg.position}
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </ScrollArea>
-                                </CardContent>
-                            </Card>
                         </div>
                     </div>
+                </ScrollArea>
+            ) : null}
 
-                    {/* INDEXING TOOLS SECTION */}
-                    <div className="mt-8">
-                        <div className="flex items-center gap-3 mb-4 px-2">
-                             <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center border border-emerald-100">
-                                <Globe className="w-3.5 h-3.5 text-emerald-500" />
-                            </div>
-                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Strumenti di Indicizzazione</h4>
-                        </div>
-                        <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm">
-                            <CardContent className="p-6">
-                                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                                    <div className="flex-1">
-                                        <p className="text-xs font-bold text-slate-900 mb-1 tracking-tight">Invia Sitemap a Google</p>
-                                        <p className="text-[10px] text-slate-500 leading-relaxed max-w-md">
-                                            Notifica Google che la tua sitemap è stata aggiornata. Il sistema userà l'URL predefinito 
-                                            <span className="font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded ml-1">/sitemap.xml</span>
-                                        </p>
-                                    </div>
-                                    <Button 
-                                        onClick={submitSitemap} 
-                                        disabled={sitemapLoading || !data}
-                                        className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black uppercase tracking-widest text-[9px] h-10 px-6"
-                                    >
-                                        {sitemapLoading ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Send className="w-3 h-3 mr-2" />}
-                                        Invia Sitemap Ora
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
+            {/* FLOATING CHAT */}
+            <div className="fixed bottom-8 right-8 z-40">
+                <Button 
+                    onClick={() => setIsChatOpen(true)}
+                    className="h-14 w-14 rounded-full bg-slate-900 hover:bg-slate-800 text-white shadow-2xl shadow-slate-400 flex items-center justify-center group transform transition-all hover:scale-105 active:scale-95"
+                >
+                    <div className="relative">
+                        <MessageCircle className="w-6 h-6" />
+                        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                        </span>
                     </div>
-                </>
-            ) : (
-                <div className="flex flex-col items-center justify-center py-24 bg-white border border-slate-100 rounded-3xl shadow-sm">
-                    <BarChart3 className="w-12 h-12 text-slate-100 mb-6" />
-                    <h3 className="text-lg font-bold text-slate-800 mb-1">Nessun dato disponibile</h3>
-                    <p className="text-sm text-slate-400 max-w-sm text-center">
-                        Non è stato possibile recuperare dati organici per questo periodo. Verifica la connessione a GSC.
-                    </p>
-                </div>
-            )}
+                </Button>
+            </div>
+
+            <Dialog open={isChatOpen} onOpenChange={setIsChatOpen}>
+                <DialogContent className="max-w-5xl h-[85vh] p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+                    <DialogHeader className="hidden">
+                        <DialogTitle>Strategist AI</DialogTitle>
+                        <DialogDescription>Chiedi consiglio all'esperto SEO.</DialogDescription>
+                    </DialogHeader>
+                    <SeoChatTab 
+                        clientId={clientId} 
+                        getAuthHeaders={getAuthHeaders} 
+                        client={client} 
+                        compact={true} 
+                        addToQueue={addToQueue}
+                        onRequestStrategicAnalysis={requestAiStrategy}
+                    />
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

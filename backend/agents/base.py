@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Any, Optional
-from helpers import generate_with_llm, log_activity
+from helpers import generate_with_llm, log_activity, generate_with_rotation
 
 logger = logging.getLogger("agents")
 
