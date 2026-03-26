@@ -77,9 +77,9 @@ const SETTORI = [
 ];
 
 const AGENZIE = [
-  { value: 'Lead-IA', label: 'Lead-IA' },
-  { value: 'Freedom', label: 'Freedom' },
+  { value: 'Freedom', label: 'Personali' },
   { value: 'Aibrid', label: 'Aibrid' },
+  { value: 'Lead-IA', label: 'Lead-IA' },
   { value: 'diretto', label: 'Diretto / Altro' },
 ];
 
@@ -429,9 +429,9 @@ export const ClientsPage = () => {
                   <div className={`w-full flex items-center justify-between p-4 rounded-2xl border bg-white shadow-sm transition-all border-[#f1f3f6] group-hover:border-slate-200`}>
                     <div className="flex items-center gap-4">
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-sm border border-transparent ${
-                        agenzia.value === 'Lead-IA' ? 'bg-indigo-50 text-indigo-500 border-indigo-100' :
-                        agenzia.value === 'Freedom' ? 'bg-emerald-50 text-emerald-500 border-emerald-100' :
-                        agenzia.value === 'Aibrid' ? 'bg-amber-50 text-amber-500 border-amber-100' :
+                        agenzia.value === 'Lead-IA' ? 'bg-emerald-50 text-emerald-500 border-emerald-100' :
+                        agenzia.value === 'Freedom' ? 'bg-yellow-50 text-yellow-500 border-yellow-100' :
+                        agenzia.value === 'Aibrid' ? 'bg-sky-50 text-sky-500 border-sky-100' :
                         'bg-slate-50 text-slate-400 border-slate-100'
                       }`}>
                         <Globe className="w-4 h-4" />
@@ -464,9 +464,9 @@ export const ClientsPage = () => {
                             <div key={client.id} className="flex items-center group px-6 py-3.5 hover:bg-slate-50/30 transition-colors">
                               <div className="flex-1 flex items-center gap-4 min-w-0">
                                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-bold shadow-sm border border-[#f1f3f6] shrink-0 ${
-                                  agenzia.value === 'Lead-IA' ? 'bg-white text-indigo-500 border-indigo-100' :
-                                  agenzia.value === 'Freedom' ? 'bg-white text-emerald-500 border-emerald-100' :
-                                  agenzia.value === 'Aibrid' ? 'bg-white text-amber-500 border-amber-100' :
+                                  agenzia.value === 'Lead-IA' ? 'bg-white text-emerald-500 border-emerald-100' :
+                                  agenzia.value === 'Freedom' ? 'bg-white text-yellow-500 border-yellow-100' :
+                                  agenzia.value === 'Aibrid' ? 'bg-white text-sky-500 border-sky-100' :
                                   'bg-white text-slate-400'
                                 }`}>
                                   {client.nome?.charAt(0).toUpperCase()}

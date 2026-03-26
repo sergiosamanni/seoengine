@@ -81,6 +81,8 @@ class GSCService:
                 "top_keywords": keywords,
                 "total_clicks": total_clicks,
                 "total_impressions": total_impressions,
+                "avg_ctr": round((total_clicks / total_impressions * 100), 2) if total_impressions > 0 else 0,
+                "avg_position": round(sum(k["position"] for k in keywords) / max(len(keywords), 1), 1),
                 "period": f"last {days} days"
             }
         except Exception as e:

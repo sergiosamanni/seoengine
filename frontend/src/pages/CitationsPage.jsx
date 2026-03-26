@@ -24,10 +24,10 @@ const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/a
 
 const AGENZIE = [
   { id: 'all', label: 'Tutte le agenzie', color: 'bg-slate-900 text-white', dot: 'bg-slate-400' },
-  { id: 'aibrid', label: 'Aibrid', color: 'bg-sky-50 text-sky-700 border-sky-100', dot: 'bg-sky-200' },
-  { id: 'lead_ia', label: 'Lead-IA', color: 'bg-rose-50 text-rose-700 border-rose-100', dot: 'bg-rose-200' },
-  { id: 'personali', label: 'Personali', color: 'bg-amber-50 text-amber-700 border-amber-100', dot: 'bg-amber-300' },
-  { id: 'altro', label: 'Altro / Diretto', color: 'bg-slate-50 text-slate-700 border-slate-200', dot: 'bg-slate-200' },
+  { id: 'aibrid', label: 'Aibrid', color: 'bg-sky-50 text-sky-700 border-sky-100', dot: 'bg-sky-400' },
+  { id: 'lead_ia', label: 'Lead-IA', color: 'bg-emerald-50 text-emerald-700 border-emerald-100', dot: 'bg-emerald-500' },
+  { id: 'personali', label: 'Personali', color: 'bg-yellow-50 text-yellow-900 border-yellow-100', dot: 'bg-yellow-500' },
+  { id: 'altro', label: 'Altro / Diretto', color: 'bg-slate-50 text-slate-700 border-slate-200', dot: 'bg-slate-300' },
 ];
 
 export const CitationsPage = () => {

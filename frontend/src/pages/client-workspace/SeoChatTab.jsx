@@ -105,7 +105,18 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
 
     const renderMessageContent = (content) => {
         if (typeof content === 'string') {
-            return <div className="whitespace-pre-wrap">{content}</div>;
+            // Semplice parsing per il grassetto **testo**
+            const parts = content.split(/(\*\*.*?\*\*)/g);
+            return (
+                <div className="whitespace-pre-wrap">
+                    {parts.map((p, i) => {
+                        if (p.startsWith('**') && p.endsWith('**')) {
+                            return <strong key={i} className="font-extrabold text-slate-900">{p.slice(2, -2)}</strong>;
+                        }
+                        return p;
+                    })}
+                </div>
+            );
         }
         if (typeof content === 'object' && content !== null) {
             // If it's an object (likely a JSON response that the backend sent as raw object), stringify it nicely

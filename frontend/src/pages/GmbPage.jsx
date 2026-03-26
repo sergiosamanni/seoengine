@@ -13,10 +13,10 @@ const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/a
 
 const AGENZIE = [
   { id: 'all', label: 'Tutte le agenzie', dot: 'bg-slate-400' },
-  { id: 'aibrid', label: 'Aibrid', dot: 'bg-sky-200' },
-  { id: 'lead_ia', label: 'Lead-IA', dot: 'bg-rose-200' },
-  { id: 'personali', label: 'Personali', dot: 'bg-amber-300' },
-  { id: 'altro', label: 'Altro / Diretto', dot: 'bg-slate-200' },
+  { id: 'personali', label: 'Personali', dot: 'bg-yellow-500' },
+  { id: 'aibrid', label: 'Aibrid', dot: 'bg-sky-400' },
+  { id: 'lead_ia', label: 'Lead-IA', dot: 'bg-emerald-500' },
+  { id: 'altro', label: 'Altro / Diretto', dot: 'bg-slate-300' },
 ];
 
 export const GmbPage = () => {

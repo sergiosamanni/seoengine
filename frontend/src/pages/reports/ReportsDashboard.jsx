@@ -10,10 +10,10 @@ import { toast } from 'sonner';
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
 const AGENZIE = [
-  { id: 'aibrid', label: 'Aibrid', color: 'bg-indigo-500' },
+  { id: 'personali', label: 'Personali', color: 'bg-yellow-500' },
+  { id: 'aibrid', label: 'Aibrid', color: 'bg-sky-400' },
   { id: 'lead_ia', label: 'Lead-IA', color: 'bg-emerald-500' },
-  { id: 'personali', label: 'Personali', color: 'bg-rose-500' },
-  { id: 'altro', label: 'Altro / Non Assegnato', color: 'bg-slate-400' },
+  { id: 'altro', label: 'Altro / Non Assegnato', color: 'bg-slate-300' },
 ];
 
 export const ReportsDashboard = () => {

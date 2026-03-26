@@ -28,10 +28,10 @@ import { toast } from 'sonner';
 const API = `${(process.env.REACT_APP_BACKEND_URL || "http://localhost:8000")}/api`;
 
 const AGENZIE = [
-  { id: 'aibrid', label: 'Aibrid', color: 'bg-sky-50 text-sky-700 border-sky-100', dot: 'bg-sky-200' },
-  { id: 'lead_ia', label: 'Lead-IA', color: 'bg-rose-50 text-rose-700 border-rose-100', dot: 'bg-rose-200' },
-  { id: 'personali', label: 'Personali', color: 'bg-amber-50 text-amber-700 border-amber-100', dot: 'bg-amber-300' },
-  { id: 'altro', label: 'Altro / Non Assegnato', color: 'bg-slate-50 text-slate-700 border-slate-200', dot: 'bg-slate-200' },
+  { id: 'personali', label: 'Personali', color: 'bg-yellow-50 text-yellow-900 border-yellow-100', dot: 'bg-yellow-500' },
+  { id: 'aibrid', label: 'Aibrid', color: 'bg-sky-50 text-sky-700 border-sky-100', dot: 'bg-sky-400' },
+  { id: 'lead_ia', label: 'Lead-IA', color: 'bg-emerald-50 text-emerald-700 border-emerald-100', dot: 'bg-emerald-500' },
+  { id: 'altro', label: 'Altro / Non Assegnato', color: 'bg-slate-50 text-slate-700 border-slate-200', dot: 'bg-slate-300' },
 ];
 
 const SETTORI = [
@@ -240,15 +240,17 @@ export const DashboardPage = () => {
 
                       {!isCollapsed && (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pl-2">
-                              {clientsInAgency.map(client => (
-                                  <Card 
-                                      key={client.id} 
-                                      className="hover:shadow-xl hover:shadow-indigo-100/20 transition-all border-slate-100 shadow-sm group cursor-pointer active:scale-[0.99] rounded-xl overflow-hidden bg-white border-l-0"
-                                      onClick={() => navigate(`/clients/${client.id}`)}
-                                  >
-                                      <CardContent className="p-0 flex items-stretch h-14">
-                                          <div className={`w-1 ${agenzia.dot} group-hover:w-1.5 transition-all`} />
-                                          <div className="flex-1 flex items-center justify-between px-4">
+                                {clientsInAgency.map(client => {
+                                    const matchedAgency = AGENZIE.find(a => a.id === (client.agenzia || 'altro')) || agenzia;
+                                    return (
+                                        <Card 
+                                            key={client.id} 
+                                            className="hover:shadow-xl hover:shadow-indigo-100/20 transition-all border-slate-100 shadow-sm group cursor-pointer active:scale-[0.99] rounded-xl overflow-hidden bg-white border-l-0"
+                                            onClick={() => navigate(`/clients/${client.id}`)}
+                                        >
+                                            <CardContent className="p-0 flex items-stretch h-14">
+                                                <div className={`w-1.5 ${matchedAgency.dot} group-hover:w-2 transition-all shrink-0`} />
+                                                <div className="flex-1 flex items-center justify-between px-4 min-w-0">
                                               <div className="flex items-center gap-3">
                                                   <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400 group-hover:bg-white group-hover:text-blue-600 transition-all">
                                                       {client.nome?.charAt(0).toUpperCase()}
@@ -295,7 +297,8 @@ export const DashboardPage = () => {
                                           </div>
                                       </CardContent>
                                   </Card>
-                              ))}
+                                    );
+                                })}
                           </div>
                       )}
                   </div>
