@@ -97,3 +97,9 @@ async def shutdown_db_client():
             logger.info("Autopilot Scheduler shut down")
     except Exception as e:
         logger.error(f"Autopilot shutdown failed: {e}")
+
+# Auto-repair DB on startup
+@app.on_event("startup")
+async def startup_repair():
+    from repair_db import repair_database
+    await repair_database()
