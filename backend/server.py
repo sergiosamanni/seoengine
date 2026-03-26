@@ -45,12 +45,13 @@ api_router.include_router(reports_router)
 api_router.include_router(citations_router)
 api_router.include_router(chat_router)
 
-@api_router.get("/")
-async def root():
-    return {"message": "Programmatic SEO Engine API", "version": "2.0"}
 
-@api_router.get("/health")
-async def health_check():
+@app.get("/")
+async def app_root():
+    return {"message": "Programmatic SEO Engine API", "version": "2.0", "docs": "/docs"}
+
+@app.get("/health")
+async def app_health_check():
     return {"status": "healthy"}
 
 app.include_router(api_router)
