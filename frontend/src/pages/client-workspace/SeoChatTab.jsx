@@ -219,6 +219,10 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
 
             // Simple parsing for bold **text**
             const parts = displayContent.split(/(\*\*.*?\*\*)/g);
+            
+            // Truncate very long conversational text (especially if it contains accidental HTML dumps)
+            const isVeryLong = displayContent.length > 500;
+            
             return (
                 <div className="space-y-4">
                     <div className="whitespace-pre-wrap">
@@ -226,8 +230,15 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                             if (p.startsWith('**') && p.endsWith('**')) {
                                 return <strong key={i} className="font-extrabold text-slate-900">{p.slice(2, -2)}</strong>;
                             }
+                            // If it's the text parts, and it's very long, maybe we should limit it or wrap it
                             return p;
                         })}
+                        {isVeryLong && (
+                            <div className="mt-2 text-[10px] text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-100 flex items-center gap-2">
+                                <AlertCircle className="w-3 h-3" />
+                                <span>Il testo completo è molto lungo. Controlla le azioni suggerite qui sotto per i dettagli tecnici.</span>
+                            </div>
+                        )}
                     </div>
 
                     {actions.map((actionData, actionIdx) => (
@@ -338,41 +349,45 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                      actionData.type === 'CREATE_ARTICLE' ? 'Crea Bozza Ora' : 'Applica Modifica'}
                                 </Button>
 
-                                {messages[msgIndex]?.executedActions?.[actionIdx] && messages[msgIndex]?.resultsActions?.[actionIdx]?.results && (
-                                    <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-100 space-y-1">
-                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mb-1">
-                                            Risultati ({messages[msgIndex].resultsActions[actionIdx].results.length}):
+                                {messages[msgIndex]?.executedActions?.[actionIdx] && messages[msgIndex]?.resultsActions?.[actionIdx] && (
+                                    <div className="mt-3 p-2 bg-emerald-50 rounded-lg border border-emerald-100 space-y-2 animate-in fade-in slide-in-from-top-1">
+                                        <div className="flex items-center gap-2 text-emerald-700">
+                                            <CheckCircle2 className="w-3 h-3" />
+                                            <span className="text-[10px] font-bold uppercase tracking-tight">Successo!</span>
                                         </div>
-                                        {messages[msgIndex].resultsActions[actionIdx].results.map((r, i) => (
-                                            <div key={i} className="flex items-center justify-between gap-2 p-1.5 bg-white rounded border border-slate-100 shadow-sm">
-                                                <div className="min-w-0">
-                                                    <div className="text-[10px] font-bold truncate text-slate-800">{r.title}</div>
-                                                    <div className="text-[8px] text-slate-400 truncate">{r.link}</div>
-                                                </div>
-                                                <Badge className="bg-slate-900 text-white text-[8px] font-mono shrink-0">ID: {r.id}</Badge>
+                                        {messages[msgIndex].resultsActions[actionIdx].message && (
+                                            <div className="text-[10px] text-emerald-600 leading-tight">
+                                                {messages[msgIndex].resultsActions[actionIdx].message}
                                             </div>
-                                        ))}
-                                        {messages[msgIndex].resultsActions[actionIdx].results.length === 0 && (
-                                            <div className="text-[10px] text-slate-400 italic py-1 text-center">Nessun risultato trovato.</div>
                                         )}
-                                    </div>
-                                )}
-
-                                {messages[msgIndex]?.executedActions?.[actionIdx] && messages[msgIndex]?.resultsActions?.[actionIdx]?.urls && (
-                                    <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-100 space-y-1">
-                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mb-1">
-                                            Pagine trovate ({messages[msgIndex].resultsActions[actionIdx].urls.length}):
-                                        </div>
-                                        <ScrollArea className="h-24 px-1">
-                                            {messages[msgIndex].resultsActions[actionIdx].urls.slice(0, 50).map((u, i) => (
-                                                <div key={i} className="text-[9px] text-slate-600 p-1 border-b border-white hover:bg-white cursor-pointer truncate" onClick={() => copyToClipboard(u)}>
-                                                    {u.replace(/^https?:\/\//, '')}
-                                                </div>
-                                            ))}
-                                            {messages[msgIndex].resultsActions[actionIdx].urls.length > 50 && (
-                                                <div className="text-[8px] text-slate-400 italic pt-1">...e altre {messages[msgIndex].resultsActions[actionIdx].urls.length - 50} pagine.</div>
-                                            )}
-                                        </ScrollArea>
+                                        {messages[msgIndex].resultsActions[actionIdx].results && (
+                                            <div className="space-y-1 mt-1">
+                                                {messages[msgIndex].resultsActions[actionIdx].results.map((r, i) => (
+                                                    <div key={i} className="flex items-center justify-between gap-2 p-1.5 bg-white rounded border border-emerald-100 shadow-sm">
+                                                        <div className="min-w-0">
+                                                            <div className="text-[9px] font-bold truncate text-slate-800">{r.title}</div>
+                                                            <div className="text-[7px] text-slate-400 truncate">{r.link || r.url}</div>
+                                                        </div>
+                                                        <Badge className="bg-emerald-600 text-white text-[7px] font-mono shrink-0 py-0 h-3">ID: {r.id}</Badge>
+                                                    </div>
+                                                ))}
+                                                {messages[msgIndex].resultsActions[actionIdx].results.length === 0 && (
+                                                    <div className="text-[9px] text-emerald-400 italic py-1 text-center font-medium">Nessun risultato trovato.</div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {messages[msgIndex].resultsActions[actionIdx].urls && (
+                                            <ScrollArea className="h-24 px-1 bg-white rounded border border-emerald-50 mt-1">
+                                                {messages[msgIndex].resultsActions[actionIdx].urls.slice(0, 50).map((u, i) => (
+                                                    <div key={i} className="text-[9px] text-emerald-600 p-1 border-b border-white hover:bg-emerald-50 cursor-pointer truncate" onClick={() => copyToClipboard(u)}>
+                                                        {u.replace(/^https?:\/\//, '')}
+                                                    </div>
+                                                ))}
+                                                {messages[msgIndex].resultsActions[actionIdx].urls.length > 50 && (
+                                                    <div className="text-[8px] text-emerald-400 italic pt-1">...e altre {messages[msgIndex].resultsActions[actionIdx].urls.length - 50} pagine.</div>
+                                                )}
+                                            </ScrollArea>
+                                        )}
                                     </div>
                                 )}
                             </div>
