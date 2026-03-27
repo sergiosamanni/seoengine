@@ -62,8 +62,10 @@ Rispondi ESCLUSIVAMENTE con un JSON valido nel seguente formato:
     }}
   ]
 }}
-{f"### GLOBAL SEO/GEO GUIDELINES:\n{json.dumps(global_guidelines, indent=2)}\n" if global_guidelines else ""}
 """
+        if global_guidelines:
+            system_prompt += f"\n### GLOBAL SEO/GEO GUIDELINES (MANDATORIE):\n{json.dumps(global_guidelines, indent=2)}\n"
+            
         user_prompt = f"""ANALIZZA I SEGUENTI DATI:
 
 ### KEYWORD TARGET (PRIORITÀ):

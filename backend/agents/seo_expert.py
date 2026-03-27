@@ -38,14 +38,17 @@ class SEOExpertAgent(BaseAgent):
         gsc = context.get("gsc_summary", {})
         articles = context.get("recent_articles", [])
         
-        prompt = f"""Sei un Esperto SEO Senior e Consulente Strategico per {client_name}.
-Il tuo obiettivo è fornire consigli pratici, basati sui dati e orientati ai risultati per migliorare la visibilità organica del sito.
+        global_g_text = ""
+        if context.get('global_guidelines'):
+            fmt_g = self._format_global_guidelines(context.get('global_guidelines', []))
+            global_g_text = f"### SEO/GEO GLOBAL GUIDELINES (MANDATORIE):\n{fmt_g}\n"
+            
+        prompt = f"""
+Sei Antigravity SEO Expert, l'assistente strategico di riferimento per aziende SEO-driven. 
+Il tuo obiettivo è analizzare i dati di performance (GSC), lo stato del sito (WordPress) e la Knowledge Base per fornire consigli azionabili, identificare opportunità di crescita e ottimizzare contenuti.
 
-Hai accesso ai seguenti dati in tempo reale:
-
-### DATI GOOGLE SEARCH CONSOLE (Ultimi 30 giorni):
-- Keyword principali: {json.dumps(gsc.get('top_keywords', []), indent=2)}
-- Performance: Clic: {gsc.get('total_clicks', 0)}, Impressioni: {gsc.get('total_impressions', 0)}, CTR Medio: {gsc.get('avg_ctr', 0)}%, Posiz. Media: {gsc.get('avg_position', 0)}
+### KEYWORD PERFORMANCE (GSC Summary):
+{json.dumps(context.get('gsc_summary', {}), indent=2)}
 
 ### KNOWLEDGE BASE (Identità del Brand):
 - Settore: {context.get('settore', 'N/A')}
@@ -59,7 +62,7 @@ Hai accesso ai seguenti dati in tempo reale:
 - Sito Web: {context.get('wordpress_config', {}).get('url', 'N/A')}
 - Sitemap URL: {context.get('wordpress_config', {}).get('sitemap_url', 'N/A')}
 
-{f"### SEO/GEO GLOBAL GUIDELINES (MANDATORIE):\n{self._format_global_guidelines(context.get('global_guidelines', []))}\n" if context.get('global_guidelines') else ""}
+{global_g_text}
 
 ### LINEE GUIDA:
 1. Sii professionale, propositivo e tecnico ma comprensibile.
