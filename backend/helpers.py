@@ -1118,8 +1118,9 @@ NOTA: Una landing page ha una sola CTA ripetuta 2-3 volte. Niente navigazione, n
 NOTA: La pillar page deve essere la risorsa piu completa disponibile sul tema. Copri ogni angolo.
 """
     else:
-{'8. <h2>Domande Frequenti</h2> con 3-5 FAQ' if include_faq else ''}
-"""
+        if include_faq:
+            prompt += "\n8. <h2>Domande Frequenti</h2> con 3-5 FAQ\n"
+        prompt += "\n"
 
     if global_guidelines:
         prompt += "\n=== SEO/GEO GLOBAL GUIDELINES (MANDATORY) ===\n"
@@ -1134,20 +1135,20 @@ NOTA: La pillar page deve essere la risorsa piu completa disponibile sul tema. C
                         prompt += f"  * Da {link['url']}: {link['excerpt'][:1000]}...\n"
         prompt += "\n"
 
-    prompt += f"""
-
-=== REGOLE SEO ===
-1. LUNGHEZZA: Minimo {lunghezza_target} parole
-2. PARAGRAFI: Max 3-4 righe
-3. KEYWORD PRIMARIA: nel titolo H1, nei primi 100 caratteri, in almeno un H2
-4. LOCALIZZAZIONE: Menziona la citta/zona target almeno 3-4 volte
-5. CTA: una primaria, ripetuta 2-3 volte
-
-=== CALL TO ACTION ===
-{cta_finale if cta_finale else 'Contattaci per maggiori informazioni'}
-
-{f'=== NOTE SPECIALI ==={chr(10)}{note_speciali}' if note_speciali else ''}
-
+    prompt += "\n=== REGOLE SEO ===\n"
+    prompt += f"1. LUNGHEZZA: Minimo {lunghezza_target} parole\n"
+    prompt += "2. PARAGRAFI: Max 3-4 righe\n"
+    prompt += "3. KEYWORD PRIMARIA: nel titolo H1, nei primi 100 caratteri, in almeno un H2\n"
+    prompt += f"4. LOCALIZZAZIONE: Menziona la citta/zona target almeno 3-4 volte\n"
+    prompt += "5. CTA: una primaria, ripetuta 2-3 volte\n"
+    
+    prompt += "\n=== CALL TO ACTION ===\n"
+    prompt += (cta_finale if cta_finale else 'Contattaci per maggiori informazioni') + "\n"
+    
+    if note_speciali:
+        prompt += f"\n=== NOTE SPECIALI ===\n{note_speciali}\n"
+    
+    prompt += """
 === UMANIZZAZIONE DEL TESTO (CRITICO) ===
 DIVIETI ASSOLUTI - Pattern AI:
 1. NO Title Case nei testi
@@ -1167,21 +1168,17 @@ REGOLE DI UMANIZZAZIONE:
 
     if existing_articles and len(existing_articles) > 0:
         links_list = "\n".join([f'- {l.get("titolo")}: {l.get("url")}' for l in existing_articles[:10]])
-        prompt += f"""
-=== LINK INTERNI DA INTEGRARE (STRATEGICO) ===
-Inserisci TASSATIVAMENTE ALMENO 3 link interni ai seguenti articoli correlati per evitare contenuti orfani e spingere il link juice.
-
-REGOLE SEO PER I LINK INTERNI:
-1. Inserisci ALMENO 3 link verso altrettanti articoli diversi della lista.
-2. Utilizza anchor text SEMANTICI e NATURALI (non usare 'clicca qui' o 'leggi questo articolo').
-3. Distribuisci i link all'interno del contenuto dove hanno senso logico.
-
-{links_list}
-REGOLE LINK:
-- Usa il titolo dell'articolo o varianti naturali come anchor text.
-- NON forzare il link se non e pertinente.
-- I link devono essere in formato <a href="URL">TESTO</a>.
-"""
+        prompt += "\n=== LINK INTERNI DA INTEGRARE (STRATEGICO) ===\n"
+        prompt += "Inserisci TASSATIVAMENTE ALMENO 3 link interni ai seguenti articoli correlati per evitare contenuti orfani e spingere il link juice.\n\n"
+        prompt += "REGOLE SEO PER I LINK INTERNI:\n"
+        prompt += "1. Inserisci ALMENO 3 link verso altrettanti articoli diversi della lista.\n"
+        prompt += "2. Utilizza anchor text SEMANTICI e NATURALI (non usare 'clicca qui' o 'leggi questo articolo').\n"
+        prompt += "3. Distribuisci i link all'interno del contenuto dove hanno senso logico.\n\n"
+        prompt += links_list + "\n"
+        prompt += "REGOLE LINK:\n"
+        prompt += "- Usa il titolo dell'articolo o varianti naturali come anchor text.\n"
+        prompt += "- NON forzare il link se non e pertinente.\n"
+        prompt += '- I link devono essere in formato <a href="URL">TESTO</a>.\n'
 
     if advanced_prompt:
         secondo_livello = advanced_prompt.get("secondo_livello_prompt", "")
