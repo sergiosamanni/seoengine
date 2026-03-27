@@ -146,7 +146,7 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
                 raise HTTPException(status_code=404, detail="Post non trovato")
 
         elif action_type == "GET_SITEMAP":
-            sitemap_url = payload.get("url")
+            sitemap_url = payload.get("url") or config.get("seo", {}).get("sitemap_url")
             if not sitemap_url:
                 # Guess from WP API URL
                 base = wp_config.get("url_api").split("/wp-json")[0]

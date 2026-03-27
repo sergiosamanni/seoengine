@@ -133,7 +133,8 @@ class ChatService:
             "recent_articles": recent_articles,
             "wordpress_config": {
                 "url": wp_config.get("url_api"),
-                "utente": wp_config.get("utente")
+                "utente": wp_config.get("utente"),
+                "sitemap_url": config.get("seo", {}).get("sitemap_url")
             }
         }
         return context

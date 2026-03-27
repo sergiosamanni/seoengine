@@ -58,6 +58,7 @@ Hai accesso ai seguenti dati in tempo reale:
 
 ### CONFIGURAZIONE SITO:
 - Sito Web: {context.get('wordpress_config', {}).get('url', 'N/A')}
+- Sitemap URL: {context.get('wordpress_config', {}).get('sitemap_url', 'N/A')}
 
 ### LINEE GUIDA:
 1. Sii professionale, propositivo e tecnico ma comprensibile.
