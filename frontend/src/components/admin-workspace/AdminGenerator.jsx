@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import config, { API_URL as API } from '../../config';
+import config, { API_URL as API, BASE_URL } from '../../config';
 import {
     Card, CardContent, CardDescription, CardHeader, CardTitle
 } from '../ui/card';
@@ -406,8 +406,7 @@ const AdminGenerator = ({
                 url: imgUrl, 
                 client_id: effectiveClientId 
             }, { headers: getAuthHeaders() });
-            const backendUrl = API.replace('/api', '');
-            const imageUrlFull = `${backendUrl}/api/uploads/files/${res.data.id}?auth=${token}`;
+            const imageUrlFull = `${BASE_URL}/api/uploads/files/${res.data.id}?auth=${token}`;
 
             if (activePlanImageIndex !== null) {
                 const newTopics = [...plan.topics];
