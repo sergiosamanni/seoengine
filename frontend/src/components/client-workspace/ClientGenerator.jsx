@@ -145,11 +145,15 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
             return;
           }
           setTimeout(poll, 3000);
-        } catch (e) { setTimeout(poll, 3000); }
+        } catch (e) { 
+          console.error("Polling error:", e);
+          setTimeout(poll, 3000); 
+        }
       };
       poll();
     } catch (error) {
-      toast.error('Errore generazione');
+      console.error("Generation error:", error);
+      toast.error(`Errore: ${error.response?.data?.detail || error.message}`);
       setGenerating(false);
     }
   };
@@ -328,8 +332,8 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
                 <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500 mx-auto shadow-xl shadow-emerald-50 animate-pulse">
                     <Zap className="w-12 h-12 fill-current" />
                 </div>
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Pronto!</h1>
-                <p className="text-sm text-slate-500 font-medium px-4">Abbiamo analizzato il sito e i competitor. L'articolo includerà la tua foto e sarà pubblicato in bozza su WordPress.</p>
+                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Analisi Completata!</h1>
+                <p className="text-sm text-slate-500 font-medium px-4">Ora puoi procedere: l'AI scriverà l'articolo e lo salverà come bozza su WordPress.</p>
             </div>
 
             <Button 

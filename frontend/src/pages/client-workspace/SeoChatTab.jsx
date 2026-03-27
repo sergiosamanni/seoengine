@@ -92,14 +92,14 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
         setInput(action.text);
     };
 
-    const handleSendMessage = async (e) => {
+    const handleSendMessage = async (e, overrideContent = null) => {
         if (e) e.preventDefault();
-        if (!input.trim() || !currentSession?.id || loading) return;
+        const content = overrideContent || input;
+        if (!content.trim() || !currentSession?.id || loading) return;
 
-        const userMsg = { role: 'user', content: input, timestamp: new Date().toISOString() };
+        const userMsg = { role: 'user', content: content, timestamp: new Date().toISOString() };
         setMessages(prev => [...prev, userMsg]);
-        const textToSend = input;
-        setInput('');
+        if (!overrideContent) setInput('');
         setLoading(true);
 
         try {
@@ -107,11 +107,27 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
             const payload = { 
                 client_id: clientId, 
                 session_id: currentSession.id, 
-                content: textToSend 
+                content: content 
             };
             
             const res = await axios.post(url, payload, { headers: getAuthHeaders() });
-            setMessages(prev => [...prev, res.data]);
+            const aiMsg = res.data;
+            setMessages(prev => [...prev, aiMsg]);
+
+            // Auto-trigger read-only actions
+            const rawActionMatch = aiMsg.content.match(/\[ACTION:\s*({.*})\s*\]/s);
+            if (rawActionMatch) {
+                try {
+                    const actionData = JSON.parse(rawActionMatch[1]);
+                    const autoTypes = ['GET_WP_POST', 'SEARCH_WP', 'GET_SITEMAP'];
+                    if (autoTypes.includes(actionData.type)) {
+                        // Small delay for natural feel
+                        setTimeout(() => {
+                            handleExecuteAction(actionData, messages.length + 1);
+                        }, 600);
+                    }
+                } catch (e) { console.error("Auto-action parse error:", e); }
+            }
         } catch (e) {
             toast.error("Errore esperto SEO");
             console.error("Chat error:", e);
@@ -147,6 +163,16 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                 }
                 return copy;
             });
+
+            // If it's a data-gathering action, automatically send results back to the AI
+            const autoFollowUpTypes = ['GET_WP_POST', 'SEARCH_WP', 'GET_SITEMAP'];
+            if (autoFollowUpTypes.includes(action.type)) {
+                const resultsSummary = action.type === 'GET_WP_POST' 
+                    ? `CONTENUTO RECUPERATO: ${JSON.stringify(res.data.post?.content?.rendered || res.data.post)}`
+                    : `RISULTATI RECUPERATI: ${JSON.stringify(res.data.results || res.data.urls)}`;
+                
+                handleSendMessage(null, `[SYSTEM_RESULT] ${resultsSummary}\n\nAnalizza questi dati e procedi con la richiesta originale.`);
+            }
         } catch (e) {
             toast.error("Errore durante l'esecuzione dell'azione");
             console.error("Action execution error:", e);
@@ -162,8 +188,8 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
 
     const renderMessageContent = (content, msgIndex) => {
         if (typeof content === 'string') {
-            // Parse ACTION first
-            const actionMatch = content.match(/\[ACTION:\s*({.*?})\]/);
+            // Parse ACTION first - greedy match for nested JSON
+            const actionMatch = content.match(/\[ACTION:\s*({.*})\s*\]/s);
             let displayContent = content;
             let actionData = null;
 
@@ -197,6 +223,7 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                     <span className="text-[10px] font-bold uppercase tracking-tight text-slate-600">
                                         {actionData.type === 'PUBLISH_ARTICLE' ? 'Pubblicazione Immediata' : 
                                          actionData.type === 'SEARCH_WP' ? 'Ricerca Contenuto WP' :
+                                         actionData.type === 'GET_WP_POST' ? 'Analisi Articolo WordPress' :
                                          actionData.type === 'GET_SITEMAP' ? 'Esplorazione Sitemap' :
                                          actionData.type === 'TRIGGER_FRESHNESS' ? 'Ottimizzazione Freshness' :
                                          actionData.type === 'CREATE_ARTICLE' ? 'Suggerimento Articolo' : 'Suggerimento Ottimizzazione'}
@@ -257,6 +284,12 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                     </div>
                                 )}
 
+                                {actionData.type === 'GET_WP_POST' && (
+                                    <div className="text-[10px] text-slate-600 truncate">
+                                        Analizza: <strong>{actionData.payload.url || actionData.payload.post_id}</strong>
+                                    </div>
+                                )}
+
                                 {actionData.type === 'TRIGGER_FRESHNESS' && (
                                     <div className="text-[10px] text-slate-600 truncate">
                                         Target: <strong>{actionData.payload.url}</strong>
@@ -284,6 +317,7 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                      messages[msgIndex]?.executed ? 'Azione Completata' : 
                                      actionData.type === 'PUBLISH_ARTICLE' ? 'Pubblica ORA su WP' :
                                      actionData.type === 'SEARCH_WP' ? 'Cerca Ora' :
+                                     actionData.type === 'GET_WP_POST' ? 'Leggi Articolo' :
                                      actionData.type === 'GET_SITEMAP' ? 'Leggi Sitemap' :
                                      actionData.type === 'TRIGGER_FRESHNESS' ? 'Attiva Freshness' :
                                      actionData.type === 'CREATE_ARTICLE' ? 'Crea Bozza Ora' : 'Applica Modifica'}

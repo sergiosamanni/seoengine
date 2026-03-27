@@ -257,7 +257,18 @@ async def import_external_image(request: dict, current_user: dict = Depends(get_
 
 @router.post("/articles/simple-generate")
 async def simple_generate_article(request: SimpleGenerateRequest, current_user: dict = Depends(get_current_user)):
-    client_id = request.client_id if current_user["role"] == "admin" else current_user.get("client_id")
+    # Prioritize client_id from request if user is admin, 
+    # otherwise validate requested client_id against user permissions
+    if current_user["role"] == "admin":
+        client_id = request.client_id
+    else:
+        # For non-admins, ensure the requested client_id is one of their allowed IDs
+        # or fallback to the primary one in their token if none requested
+        client_id = request.client_id or current_user.get("client_id")
+        allowed_ids = current_user.get("client_ids", [])
+        if client_id not in allowed_ids:
+            raise HTTPException(status_code=403, detail="Non hai i permessi per questo cliente")
+            
     if not client_id: raise HTTPException(status_code=400, detail="client_id richiesto")
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client_doc: raise HTTPException(status_code=404, detail="Cliente non trovato")
