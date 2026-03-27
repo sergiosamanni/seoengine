@@ -1619,3 +1619,27 @@ async def web_search_images(keyword: str, max_results: int = 5) -> list:
         logger.warning(f"web_search_images error for '{keyword}': {e}")
         return []
 
+
+async def web_search_text(query: str, max_results: int = 5) -> list:
+    """Search for text results using DuckDuckGo. Returns a list of {title, body, url} dicts."""
+    try:
+        from duckduckgo_search import DDGS
+        with DDGS() as ddgs:
+            results = list(ddgs.text(
+                keywords=query,
+                region="it-it", # Targeted for Italian SEO
+                safesearch="moderate",
+                max_results=max_results
+            ))
+        formatted = []
+        for r in results:
+            formatted.append({
+                "title": r.get("title", ""),
+                "body": r.get("body", ""),
+                "url": r.get("href", ""),
+            })
+        return formatted
+    except Exception as e:
+        logger.warning(f"web_search_text error for '{query}': {e}")
+        return []
+

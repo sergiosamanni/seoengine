@@ -30,7 +30,8 @@ class SEOScanner:
         # 4. Evaluate Cannibalization (Gardener)
         await cls.evaluate_cannibalization(client)
         
-        # 5. Placeholder for Semantic Gap
+        # 5. Evaluate Semantic Gap (Analysis)
+        await cls.evaluate_semantic_gap(client)
         
         logger.info(f"SEO Scan completed for client {client_id}")
 
@@ -237,6 +238,75 @@ class SEOScanner:
                         })
             except Exception as e:
                 logger.error(f"Gardener evaluation failed for {client_id}: {e}")
+
+    @classmethod
+    async def evaluate_semantic_gap(cls, client):
+        client_id = client["id"]
+        config = client.get("configuration", {})
+        from services.gsc_service import GSCService
+        from helpers import web_search_text
+        
+        # 1. Fetch Striking Distance Keywords
+        keywords = await GSCService.get_striking_distance_keywords(client_id, limit=3)
+        if not keywords:
+            return
+
+        llm_config = config.get("llm", {}) or config.get("openai", {})
+        if not llm_config or not (llm_config.get("api_key") or llm_config.get("openai_api_key")):
+            llm_config = {
+                "provider": os.environ.get("LLM_PROVIDER", "openai"),
+                "api_key": os.environ.get("OPENAI_API_KEY"),
+                "modello": os.environ.get("LLM_MODEL", "gpt-4o-mini")
+            }
+
+        for kw_info in keywords:
+            kw = kw_info["query"]
+            # 2. Search Top 3 snippets
+            search_results = await web_search_text(kw, max_results=3)
+            if not search_results:
+                continue
+
+            competitors_context = "\n".join([f"- {r['title']}: {r['body'][:300]}" for r in search_results])
+            
+            prompt = (
+                f"Sei un SEO Consultant. La nostra pagina {kw_info['url']} è in posizione {kw_info['position']} per '{kw}'.\n"
+                "I Top 3 competitor mostrano questi snippet/contenuti:\n"
+                + competitors_context + 
+                "\n\nIndividua un 'Semantic Gap' (cosa hanno loro che noi non abbiamo: tabelle, FAQ, dati, grafici).\n"
+                "FORNISCI IL RISULTATO SOLO IN JSON:\n"
+                "{\n"
+                "  \"gap_identified\": \"cosa manca esatto (max 100 car)\",\n"
+                "  \"reason\": \"Perché aggiungerlo (max 150 car)\",\n"
+                "  \"suggestion\": \"Testo o elemento preciso da inserire per scalare in Top 3 (max 250 car)\"\n"
+                "}\n"
+            )
+
+            try:
+                response_text = await generate_with_rotation(llm_config, prompt, "Autopilot Semantic Gap Scan:")
+                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                if json_match:
+                    prop = json.loads(json_match.group(0))
+                    
+                    # Check if task already exists
+                    exists = await db.autopilot_tasks.find_one({
+                        "url": kw_info["url"], 
+                        "title": {"$regex": "Semantic Gap"}, 
+                        "status": "pending"
+                    })
+                    if not exists:
+                        await db.autopilot_tasks.insert_one({
+                            "id": str(uuid.uuid4()),
+                            "client_id": client_id,
+                            "type": "SEMANTIC_GAP",
+                            "status": "pending",
+                            "title": f"Semantic Gap: {kw}",
+                            "reason": f"Siamo in striking distance ({kw_info['position']}). Manca: {prop['gap_identified']}",
+                            "suggestion": prop["suggestion"],
+                            "url": kw_info["url"],
+                            "created_at": datetime.now(timezone.utc).isoformat()
+                        })
+            except Exception as e:
+                logger.error(f"Semantic Gap evaluation failed for {client_id} (kw: {kw}): {e}")
 
     @classmethod
     async def evaluate_editorial_plan(cls, client):

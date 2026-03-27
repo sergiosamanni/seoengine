@@ -194,3 +194,56 @@ class GSCService:
         except Exception as e:
             logger.error(f"GSC Cannibalization error for {client_id}: {e}")
             return []
+
+    @classmethod
+    async def get_striking_distance_keywords(cls, client_id: str, days: int = 28, limit: int = 10) -> list:
+        """Finds keywords ranking in positions 4-12 (Striking Distance)."""
+        client_doc = await db.clients.find_one({"id": client_id}, {"configuration.gsc": 1})
+        if not client_doc: return []
+        gsc_config = (client_doc.get("configuration", {}) or {}).get("gsc", {})
+        site_url = gsc_config.get("site_url", "")
+        tokens = gsc_config.get("tokens")
+        if not tokens or not site_url: return []
+
+        try:
+            import google.oauth2.credentials
+            from googleapiclient.discovery import build
+            from google.auth.transport.requests import Request
+            
+            creds = google.oauth2.credentials.Credentials(
+                token=tokens["token"], refresh_token=tokens.get("refresh_token"),
+                token_uri=tokens.get("token_uri", "https://oauth2.googleapis.com/token"),
+                client_id=tokens.get("client_id"), client_secret=tokens.get("client_secret")
+            )
+            if creds.expired and creds.refresh_token: creds.refresh(Request())
+            
+            service = build("searchconsole", "v1", credentials=creds)
+            end_date = datetime.now(timezone.utc).date()
+            start_date = end_date - timedelta(days=days)
+            
+            response = service.searchanalytics().query(
+                siteUrl=site_url,
+                body={
+                    "startDate": start_date.isoformat(), "endDate": end_date.isoformat(),
+                    "dimensions": ["query", "page"], "rowLimit": limit * 5 # Get more to filter
+                }
+            ).execute()
+            
+            striking = []
+            for row in response.get("rows", []):
+                pos = row.get("position", 0)
+                if 4.0 <= pos <= 13.0:
+                    striking.append({
+                        "query": row["keys"][0],
+                        "url": row["keys"][1],
+                        "clicks": row.get("clicks", 0),
+                        "impressions": row.get("impressions", 0),
+                        "position": round(pos, 1)
+                    })
+            
+            # Sort by impressions (biggest opportunity)
+            striking.sort(key=lambda x: x["impressions"], reverse=True)
+            return striking[:limit]
+        except Exception as e:
+            logger.error(f"GSC Striking Distance error for {client_id}: {e}")
+            return []
