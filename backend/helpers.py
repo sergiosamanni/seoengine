@@ -6,7 +6,7 @@ import asyncio
 import httpx
 import json
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional, Dict
 from bs4 import BeautifulSoup
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
