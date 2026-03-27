@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from database import db
 from auth import hash_password, verify_password, create_token, get_current_user, require_admin
-from models import UserCreate, UserResponse, AssignClientRequest
+from models import UserCreate, UserResponse, AssignClientRequest, UserUpdate
 
 router = APIRouter()
 
