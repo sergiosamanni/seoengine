@@ -117,6 +117,8 @@ class ChatService:
         # Use centralized GSC Service
         gsc_summary = await GSCService.get_performance_summary(client_id)
         
+        wp_config = config.get("wordpress", {})
+        
         # Fetch latest articles
         recent_articles = await db.articles.find(
             {"client_id": client_id, "stato": "published"}, 
@@ -128,7 +130,11 @@ class ChatService:
             "settore": client.get("settore"),
             "knowledge_base": config.get("knowledge_base", {}),
             "gsc_summary": gsc_summary,
-            "recent_articles": recent_articles
+            "recent_articles": recent_articles,
+            "wordpress_config": {
+                "url": wp_config.get("url_api"),
+                "utente": wp_config.get("utente")
+            }
         }
         return context
 

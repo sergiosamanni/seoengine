@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from auth import get_current_user
 from services.article_service import ArticleService
-from helpers import publish_to_wordpress, update_wordpress_post
+from helpers import publish_to_wordpress, update_wordpress_post, search_wordpress_post, get_wordpress_post
 from database import db
 import logging
 import uuid
@@ -99,6 +99,52 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
             else:
                 raise HTTPException(status_code=500, detail="Errore nell'aggiornamento WordPress")
             
+        elif action_type == "SEARCH_WP":
+            query = payload.get("query")
+            wp_type = payload.get("wp_type", "post")
+            if not query:
+                raise HTTPException(status_code=400, detail="query richiesto")
+            
+            results = await search_wordpress_post(
+                url=wp_config.get("url_api"),
+                username=wp_config.get("utente"),
+                password=wp_config.get("password_applicazione"),
+                query=query,
+                wp_type=wp_type
+            )
+            return {"status": "success", "results": results}
+
+        elif action_type == "GET_WP_POST":
+            post_id = payload.get("post_id")
+            wp_type = payload.get("wp_type", "post")
+            if not post_id:
+                raise HTTPException(status_code=400, detail="post_id richiesto")
+            
+            post = await get_wordpress_post(
+                url=wp_config.get("url_api"),
+                username=wp_config.get("utente"),
+                password=wp_config.get("password_applicazione"),
+                post_id=post_id,
+                wp_type=wp_type
+            )
+            if post:
+                return {"status": "success", "post": post}
+            else:
+                raise HTTPException(status_code=404, detail="Post non trovato")
+
+        elif action_type == "TRIGGER_FRESHNESS":
+            url = payload.get("url")
+            if not url:
+                raise HTTPException(status_code=400, detail="url richiesto")
+            
+            # Here we would call the freshness service
+            # For now, we'll mark the article for freshness if it exists in our DB
+            updated = await db.articles.find_one_and_update(
+                {"link": url, "client_id": client_id},
+                {"$set": {"last_freshness_check": datetime.now(timezone.utc).isoformat()}}
+            )
+            return {"status": "success", "message": f"Freshness triggerata per {url}", "updated": bool(updated)}
+
         else:
             raise HTTPException(status_code=400, detail="Tipo azione non supportato")
             

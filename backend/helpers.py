@@ -813,7 +813,45 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
         raise Exception(last_error or "Errore sconosciuto nella pubblicazione")
 
 
+async def search_wordpress_post(url: str, username: str, password: str, query: str, wp_type: str = "post") -> list:
+    """Search for a post/page by title or slug."""
+    async with httpx.AsyncClient() as http_client:
+        base_url = url.replace("/posts", "")
+        endpoint = f"{base_url}/pages" if wp_type == "page" else url
+        try:
+            response = await http_client.get(
+                endpoint, auth=(username, password),
+                params={"search": query, "per_page": 5}, timeout=15.0
+            )
+            if response.status_code == 200:
+                return [{"id": p["id"], "title": p["title"]["rendered"], "link": p["link"]} for p in response.json()]
+        except Exception as e:
+            logger.warning(f"Error searching WP for '{query}': {e}")
+        return []
+
+
+async def get_wordpress_post(url: str, username: str, password: str, post_id: str, wp_type: str = "post") -> dict:
+    """Get full content and metadata of a specific post/page."""
+    async with httpx.AsyncClient() as http_client:
+        base_url = url.replace("/posts", "")
+        endpoint = f"{base_url}/pages/{post_id}" if wp_type == "page" else f"{url}/{post_id}"
+        try:
+            response = await http_client.get(endpoint, auth=(username, password), timeout=15.0)
+            if response.status_code == 200:
+                p = response.json()
+                return {
+                    "id": p["id"],
+                    "title": p["title"]["rendered"],
+                    "content": p["content"]["rendered"],
+                    "link": p["link"]
+                }
+        except Exception as e:
+            logger.warning(f"Error fetching WP post {post_id}: {e}")
+        return None
+
+
 async def update_wordpress_post(url: str, username: str, password: str, post_id: str, content: str, wp_type: str = "post") -> bool:
+    """Update an existing WordPress post/page."""
     async with httpx.AsyncClient() as http_client:
         base_url = url.replace("/posts", "")
         endpoint = f"{base_url}/pages/{post_id}" if wp_type == "page" else f"{url}/{post_id}"

@@ -179,6 +179,8 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                     <Sparkles className="w-3 h-3 text-amber-500" />
                                     <span className="text-[10px] font-bold uppercase tracking-tight text-slate-600">
                                         {actionData.type === 'PUBLISH_ARTICLE' ? 'Pubblicazione Immediata' : 
+                                         actionData.type === 'SEARCH_WP' ? 'Ricerca Contenuto WP' :
+                                         actionData.type === 'TRIGGER_FRESHNESS' ? 'Ottimizzazione Freshness' :
                                          actionData.type === 'CREATE_ARTICLE' ? 'Suggerimento Articolo' : 'Suggerimento Ottimizzazione'}
                                     </span>
                                 </div>
@@ -203,8 +205,27 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                 )}
                                 
                                 {actionData.type === 'FIX_CONTENT' && (
-                                    <div className="text-[10px] text-slate-600 italic">
-                                        {actionData.payload.suggestion}
+                                    <div className="space-y-2">
+                                        <div className="text-[10px] text-slate-600 italic">
+                                            {actionData.payload.suggestion || "Aggiornamento contenuto..."}
+                                        </div>
+                                        {actionData.payload.wordpress_post_id && (
+                                            <Badge variant="outline" className="text-[8px] border-slate-200 text-slate-400">
+                                                ID: {actionData.payload.wordpress_post_id}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                )}
+
+                                {actionData.type === 'SEARCH_WP' && (
+                                    <div className="text-[10px] text-slate-600">
+                                        Cerca <strong>"{actionData.payload.query}"</strong> tra le {actionData.payload.wp_type === 'page' ? 'pagine' : 'articoli'} del sito.
+                                    </div>
+                                )}
+
+                                {actionData.type === 'TRIGGER_FRESHNESS' && (
+                                    <div className="text-[10px] text-slate-600 truncate">
+                                        Target: <strong>{actionData.payload.url}</strong>
                                     </div>
                                 )}
 
@@ -228,8 +249,27 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                     {messages[msgIndex]?.executionLoading ? 'Esecuzione...' : 
                                      messages[msgIndex]?.executed ? 'Azione Completata' : 
                                      actionData.type === 'PUBLISH_ARTICLE' ? 'Pubblica ORA su WP' :
+                                     actionData.type === 'SEARCH_WP' ? 'Cerca Ora' :
+                                     actionData.type === 'TRIGGER_FRESHNESS' ? 'Attiva Freshness' :
                                      actionData.type === 'CREATE_ARTICLE' ? 'Crea Bozza Ora' : 'Applica Modifica'}
                                 </Button>
+                                {messages[msgIndex]?.executed && messages[msgIndex]?.executionResult?.results && (
+                                    <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-100 space-y-1">
+                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mb-1">Risultati trovati:</div>
+                                        {messages[msgIndex].executionResult.results.map((r, i) => (
+                                            <div key={i} className="flex items-center justify-between gap-2 p-1.5 bg-white rounded border border-slate-100 shadow-sm">
+                                                <div className="min-w-0">
+                                                    <div className="text-[10px] font-bold truncate text-slate-800">{r.title}</div>
+                                                    <div className="text-[8px] text-slate-400 truncate">{r.link}</div>
+                                                </div>
+                                                <Badge className="bg-slate-900 text-white text-[8px] font-mono shrink-0">ID: {r.id}</Badge>
+                                            </div>
+                                        ))}
+                                        {messages[msgIndex].executionResult.results.length === 0 && (
+                                            <div className="text-[10px] text-slate-400 italic py-1">Nessun risultato trovato.</div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </Card>
                     )}
