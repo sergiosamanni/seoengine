@@ -41,7 +41,9 @@ import {
   Loader2,
   Shield,
   User,
-  Plus
+  Plus,
+  PenTool,
+  Save
 } from 'lucide-react';
 import { Checkbox } from '../components/ui/checkbox';
 import { ScrollArea } from '../components/ui/scroll-area';
@@ -61,6 +63,12 @@ export const UsersPage = () => {
   const [assigning, setAssigning] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(null);
   const [clientSearch, setClientSearch] = useState('');
+  
+  // Edit User State
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editFormData, setEditFormData] = useState({ name: '', email: '', role: '', client_ids: [], password: '' });
+  const [updating, setUpdating] = useState(false);
   
   // Create User State
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -140,6 +148,36 @@ export const UsersPage = () => {
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Errore');
+    }
+  };
+
+  const handleEditInit = (user) => {
+    setEditingUser(user);
+    setEditFormData({
+        name: user.name || '',
+        email: user.email || '',
+        role: user.role || 'client',
+        client_ids: user.client_ids || [],
+        password: '' // Don't preload password
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editFormData.name || !editFormData.email) {
+        toast.error("Nome e Email sono obbligatori");
+        return;
+    }
+    setUpdating(true);
+    try {
+        await axios.put(`${API}/users/${editingUser.id}`, editFormData, { headers: getAuthHeaders() });
+        toast.success(`Utente ${editFormData.name} aggiornato con successo`);
+        setEditDialogOpen(false);
+        fetchData();
+    } catch (error) {
+        toast.error(error.response?.data?.detail || "Errore aggiornamento utente");
+    } finally {
+        setUpdating(false);
     }
   };
 
@@ -300,32 +338,33 @@ export const UsersPage = () => {
                     </div>
 
                     {/* Actions - Subtle */}
-                    {user.role !== 'admin' && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-slate-900 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all border border-transparent hover:border-[#f1f3f6]" data-testid={`user-actions-${user.id}`}>
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-xl border border-[#f1f3f6] shadow-xl p-1.5 min-w-[180px]">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-slate-900 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all border border-transparent hover:border-[#f1f3f6]" data-testid={`user-actions-${user.id}`}>
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-xl border border-[#f1f3f6] shadow-xl p-1.5 min-w-[180px]">
+                        <DropdownMenuItem className="rounded-lg text-xs font-semibold p-2" onClick={() => handleEditInit(user)}>
+                          <PenTool className="w-3.5 h-3.5 mr-2 text-slate-400" />
+                          Modifica Account
+                        </DropdownMenuItem>
+                        {user.role !== 'admin' && (
                           <DropdownMenuItem className="rounded-lg text-xs font-semibold p-2" onClick={() => { setAssignDialog(user); setSelectedClientIds(user.client_ids || []); }}>
                             <Link2 className="w-3.5 h-3.5 mr-2 text-slate-400" />
                             {user.client_ids && user.client_ids.length > 0 ? 'Gestisci siti' : 'Collega a siti'}
                           </DropdownMenuItem>
-                          {user.client_ids && user.client_ids.length > 0 && (
-                            <DropdownMenuItem className="rounded-lg text-xs font-semibold p-2" onClick={() => unassignUser(user)}>
-                              <Unlink className="w-3.5 h-3.5 mr-2 text-slate-400" />
-                              Scollega tutto
-                            </DropdownMenuItem>
-                          )}
-                          <div className="h-px bg-[#f1f3f6] my-1.5 mx-1" />
-                          <DropdownMenuItem onClick={() => setDeleteDialog(user)} className="rounded-lg text-xs font-semibold p-2 text-red-500 focus:text-red-600 focus:bg-red-50">
-                            <Trash2 className="w-3.5 h-3.5 mr-2" />
-                            Elimina Account
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                        )}
+                        <div className="h-px bg-[#f1f3f6] my-1.5 mx-1" />
+                        <DropdownMenuItem 
+                            onClick={() => setDeleteDialog(user)} 
+                            className="rounded-lg text-xs font-semibold p-2 text-red-500 focus:text-red-600 focus:bg-red-50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-2" />
+                          Elimina Account
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))
@@ -408,6 +447,129 @@ export const UsersPage = () => {
               {assigning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Salva Permessi'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* NEW: Edit User Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if(!open) setClientSearch(''); }}>
+        <DialogContent className="rounded-3xl border-[#f1f3f6] max-w-xl p-0 overflow-hidden shadow-2xl">
+            <DialogHeader className="p-8 bg-slate-900 text-white">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                        <PenTool className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <DialogTitle className="text-xl font-bold tracking-tight">Modifica Utente</DialogTitle>
+                        <DialogDescription className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-0.5 opacity-60">
+                            Aggiorna informazioni o reset password
+                        </DialogDescription>
+                    </div>
+                </div>
+            </DialogHeader>
+            <div className="p-8 space-y-6">
+                <div className="grid grid-cols-1 gap-5">
+                    <div className="space-y-2">
+                        <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Nome Completo</Label>
+                        <Input 
+                            value={editFormData.name} 
+                            onChange={e => setEditFormData({...editFormData, name: e.target.value})}
+                            placeholder="Es: Mario Rossi" 
+                            className="h-11 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-medium focus:bg-white"
+                        />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Email Aziendale</Label>
+                            <Input 
+                                value={editFormData.email} 
+                                onChange={e => setEditFormData({...editFormData, email: e.target.value})}
+                                placeholder="mario@esempio.it" 
+                                className="h-11 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-medium focus:bg-white"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Nuova Password (opz.)</Label>
+                            <Input 
+                                type="password"
+                                value={editFormData.password} 
+                                onChange={e => setEditFormData({...editFormData, password: e.target.value})}
+                                placeholder="Lascia vuoto per non cambiare" 
+                                className="h-11 border-slate-100 bg-slate-50/50 rounded-xl px-4 font-medium focus:bg-white"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Ruolo Sistema</Label>
+                        <Select value={editFormData.role} onValueChange={v => setEditFormData({...editFormData, role: v})}>
+                            <SelectTrigger className="h-11 border-slate-100 bg-slate-50/50 rounded-xl px-5 font-bold">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+                                <SelectItem value="client" className="text-xs font-bold py-2.5">Cliente (Accesso Limitato)</SelectItem>
+                                <SelectItem value="admin" className="text-xs font-bold py-2.5">Administrator (Accesso Totale)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {editFormData.role === 'client' && (
+                        <div className="space-y-3 pt-2">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 ml-1">Associa Siti Web</Label>
+                                <span className="text-[9px] text-blue-500 font-bold uppercase px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100">{editFormData.client_ids?.length || 0} selezionati</span>
+                            </div>
+                            
+                            <div className="relative group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                <Input 
+                                    placeholder="Cerca dominio o cliente..." 
+                                    value={clientSearch}
+                                    onChange={(e) => setClientSearch(e.target.value)}
+                                    className="pl-10 h-10 border-slate-100 bg-slate-50/50 rounded-xl px-5 text-[11px] font-medium transition-all focus:bg-white"
+                                />
+                            </div>
+
+                            <ScrollArea className="h-[180px] rounded-2xl border border-slate-50 bg-slate-50/30 p-4 shadow-inner">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {clients.filter(c => 
+                                        c.nome.toLowerCase().includes(clientSearch.toLowerCase()) || 
+                                        c.sito_web?.toLowerCase().includes(clientSearch.toLowerCase())
+                                    ).map(c => (
+                                        <div 
+                                            key={c.id} 
+                                            onClick={() => {
+                                                const currentIds = editFormData.client_ids || [];
+                                                if (currentIds.includes(c.id)) setEditFormData({...editFormData, client_ids: currentIds.filter(id => id !== c.id)});
+                                                else setEditFormData({...editFormData, client_ids: [...currentIds, c.id]});
+                                            }}
+                                            className={`flex items-center space-x-2.5 p-2.5 rounded-xl border transition-all cursor-pointer ${
+                                                (editFormData.client_ids || []).includes(c.id) 
+                                                ? 'bg-white border-blue-200 shadow-sm ring-1 ring-blue-50' 
+                                                : 'opacity-70 border-transparent hover:opacity-100 hover:bg-white hover:border-slate-100'
+                                            }`}
+                                        >
+                                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${(editFormData.client_ids || []).includes(c.id) ? 'bg-blue-600 border-blue-600' : 'bg-slate-200 border-slate-300'}`}>
+                                                {(editFormData.client_ids || []).includes(c.id) && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-[10px] font-bold truncate ${(editFormData.client_ids || []).includes(c.id) ? 'text-blue-700' : 'text-slate-600'}`}>{c.nome}</p>
+                                                <p className="text-[8px] text-slate-400 font-medium truncate tracking-tight">{c.sito_web?.replace('https://','')}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        </div>
+                    )}
+                </div>
+            </div>
+            <DialogFooter className="p-8 bg-slate-50 border-t border-[#f1f3f6] gap-3 flex-row sm:justify-end">
+                <Button variant="ghost" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 h-11 px-6 rounded-xl" onClick={() => setEditDialogOpen(false)}>Annulla</Button>
+                <Button onClick={handleUpdateUser} disabled={updating} className="bg-slate-900 text-white h-11 px-10 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-slate-200 active:scale-95 transition-all">
+                    {updating ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Save className="w-3.5 h-3.5 mr-2" />} Salva Modifiche
+                </Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
 

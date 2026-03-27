@@ -76,13 +76,49 @@ async def unassign_user_from_client(request: dict, current_user: dict = Depends(
     return {"message": "Utente rimosso dai clienti"}
 
 
+@router.put("/users/{user_id}", response_model=UserResponse)
+async def update_user(user_id: str, updates: UserUpdate, current_user: dict = Depends(require_admin)):
+    # Check if user exists
+    existing = await db.users.find_one({"id": user_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+
+    # Build update document
+    update_doc = {}
+    if updates.name is not None:
+        update_doc["name"] = updates.name
+    if updates.email is not None:
+        # Check if email is already taken by another user
+        if updates.email != existing["email"]:
+            also_existing = await db.users.find_one({"email": updates.email})
+            if also_existing:
+                raise HTTPException(status_code=400, detail="Email gia registrata")
+        update_doc["email"] = updates.email
+    if updates.role is not None:
+        update_doc["role"] = updates.role
+    if updates.client_ids is not None:
+        update_doc["client_ids"] = updates.client_ids
+    if updates.password is not None and updates.password.strip():
+        update_doc["password"] = hash_password(updates.password)
+
+    if update_doc:
+        await db.users.update_one({"id": user_id}, {"$set": update_doc})
+
+    updated_user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+    return UserResponse(**updated_user)
+
+
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: str, current_user: dict = Depends(require_admin)):
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
-    if user.get("role") == "admin":
-        raise HTTPException(status_code=400, detail="Non puoi eliminare un admin")
+    
+    # Allow deleting any user as requested ("eliminare qualunque utente")
+    # But maybe prevent deleting yourself?
+    if user_id == current_user.get("user_id"):
+         raise HTTPException(status_code=400, detail="Non puoi eliminare il tuo stesso account")
+         
     await db.users.delete_one({"id": user_id})
     return {"message": "Utente eliminato"}
 

@@ -184,6 +184,14 @@ class UserResponse(BaseModel):
     created_at: str
 
 
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    role: Optional[str] = None
+    client_ids: Optional[List[str]] = None
+    password: Optional[str] = None
+
+
 class AssignClientRequest(BaseModel):
     user_id: str
     client_ids: List[str]
