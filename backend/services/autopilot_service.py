@@ -6,6 +6,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from database import db
 from services.article_service import ArticleService
+from services.seo_scanner import SEOScanner
 from helpers import log_activity, build_system_prompt
 
 logger = logging.getLogger("server")
@@ -49,70 +50,15 @@ class AutopilotService:
         
         logger.info(f"Processing Autopilot for {client['nome']} ({client_id})")
         
-        # 1. Select Content
-        topic = None
-        keyword = None
-        source = "editorial_plan"
-        
-        # Strategy: Editorial Plan First
-        if auto_config.get("strategy") == "editorial_plan_first":
-            plan = await db.editorial_plans.find_one({"client_id": client_id})
-            if plan and plan.get("topics"):
-                # Pick the first topic
-                target = plan["topics"][0]
-                keyword = target.get("keyword")
-                topic = f"{target.get('titolo')}\n\nFunnel: {target.get('funnel')}\nOutline: {target.get('outline')}"
-            else:
-                # Fallback to combinations
-                source = "combinations"
-        
-        if source == "combinations":
-            kw_config = config.get("keyword_combinations", {})
-            import itertools
-            import random
-            servizi = kw_config.get("servizi", [])
-            citta = kw_config.get("citta_e_zone", [])
-            tipi = kw_config.get("tipi_o_qualificatori", [])
-            
-            if servizi and citta and tipi:
-                # Pick a random combination
-                s = random.choice(servizi)
-                c = random.choice(citta)
-                t = random.choice(tipi)
-                keyword = f"{s} {t} a {c}"
-                topic = f"Generazione automatica per la combinazione: {keyword}"
-            else:
-                logger.warning(f"No content available for client {client_id} autopilot")
-                await cls.update_next_run(client_id, auto_config)
-                return
+        # 1. Trigger the Modular SEO Scanner
+        # This will populate the autopilot_tasks queue for HITL approval
+        try:
+            await log_activity(client_id, "autopilot_scan", "running", {})
+            await SEOScanner.scan_client(client_id)
+        except Exception as e:
+            logger.error(f"Autopilot scan failed for {client_id}: {e}")
 
-        # 2. Prepare Generation
-        job_id = await ArticleService.create_job(client_id, 1)
-        await log_activity(client_id, "autopilot_run", "running", {"keyword": keyword, "source": source})
-        
-        # Get LLM and Knowledge Base
-        llm_config = config.get("llm", {}) or config.get("openai", {})
-        kb = config.get("knowledge_base", {})
-        tone = config.get("tono_e_stile", {})
-        seo = config.get("seo", {})
-        advanced_prompt = config.get("advanced_prompt", {})
-        strategy = config.get("content_strategy", {})
-        
-        system_prompt = build_system_prompt(
-            kb, tone, seo, client["nome"], advanced_prompt, strategy, 
-            "articolo_blog", {}, [] # No specific brief or existing context for now
-        )
-
-        # 3. Trigger Generation (Asynchronous)
-        # Note: We use a simple task so it doesn't block the main scheduler thread
-        asyncio.create_task(ArticleService.run_simple_article_generation(
-            job_id, client_id, keyword, topic, 
-            auto_config.get("auto_publish", True),
-            system_prompt, llm_config, config.get("wordpress", {}),
-            kb, {"servizio": keyword, "citta": kb.get("citta_principale", ""), "tipo": "Autopilot"}
-        ))
-
-        # 4. Update Scheduling
+        # 2. Update Scheduling
         await cls.update_next_run(client_id, auto_config)
 
     @classmethod
