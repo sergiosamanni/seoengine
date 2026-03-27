@@ -1,8 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from database import db
 from auth import get_current_user
-from helpers import get_sitemap_links
+from helpers import get_sitemap_links, generate_with_rotation
+import json
+import re
+import os
+import logging
 
+logger = logging.getLogger("server")
 router = APIRouter()
 
 @router.get("/freshness/{client_id}")
@@ -27,7 +32,6 @@ async def get_freshness_candidates(client_id: str, current_user: dict = Depends(
         })
         
     # Get pages from Sitemap 
-    # Usually Sitemap is used to find external pages not in db that need update/internal linking
     config = client.get("configuration", {})
     sitemap_url = config.get("seo", {}).get("sitemap_url") 
     if not sitemap_url:
@@ -64,6 +68,14 @@ async def freshness_audit(client_id: str, request: dict, current_user: dict = De
     config = client.get("configuration", {})
     llm_config = config.get("llm", {}) or config.get("openai", {})
     
+    # Use client config or fallback to defaults
+    if not llm_config or not (llm_config.get("api_key") or llm_config.get("openai_api_key")):
+        llm_config = {
+            "provider": os.environ.get("LLM_PROVIDER", "openai"),
+            "api_key": os.environ.get("OPENAI_API_KEY") or os.environ.get("DEEPSEEK_API_KEY"),
+            "modello": os.environ.get("LLM_MODEL", "gpt-4o-mini")
+        }
+
     articles = request.get("articles", [])[:10]
     
     prompt = (
@@ -85,19 +97,16 @@ async def freshness_audit(client_id: str, request: dict, current_user: dict = De
     for a in articles:
         prompt += f"- Titolo: {a.get('titolo', '')} (URL: {a.get('url', '')})\n"
         
-    from helpers import generate_with_rotation
-    import json
-    import re
-    
     try:
         response_text = await generate_with_rotation(llm_config, prompt, "Genera Audit Freshness JSON:")
         json_match = re.search(r'\[\s*\{.*?\}\s*\]', response_text, re.DOTALL)
         if json_match:
             audit = json.loads(json_match.group(0))
         else:
+            # Try parsing raw if no match
             audit = json.loads(response_text)
             
         return {"audit": audit}
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Errore elaborazione audit Freshness")
-
+        logger.error(f"Audit generation failed for client {client_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore elaborazione audit Freshness: {str(e)}")
