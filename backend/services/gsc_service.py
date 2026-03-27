@@ -135,3 +135,62 @@ class GSCService:
         except Exception as e:
             logger.error(f"GSC Page performance error for {client_id}: {e}")
             return []
+
+    @classmethod
+    async def get_keyword_cannibalization(cls, client_id: str, days: int = 28, limit: int = 100) -> list:
+        """Identifies keywords that trigger multiple landing pages."""
+        client_doc = await db.clients.find_one({"id": client_id}, {"configuration.gsc": 1})
+        if not client_doc: return []
+        gsc_config = (client_doc.get("configuration", {}) or {}).get("gsc", {})
+        site_url = gsc_config.get("site_url", "")
+        tokens = gsc_config.get("tokens")
+        if not tokens or not site_url: return []
+
+        try:
+            import google.oauth2.credentials
+            from googleapiclient.discovery import build
+            from google.auth.transport.requests import Request
+            
+            creds = google.oauth2.credentials.Credentials(
+                token=tokens["token"], refresh_token=tokens.get("refresh_token"),
+                token_uri=tokens.get("token_uri", "https://oauth2.googleapis.com/token"),
+                client_id=tokens.get("client_id"), client_secret=tokens.get("client_secret")
+            )
+            if creds.expired and creds.refresh_token: creds.refresh(Request())
+            
+            service = build("searchconsole", "v1", credentials=creds)
+            end_date = datetime.now(timezone.utc).date()
+            start_date = end_date - timedelta(days=days)
+            
+            # Query by Query AND Page
+            response = service.searchanalytics().query(
+                siteUrl=site_url,
+                body={
+                    "startDate": start_date.isoformat(), "endDate": end_date.isoformat(),
+                    "dimensions": ["query", "page"], "rowLimit": limit
+                }
+            ).execute()
+            
+            # Group by Query
+            kw_map = {}
+            for row in response.get("rows", []):
+                kw = row["keys"][0]
+                url = row["keys"][1]
+                if kw not in kw_map: kw_map[kw] = []
+                kw_map[kw].append({
+                    "url": url,
+                    "clicks": row.get("clicks", 0),
+                    "impressions": row.get("impressions", 0),
+                    "position": round(row.get("position", 0), 1)
+                })
+            
+            # Filter for keywords with > 1 page
+            conflicts = []
+            for kw, pages in kw_map.items():
+                if len(pages) > 1:
+                    conflicts.append({"query": kw, "pages": pages})
+            
+            return conflicts
+        except Exception as e:
+            logger.error(f"GSC Cannibalization error for {client_id}: {e}")
+            return []

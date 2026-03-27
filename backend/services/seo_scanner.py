@@ -27,7 +27,10 @@ class SEOScanner:
         # 3. Evaluate Internal Linking (Spider)
         await cls.evaluate_internal_linking(client)
         
-        # 4. Placeholder for Content Gardening
+        # 4. Evaluate Cannibalization (Gardener)
+        await cls.evaluate_cannibalization(client)
+        
+        # 5. Placeholder for Semantic Gap
         
         logger.info(f"SEO Scan completed for client {client_id}")
 
@@ -166,6 +169,74 @@ class SEOScanner:
                         })
         except Exception as e:
             logger.error(f"Spider evaluation failed for {client_id}: {e}")
+
+    @classmethod
+    async def evaluate_cannibalization(cls, client):
+        client_id = client["id"]
+        config = client.get("configuration", {})
+        from services.gsc_service import GSCService
+        
+        # 1. Fetch Conflicts
+        conflicts = await GSCService.get_keyword_cannibalization(client_id, limit=50)
+        if not conflicts:
+            return
+
+        # Pick a significant conflict (max 2 per scan to avoid noise)
+        significant_conflicts = [c for c in conflicts if sum(p['clicks'] for p in c['pages']) > 2][:2]
+        
+        if not significant_conflicts:
+            return
+
+        llm_config = config.get("llm", {}) or config.get("openai", {})
+        if not llm_config or not (llm_config.get("api_key") or llm_config.get("openai_api_key")):
+            llm_config = {
+                "provider": os.environ.get("LLM_PROVIDER", "openai"),
+                "api_key": os.environ.get("OPENAI_API_KEY"),
+                "modello": os.environ.get("LLM_MODEL", "gpt-4o-mini")
+            }
+
+        for conflict in significant_conflicts:
+            prompt = (
+                f"Sei un SEO Consultant. Ho rilevato una cannibalizzazione per la keyword '{conflict['query']}'.\n"
+                "Queste pagine competono per lo stesso traffico:\n"
+                + "\n".join([f"- {p['url']} (Clic: {p['clicks']}, Pos: {p['position']})" for p in conflict['pages']]) + 
+                "\n\nProponi una strategia di CONSOLIDAMENTO.\n"
+                "FORNISCI IL RISULTATO SOLO IN JSON:\n"
+                "{\n"
+                "  \"winner_url\": \"url da mantenere\",\n"
+                "  \"loser_url\": \"url da reindirizzare\",\n"
+                "  \"reason\": \"Perché farlo (max 150 car)\",\n"
+                "  \"suggestion\": \"Azione pratica (es: Copia il paragrafo X da Y in Z e fai 301)\"\n"
+                "}\n"
+            )
+
+            try:
+                response_text = await generate_with_rotation(llm_config, prompt, "Autopilot Gardener Scan:")
+                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                if json_match:
+                    prop = json.loads(json_match.group(0))
+                    
+                    # Check if task already exists
+                    exists = await db.autopilot_tasks.find_one({
+                        "winner_url": prop.get("winner_url"), 
+                        "loser_url": prop.get("loser_url"), 
+                        "status": "pending"
+                    })
+                    if not exists:
+                        await db.autopilot_tasks.insert_one({
+                            "id": str(uuid.uuid4()),
+                            "client_id": client_id,
+                            "type": "CANNIBALIZATION",
+                            "status": "pending",
+                            "title": f"Gardener: Cannibalizzazione rilevata",
+                            "reason": f"Conflitto per keyword '{conflict['query']}': {prop['reason']}",
+                            "suggestion": prop["suggestion"],
+                            "winner_url": prop.get("winner_url"),
+                            "loser_url": prop.get("loser_url"),
+                            "created_at": datetime.now(timezone.utc).isoformat()
+                        })
+            except Exception as e:
+                logger.error(f"Gardener evaluation failed for {client_id}: {e}")
 
     @classmethod
     async def evaluate_editorial_plan(cls, client):
