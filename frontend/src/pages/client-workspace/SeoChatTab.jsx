@@ -114,19 +114,24 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
             const aiMsg = res.data;
             setMessages(prev => [...prev, aiMsg]);
 
-            // Auto-trigger read-only actions
-            const rawActionMatch = aiMsg.content.match(/\[ACTION:\s*({.*})\s*\]/s);
-            if (rawActionMatch) {
-                try {
-                    const actionData = JSON.parse(rawActionMatch[1]);
-                    const autoTypes = ['GET_WP_POST', 'SEARCH_WP', 'GET_SITEMAP'];
-                    if (autoTypes.includes(actionData.type)) {
-                        // Small delay for natural feel
-                        setTimeout(() => {
-                            handleExecuteAction(actionData, messages.length + 1);
-                        }, 600);
-                    }
-                } catch (e) { console.error("Auto-action parse error:", e); }
+            // Auto-trigger read-only actions (supports multiple actions)
+            const actionMatches = [...aiMsg.content.matchAll(/\[ACTION:\s*({[\s\S]*?})\s*\]/g)];
+            if (actionMatches.length > 0) {
+                const autoTypes = ['GET_WP_POST', 'SEARCH_WP', 'GET_SITEMAP'];
+                let delay = 600;
+                
+                for (const match of actionMatches) {
+                    try {
+                        const actionData = JSON.parse(match[1]);
+                        if (autoTypes.includes(actionData.type)) {
+                            // Sequential trigger with slight offset for readability
+                            setTimeout(() => {
+                                handleExecuteAction(actionData, messages.length + 1);
+                            }, delay);
+                            delay += 1500; // Increase delay for subsequent actions
+                        }
+                    } catch (e) { console.error("Auto-action parse error:", e); }
+                }
             }
         } catch (e) {
             toast.error("Errore esperto SEO");
@@ -136,12 +141,16 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
         }
     };
 
-    const handleExecuteAction = async (action, messageIndex) => {
-        // Optimistic update of the message to show loading in the card
+    const handleExecuteAction = async (action, messageIndex, actionIdx = 0) => {
+        // Optimistic update for specific action
         setMessages(prev => {
             const copy = [...prev];
             if (copy[messageIndex]) {
-                copy[messageIndex] = { ...copy[messageIndex], executionLoading: true };
+                const loading = copy[messageIndex].loadingActions || {};
+                copy[messageIndex] = { 
+                    ...copy[messageIndex], 
+                    loadingActions: { ...loading, [actionIdx]: true } 
+                };
             }
             return copy;
         });
@@ -149,16 +158,20 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
         try {
             const res = await axios.post(`${API}/chat/action/execute`, { ...action, client_id: clientId }, { headers: getAuthHeaders() });
             
-            toast.success(res.data.message || "Azione eseguita con successo");
+            toast.success(res.data.message || "Azione eseguita");
             
             setMessages(prev => {
                 const copy = [...prev];
                 if (copy[messageIndex]) {
+                    const executed = copy[messageIndex].executedActions || {};
+                    const loading = copy[messageIndex].loadingActions || {};
+                    const results = copy[messageIndex].resultsActions || {};
+                    
                     copy[messageIndex] = { 
                         ...copy[messageIndex], 
-                        executionLoading: false, 
-                        executed: true,
-                        executionResult: res.data 
+                        loadingActions: { ...loading, [actionIdx]: false },
+                        executedActions: { ...executed, [actionIdx]: true },
+                        resultsActions: { ...results, [actionIdx]: res.data }
                     };
                 }
                 return copy;
@@ -174,12 +187,15 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                 handleSendMessage(null, `[SYSTEM_RESULT] ${resultsSummary}\n\nAnalizza questi dati e procedi con la richiesta originale.`);
             }
         } catch (e) {
-            toast.error("Errore durante l'esecuzione dell'azione");
-            console.error("Action execution error:", e);
+            toast.error("Errore azione");
             setMessages(prev => {
                 const copy = [...prev];
                 if (copy[messageIndex]) {
-                    copy[messageIndex] = { ...copy[messageIndex], executionLoading: false };
+                    const loading = copy[messageIndex].loadingActions || {};
+                    copy[messageIndex] = { 
+                        ...copy[messageIndex], 
+                        loadingActions: { ...loading, [actionIdx]: false } 
+                    };
                 }
                 return copy;
             });
@@ -188,19 +204,18 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
 
     const renderMessageContent = (content, msgIndex) => {
         if (typeof content === 'string') {
-            // Parse ACTION first - greedy match for nested JSON
-            const actionMatch = content.match(/\[ACTION:\s*({.*})\s*\]/s);
+            // Support multiple ACTIONS in one message
+            const actionMatches = [...content.matchAll(/\[ACTION:\s*({[\s\S]*?})\s*\]/g)];
             let displayContent = content;
-            let actionData = null;
+            let actions = [];
 
-            if (actionMatch) {
+            actionMatches.forEach((match) => {
                 try {
-                    actionData = JSON.parse(actionMatch[1]);
-                    displayContent = content.replace(actionMatch[0], '').trim();
-                } catch (e) {
-                    console.error("Failed to parse action JSON", e);
-                }
-            }
+                    const data = JSON.parse(match[1]);
+                    actions.push(data);
+                    displayContent = displayContent.replace(match[0], '').trim();
+                } catch (e) { console.error("Failed to parse action JSON:", e); }
+            });
 
             // Simple parsing for bold **text**
             const parts = displayContent.split(/(\*\*.*?\*\*)/g);
@@ -215,8 +230,8 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                         })}
                     </div>
 
-                    {actionData && (
-                        <Card className="mt-4 border-slate-200 bg-white shadow-sm overflow-hidden">
+                    {actions.map((actionData, actionIdx) => (
+                        <Card key={actionIdx} className="mt-4 border-slate-200 bg-white shadow-sm overflow-hidden">
                             <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <Sparkles className="w-3 h-3 text-amber-500" />
@@ -229,7 +244,7 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                          actionData.type === 'CREATE_ARTICLE' ? 'Suggerimento Articolo' : 'Suggerimento Ottimizzazione'}
                                     </span>
                                 </div>
-                                {messages[msgIndex]?.executed && (
+                                {messages[msgIndex]?.executedActions?.[actionIdx] && (
                                     <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] font-bold uppercase px-1">
                                         Eseguito
                                     </Badge>
@@ -280,7 +295,7 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
 
                                 {actionData.type === 'SEARCH_WP' && (
                                     <div className="text-[10px] text-slate-600">
-                                        Cerca <strong>"{actionData.payload.query}"</strong> tra le {actionData.payload.wp_type === 'page' ? 'pagine' : 'articoli'} del sito.
+                                        Cerca <strong>"{actionData.payload.query}"</strong> tra {actionData.payload.wp_type === 'page' ? 'le pagine' : 'gli articoli'}.
                                     </div>
                                 )}
 
@@ -298,23 +313,23 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
 
                                 <Button 
                                     size="sm"
-                                    disabled={messages[msgIndex]?.executed || messages[msgIndex]?.executionLoading}
-                                    onClick={() => handleExecuteAction(actionData, msgIndex)}
+                                    disabled={messages[msgIndex]?.executedActions?.[actionIdx] || messages[msgIndex]?.loadingActions?.[actionIdx]}
+                                    onClick={() => handleExecuteAction(actionData, msgIndex, actionIdx)}
                                     className={`w-full h-8 text-[10px] font-bold uppercase tracking-tight gap-2 transition-all ${
-                                        messages[msgIndex]?.executed 
+                                        messages[msgIndex]?.executedActions?.[actionIdx] 
                                         ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-50 border border-emerald-100' 
                                         : 'bg-slate-900 text-white hover:bg-slate-800'
                                     }`}
                                 >
-                                    {messages[msgIndex]?.executionLoading ? (
+                                    {messages[msgIndex]?.loadingActions?.[actionIdx] ? (
                                         <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : messages[msgIndex]?.executed ? (
+                                    ) : messages[msgIndex]?.executedActions?.[actionIdx] ? (
                                         <CheckCircle2 className="w-3 h-3" />
                                     ) : (
                                         <Zap className="w-3 h-3" />
                                     )}
-                                    {messages[msgIndex]?.executionLoading ? 'Esecuzione...' : 
-                                     messages[msgIndex]?.executed ? 'Azione Completata' : 
+                                    {messages[msgIndex]?.loadingActions?.[actionIdx] ? 'Esecuzione...' : 
+                                     messages[msgIndex]?.executedActions?.[actionIdx] ? 'Azione Completata' : 
                                      actionData.type === 'PUBLISH_ARTICLE' ? 'Pubblica ORA su WP' :
                                      actionData.type === 'SEARCH_WP' ? 'Cerca Ora' :
                                      actionData.type === 'GET_WP_POST' ? 'Leggi Articolo' :
@@ -322,10 +337,13 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                      actionData.type === 'TRIGGER_FRESHNESS' ? 'Attiva Freshness' :
                                      actionData.type === 'CREATE_ARTICLE' ? 'Crea Bozza Ora' : 'Applica Modifica'}
                                 </Button>
-                                {messages[msgIndex]?.executed && messages[msgIndex]?.executionResult?.results && (
+
+                                {messages[msgIndex]?.executedActions?.[actionIdx] && messages[msgIndex]?.resultsActions?.[actionIdx]?.results && (
                                     <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-100 space-y-1">
-                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mb-1">Risultati trovati:</div>
-                                        {messages[msgIndex].executionResult.results.map((r, i) => (
+                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mb-1">
+                                            Risultati ({messages[msgIndex].resultsActions[actionIdx].results.length}):
+                                        </div>
+                                        {messages[msgIndex].resultsActions[actionIdx].results.map((r, i) => (
                                             <div key={i} className="flex items-center justify-between gap-2 p-1.5 bg-white rounded border border-slate-100 shadow-sm">
                                                 <div className="min-w-0">
                                                     <div className="text-[10px] font-bold truncate text-slate-800">{r.title}</div>
@@ -334,35 +352,36 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                                 <Badge className="bg-slate-900 text-white text-[8px] font-mono shrink-0">ID: {r.id}</Badge>
                                             </div>
                                         ))}
-                                        {messages[msgIndex].executionResult.results.length === 0 && (
-                                            <div className="text-[10px] text-slate-400 italic py-1">Nessun risultato trovato.</div>
+                                        {messages[msgIndex].resultsActions[actionIdx].results.length === 0 && (
+                                            <div className="text-[10px] text-slate-400 italic py-1 text-center">Nessun risultato trovato.</div>
                                         )}
                                     </div>
                                 )}
 
-                                {messages[msgIndex]?.executed && messages[msgIndex]?.executionResult?.urls && (
+                                {messages[msgIndex]?.executedActions?.[actionIdx] && messages[msgIndex]?.resultsActions?.[actionIdx]?.urls && (
                                     <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-100 space-y-1">
-                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mb-1">Pagine trovate ({messages[msgIndex].executionResult.urls.length}):</div>
+                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mb-1">
+                                            Pagine trovate ({messages[msgIndex].resultsActions[actionIdx].urls.length}):
+                                        </div>
                                         <ScrollArea className="h-24 px-1">
-                                            {messages[msgIndex].executionResult.urls.slice(0, 50).map((u, i) => (
+                                            {messages[msgIndex].resultsActions[actionIdx].urls.slice(0, 50).map((u, i) => (
                                                 <div key={i} className="text-[9px] text-slate-600 p-1 border-b border-white hover:bg-white cursor-pointer truncate" onClick={() => copyToClipboard(u)}>
                                                     {u.replace(/^https?:\/\//, '')}
                                                 </div>
                                             ))}
-                                            {messages[msgIndex].executionResult.urls.length > 50 && (
-                                                <div className="text-[8px] text-slate-400 italic pt-1">...e altre {messages[msgIndex].executionResult.urls.length - 50} pagine.</div>
+                                            {messages[msgIndex].resultsActions[actionIdx].urls.length > 50 && (
+                                                <div className="text-[8px] text-slate-400 italic pt-1">...e altre {messages[msgIndex].resultsActions[actionIdx].urls.length - 50} pagine.</div>
                                             )}
                                         </ScrollArea>
                                     </div>
                                 )}
                             </div>
                         </Card>
-                    )}
+                    ))}
                 </div>
             );
         }
         if (typeof content === 'object' && content !== null) {
-            // If it's an object (likely a JSON response that the backend sent as raw object), stringify it nicely
             return (
                 <div className="space-y-2">
                     <div className="flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-1 rounded-md text-[9px] font-bold w-fit uppercase">
