@@ -406,7 +406,7 @@ const AdminGenerator = ({
                 url: imgUrl, 
                 client_id: effectiveClientId 
             }, { headers: getAuthHeaders() });
-            const backendUrl = config.API_URL.replace('/api', '');
+            const backendUrl = API.replace('/api', '');
             const imageUrlFull = `${backendUrl}/api/uploads/files/${res.data.id}?auth=${token}`;
 
             if (activePlanImageIndex !== null) {
