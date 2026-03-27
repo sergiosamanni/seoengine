@@ -121,30 +121,42 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
     };
 
     const handleExecuteAction = async (action, messageIndex) => {
-        try {
-            // Optimistic update of the message to show loading in the card
-            const newMessages = [...messages];
-            newMessages[messageIndex] = { ...newMessages[messageIndex], executionLoading: true };
-            setMessages(newMessages);
+        // Optimistic update of the message to show loading in the card
+        setMessages(prev => {
+            const copy = [...prev];
+            if (copy[messageIndex]) {
+                copy[messageIndex] = { ...copy[messageIndex], executionLoading: true };
+            }
+            return copy;
+        });
 
+        try {
             const res = await axios.post(`${API}/chat/action/execute`, { ...action, client_id: clientId }, { headers: getAuthHeaders() });
             
             toast.success(res.data.message || "Azione eseguita con successo");
             
-            // Mark as executed
-            newMessages[messageIndex] = { 
-                ...newMessages[messageIndex], 
-                executionLoading: false, 
-                executed: true,
-                executionResult: res.data.message 
-            };
-            setMessages(newMessages);
+            setMessages(prev => {
+                const copy = [...prev];
+                if (copy[messageIndex]) {
+                    copy[messageIndex] = { 
+                        ...copy[messageIndex], 
+                        executionLoading: false, 
+                        executed: true,
+                        executionResult: res.data 
+                    };
+                }
+                return copy;
+            });
         } catch (e) {
             toast.error("Errore durante l'esecuzione dell'azione");
             console.error("Action execution error:", e);
-            const newMessages = [...messages];
-            newMessages[messageIndex] = { ...newMessages[messageIndex], executionLoading: false };
-            setMessages(newMessages);
+            setMessages(prev => {
+                const copy = [...prev];
+                if (copy[messageIndex]) {
+                    copy[messageIndex] = { ...copy[messageIndex], executionLoading: false };
+                }
+                return copy;
+            });
         }
     };
 
