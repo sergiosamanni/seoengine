@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import {
-  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X, Globe, MapPin
+  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X, Globe, MapPin, BookOpen
 } from 'lucide-react';
 import axios from 'axios';
 import { API_URL as API } from '../config';
@@ -41,6 +41,7 @@ export const DashboardLayout = ({ children }) => {
     { label: 'GMB', icon: MapPin, path: '/gmb' },
     { label: 'Citazioni', icon: Globe, path: '/citations' },
     { label: 'Activity Log', icon: Activity, path: '/activity-log' },
+    { label: 'SEO/GEO Guidelines', icon: BookOpen, path: '/seo-geo-guidelines' },
   ];
   const clientNav = [
     { label: 'Genera', icon: FileText, path: '/generate' },

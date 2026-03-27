@@ -280,10 +280,14 @@ async def simple_generate_article(request: SimpleGenerateRequest, current_user: 
     brief_override = {"note_speciali": request.topic or f"Scrivi un articolo sulla keyword: {request.keyword}",
                       "search_intent": {"informazionale": "informazionale", "commerciale": "commerciale", "conversione": "transazionale"}.get(request.objective, "informazionale")}
     
+    # Fetch Global SEO/GEO Guidelines
+    global_settings = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
+    global_g = global_settings.get("seo_geo_guidelines", []) if global_settings else []
+    
     ct_map = {"articolo": "articolo_blog", "landing_page": "landing_page", "pillar_page": "pillar_page"}
     system_prompt = build_system_prompt(kb, config.get("tono_e_stile", {}), config.get("seo", {}),
         client_doc["nome"], config.get("advanced_prompt", {}), config.get("content_strategy", {}), 
-        ct_map.get(request.content_type, "articolo_blog"), brief_override, existing_published)
+        ct_map.get(request.content_type, "articolo_blog"), brief_override, existing_published, global_g)
 
     # Append GSC and SERP context
     if request.gsc_context or request.serp_context:
@@ -730,12 +734,17 @@ async def generate_editorial_plan(client_id: str, current_user: dict = Depends(g
         except Exception as e:
             logger.warning(f"Could not fetch sitemap for existing topics check: {e}")
     
+    # Fetch Global SEO/GEO Guidelines
+    global_settings = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
+    global_g = global_settings.get("seo_geo_guidelines", []) if global_settings else []
+    
     topics = await strategist.generate_plan(
         gsc_data=gsc_data, 
         kb_data=kb_data, 
         target_keywords=target_keywords, 
         existing_topics=existing_topics,
-        num_topics=10
+        num_topics=10,
+        global_guidelines=global_g
     )
     
     # Fetch a stock image preview for each topic using the image_search_query

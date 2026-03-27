@@ -328,3 +328,19 @@ class ChatSessionResponse(BaseModel):
     created_at: str
     updated_at: str
     last_message: Optional[str] = None
+
+# ============== GLOBAL SETTINGS ==============
+
+class SEOGeoGuideline(BaseModel):
+    id: str
+    title: str
+    content: str  # Can contain markdown and links
+    links_data: Optional[List[Dict[str, Any]]] = None # To store scraped content from links
+    last_synced: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+class GlobalSettings(BaseModel):
+    id: str = "global"
+    seo_geo_guidelines: List[SEOGeoGuideline] = []
+    updated_at: str

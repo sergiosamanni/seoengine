@@ -25,6 +25,7 @@ from routes.chat import router as chat_router
 from routes.actions import router as actions_router
 from routes.diag import router as diag_router
 from routes.autopilot import router as autopilot_router
+from routes.settings import router as settings_router
 
 app.add_middleware(
     CORSMiddleware,
@@ -50,6 +51,7 @@ api_router.include_router(chat_router, prefix="/chat")
 api_router.include_router(actions_router, prefix="/chat/action")
 api_router.include_router(diag_router)
 api_router.include_router(autopilot_router)
+api_router.include_router(settings_router, prefix="/settings")
 
 
 @app.get("/")

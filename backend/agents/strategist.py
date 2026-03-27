@@ -10,7 +10,9 @@ class StrategistAgent(BaseAgent):
     def __init__(self, client_id: str, llm_config: dict):
         super().__init__(name="Strategist", client_id=client_id, llm_config=llm_config)
         
-    async def generate_plan(self, gsc_data: dict, kb_data: dict, target_keywords: list = None, existing_topics: list = None, num_topics: int = 10) -> list:
+    async def generate_plan(self, gsc_data: dict, kb_data: dict, target_keywords: list = None,
+                            existing_topics: list = None, num_topics: int = 10,
+                            global_guidelines: list = None) -> list:
         """
         Generates a list of suggested topics/titles based on GSC, KB, and Target Keywords.
         Each topic includes an SEO-optimized outline and an image search query for the cover.
@@ -29,6 +31,7 @@ Dati di input:
 2. KB: Descrizione dell'attività e dei servizi core.
 3. Keyword Target: Parole chiave specifiche per cui il cliente VUOLE posizionarsi.
 4. Argomenti già trattati: Elenco di titoli o keyword già pubblicati (da evitare).
+5. Global Guidelines: Regole SEO/GEO globali del sistema (MANDATORIE).
 
 Regole:
 - Se sono fornite "Keyword Target", crea articoli SPECIFICI per queste keyword.
@@ -59,6 +62,7 @@ Rispondi ESCLUSIVAMENTE con un JSON valido nel seguente formato:
     }}
   ]
 }}
+{f"### GLOBAL SEO/GEO GUIDELINES:\n{json.dumps(global_guidelines, indent=2)}\n" if global_guidelines else ""}
 """
         user_prompt = f"""ANALIZZA I SEGUENTI DATI:
 

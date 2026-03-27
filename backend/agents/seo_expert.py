@@ -56,9 +56,10 @@ Hai accesso ai seguenti dati in tempo reale:
 ### CONTENUTI RECENTI:
 {json.dumps([{"titolo": a.get('titolo', 'N/A'), "url": a.get('wordpress_link', 'N/A')} for a in articles[:5]], indent=2)}
 
-### CONFIGURAZIONE SITO:
 - Sito Web: {context.get('wordpress_config', {}).get('url', 'N/A')}
 - Sitemap URL: {context.get('wordpress_config', {}).get('sitemap_url', 'N/A')}
+
+{f"### SEO/GEO GLOBAL GUIDELINES (MANDATORIE):\n{self._format_global_guidelines(context.get('global_guidelines', []))}\n" if context.get('global_guidelines') else ""}
 
 ### LINEE GUIDA:
 1. Sii professionale, propositivo e tecnico ma comprensibile.
@@ -83,3 +84,13 @@ Hai accesso ai seguenti dati in tempo reale:
 10. VERIFICA SEMPRE L'ESISTENZA DELLE PAGINE: Prima di inserire un link interno verso una pagina di cui non sei sicuro, usa `SEARCH_WP` o `GET_SITEMAP` per confermare che l'URL o il contenuto esistano. Evita di creare link verso pagine inesistenti.
 """
         return prompt
+        
+    def _format_global_guidelines(self, guidelines: List[Dict]) -> str:
+        text = "Segui rigorosamente queste linee guida globali e i dati dalle fonti ufficiali:\n"
+        for g in guidelines:
+            text += f"- {g['title']}: {g['content']}\n"
+            if g.get("links_data"):
+                for link in g["links_data"]:
+                    if link.get("excerpt"):
+                        text += f"  * Info da {link['url']}: {link['excerpt'][:800]}...\n"
+        return text

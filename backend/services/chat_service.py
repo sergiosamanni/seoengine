@@ -125,12 +125,17 @@ class ChatService:
             {"_id": 0, "titolo": 1, "wordpress_link": 1}
         ).sort("published_at", -1).limit(5).to_list(5)
         
+        # Fetch Global SEO/GEO Guidelines
+        global_settings = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
+        guidelines = global_settings.get("seo_geo_guidelines", []) if global_settings else []
+        
         context = {
             "client_name": client.get("nome"),
             "settore": client.get("settore"),
             "knowledge_base": config.get("knowledge_base", {}),
             "gsc_summary": gsc_summary,
             "recent_articles": recent_articles,
+            "global_guidelines": guidelines,
             "wordpress_config": {
                 "url": wp_config.get("url_api"),
                 "utente": wp_config.get("utente"),

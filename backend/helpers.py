@@ -937,7 +937,7 @@ async def update_wordpress_post(url: str, username: str, password: str, post_id:
 def build_system_prompt(kb: dict, tone: dict, seo: dict, client_name: str,
                         advanced_prompt: dict = None, strategy: dict = None,
                         content_type: str = "articolo_blog", brief_override: dict = None,
-                        existing_articles: list = None) -> str:
+                        existing_articles: list = None, global_guidelines: list = None) -> str:
     lingua = seo.get("lingua", "italiano")
     lunghezza = seo.get("lunghezza_minima_parole", 1500)
     include_faq = seo.get("include_faq_in_fondo", False)
@@ -1118,16 +1118,21 @@ NOTA: Una landing page ha una sola CTA ripetuta 2-3 volte. Niente navigazione, n
 NOTA: La pillar page deve essere la risorsa piu completa disponibile sul tema. Copri ogni angolo.
 """
     else:
-        prompt += f"""Struttura obbligatoria ARTICOLO BLOG:
-1. <h1> - Titolo principale SEO ottimizzato (UNICO in tutto il testo)
-2. <p> - Paragrafo introduttivo (150-200 parole)
-3. <h2> - Sezioni principali (almeno 3-4)
-4. <h3> - Sottosezioni per approfondimenti
-5. <ul><li> - Elenchi puntati per vantaggi
-6. <strong> - Evidenzia 2-3 concetti chiave per paragrafo
-7. <p> finale con call to action
 {'8. <h2>Domande Frequenti</h2> con 3-5 FAQ' if include_faq else ''}
 """
+
+    if global_guidelines:
+        prompt += "\n=== SEO/GEO GLOBAL GUIDELINES (MANDATORY) ===\n"
+        prompt += "DEVI seguire queste linee guida globali e imparare dai contenuti ufficiali allegati:\n"
+        for gg in global_guidelines:
+            prompt += f"\n- TITOLO GUIDA: {gg['title']}\n"
+            prompt += f"- CONTENUTO:\n{gg['content']}\n"
+            if gg.get("links_data"):
+                prompt += "- DATI DA FONTI UFFICIALI (GOOGLE & ALTRO):\n"
+                for link in gg["links_data"]:
+                    if link.get("excerpt"):
+                        prompt += f"  * Da {link['url']}: {link['excerpt'][:1000]}...\n"
+        prompt += "\n"
 
     prompt += f"""
 
@@ -1643,3 +1648,28 @@ async def web_search_text(query: str, max_results: int = 5) -> list:
         logger.warning(f"web_search_text error for '{query}': {e}")
         return []
 
+
+async def scrape_links_content(urls: List[str]) -> List[Dict[str, Any]]:
+    """Scrape multiple URLs and extract clean text for AI learning."""
+    results = []
+    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+        for url in urls:
+            try:
+                logger.info(f"Syncing link for SEO Guidelines: {url}")
+                resp = await client.get(url)
+                if resp.status_code == 200:
+                    soup = BeautifulSoup(resp.content, "html.parser")
+                    # Remove unwanted tags
+                    for s in soup(["script", "style", "nav", "footer", "header"]):
+                        s.decompose()
+                    text = soup.get_text(separator=' ', strip=True)
+                    # Limit to avoid token explosion
+                    results.append({
+                        "url": url,
+                        "title": soup.title.string if soup.title else url,
+                        "excerpt": text[:10000] # Safe limit
+                    })
+            except Exception as e:
+                logger.error(f"Error scraping {url}: {e}")
+                results.append({"url": url, "error": str(e)})
+    return results

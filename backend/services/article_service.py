@@ -63,6 +63,10 @@ class ArticleService:
         strategy = config.get("content_strategy", {})
         wp_config = config.get("wordpress", {})
         
+        # Fetch Global SEO/GEO Guidelines
+        global_settings = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
+        global_g = global_settings.get("seo_geo_guidelines", []) if global_settings else []
+        
         ct_map = {"articolo": "articolo_blog", "landing_page": "landing_page", "pillar_page": "pillar_page"}
         content_type_prompt = ct_map.get(content_type, "articolo_blog")
         
@@ -95,7 +99,7 @@ class ArticleService:
             
             # Re-build system prompt for each article to pick up potentially new links if we were doing live updates
             # For now, we use the initial context to keep it fast
-            system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, content_type_prompt, brief, existing_published)
+            system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, content_type_prompt, brief, existing_published, global_g)
 
             content = None
             gen_error = None
