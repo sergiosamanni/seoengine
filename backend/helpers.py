@@ -1625,7 +1625,68 @@ async def web_search_images(keyword: str, max_results: int = 5) -> list:
         return formatted
     except Exception as e:
         logger.warning(f"web_search_images error for '{keyword}': {e}")
+        # Automatically fallback to Wikimedia if DDG is blocked or fails
+        return await web_search_images_wikimedia(keyword, max_results)
+
+async def web_search_images_wikimedia(keyword: str, max_results: int = 5) -> list:
+    """Search for images using Wikimedia Commons (unblocked API)."""
+    try:
+        import httpx
+        import urllib.parse
+        
+        # Try primary keyword first
+        search_results = await _wikimedia_api_call(keyword, max_results)
+        
+        # If no results, try a broader keyword (simplified)
+        if not search_results and " " in keyword:
+            broad_kw = keyword.split(" ")[-1] # last word often most descriptive
+            logger.info(f"Wikimedia: No results for '{keyword}', trying broader '{broad_kw}'")
+            search_results = await _wikimedia_api_call(broad_kw, max_results)
+            
+        return search_results
+    except Exception as e:
+        logger.error(f"Wikimedia search failed: {e}")
         return []
+
+async def _wikimedia_api_call(keyword: str, max_results: int) -> list:
+    import httpx
+    url = "https://commons.wikimedia.org/w/api.php"
+    params = {
+        "action": "query",
+        "prop": "pageimages|imageinfo",
+        "iiprop": "url|size",
+        "piprop": "thumbnail",
+        "pithumbsize": 300,
+        "generator": "search",
+        "gsrsearch": keyword,
+        "gsrnamespace": 6,
+        "gsrlimit": max_results,
+        "format": "json"
+    }
+    headers = {"User-Agent": "SEOEngine/1.0 (admin@seoengine.com)"}
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(url, params=params, headers=headers)
+        if resp.status_code != 200:
+            return []
+        
+        data = resp.json()
+        pages = data.get("query", {}).get("pages", {})
+        results = []
+        for p_id, p_info in pages.items():
+            img_info = p_info.get("imageinfo", [{}])[0]
+            thumb_info = p_info.get("thumbnail", {})
+            img_url = img_info.get("url")
+            if img_url:
+                results.append({
+                    "image": img_url,
+                    "thumbnail": thumb_info.get("source", img_url),
+                    "url": img_info.get("descriptionurl", img_url),
+                    "title": p_info.get("title", "").replace("File:", ""),
+                    "width": img_info.get("width", 800),
+                    "height": img_info.get("height", 600),
+                    "provider": "wikimedia"
+                })
+        return results
 
 
 async def web_search_text(query: str, max_results: int = 5) -> list:

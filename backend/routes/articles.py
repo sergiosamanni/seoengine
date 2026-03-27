@@ -543,8 +543,12 @@ async def serp_images(request: dict, current_user: dict = Depends(get_current_us
                 results = []
 
         if not results:
-            # If still no results, maybe try a simple text-based search to at least see if DDG is up
-            logger.warning("No images found via DDG. Returning empty list.")
+            logger.warning("No images found via DDG. Trying Wikimedia Commons fallback...")
+            from helpers import web_search_images_wikimedia
+            results = await web_search_images_wikimedia(keyword, max_results)
+
+        if not results:
+            logger.warning("No images found via any provider. Returning empty list.")
             return {"keyword": keyword, "results": [], "total": 0}
         
         async def get_file_size(url: str, w: int, h: int) -> int:
