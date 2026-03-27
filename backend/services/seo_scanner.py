@@ -82,9 +82,18 @@ class SEOScanner:
             json_match = re.search(r'\[\s*\{.*?\}\s*\]', response_text, re.DOTALL)
             if json_match:
                 proposals = json.loads(json_match.group(0))
+                if not isinstance(proposals, list):
+                    logger.warning(f"Freshness scan expected list, got {type(proposals)}")
+                    return
+                    
                 for prop in proposals:
+                    if not isinstance(prop, dict): continue
+                    
+                    url = prop.get("url")
+                    if not url: continue
+                    
                     # Check if task already exists for this URL to avoid duplicates
-                    exists = await db.autopilot_tasks.find_one({"url": prop["url"], "status": "pending"})
+                    exists = await db.autopilot_tasks.find_one({"url": url, "status": "pending"})
                     if not exists:
                         await db.autopilot_tasks.insert_one({
                             "id": str(uuid.uuid4()),
@@ -111,10 +120,11 @@ class SEOScanner:
         if not pages:
             return
 
-        # Donors: Top 5 pages
-        donors = sorted(pages, key=lambda x: x["clicks"], reverse=True)[:5]
+        # Donors: Top 5 pages (safeguard for None elements)
+        non_null_pages = [p for p in pages if isinstance(p, dict)]
+        donors = sorted(non_null_pages, key=lambda x: x.get("clicks", 0), reverse=True)[:5]
         # Recipients: Low click, high impression (potential)
-        recipients = sorted([p for p in pages if p["clicks"] < 5], key=lambda x: x["impressions"], reverse=True)[:5]
+        recipients = sorted([p for p in non_null_pages if p.get("clicks", 0) < 5], key=lambda x: x.get("impressions", 0), reverse=True)[:5]
         
         if not donors or not recipients:
             return
@@ -146,6 +156,9 @@ class SEOScanner:
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
             if json_match:
                 prop = json.loads(json_match.group(0))
+                if not isinstance(prop, dict):
+                    logger.warning(f"Spider scan expected dict, got {type(prop)}")
+                    return
                 
                 # Verify keys
                 if "source_url" in prop and "target_url" in prop:
@@ -183,7 +196,15 @@ class SEOScanner:
             return
 
         # Pick a significant conflict (max 2 per scan to avoid noise)
-        significant_conflicts = [c for c in conflicts if sum(p['clicks'] for p in c['pages']) > 2][:2]
+        significant_conflicts = []
+        for c in conflicts:
+            if not isinstance(c, dict) or not c.get("pages"): continue
+            
+            total_clicks = sum((p.get("clicks", 0) or 0) for p in c["pages"] if isinstance(p, dict))
+            if total_clicks > 2:
+                significant_conflicts.append(c)
+        
+        significant_conflicts = significant_conflicts[:2]
         
         if not significant_conflicts:
             return
@@ -216,11 +237,16 @@ class SEOScanner:
                 json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
                 if json_match:
                     prop = json.loads(json_match.group(0))
+                    if not isinstance(prop, dict): continue
+                    
+                    winner_url = prop.get("winner_url")
+                    loser_url = prop.get("loser_url")
+                    if not winner_url or not loser_url: continue
                     
                     # Check if task already exists
                     exists = await db.autopilot_tasks.find_one({
-                        "winner_url": prop.get("winner_url"), 
-                        "loser_url": prop.get("loser_url"), 
+                        "winner_url": winner_url, 
+                        "loser_url": loser_url, 
                         "status": "pending"
                     })
                     if not exists:
@@ -286,10 +312,11 @@ class SEOScanner:
                 json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
                 if json_match:
                     prop = json.loads(json_match.group(0))
+                    if not isinstance(prop, dict): continue
                     
                     # Check if task already exists
                     exists = await db.autopilot_tasks.find_one({
-                        "url": kw_info["url"], 
+                        "url": kw_info.get("url"), 
                         "title": {"$regex": "Semantic Gap"}, 
                         "status": "pending"
                     })

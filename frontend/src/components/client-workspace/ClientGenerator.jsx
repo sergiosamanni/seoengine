@@ -1,34 +1,26 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { API_URL as API } from '../../config';
-import { Card, CardContent, CardDescription } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Progress } from '../ui/progress';
-import { Separator } from '../ui/separator';
-import { Alert, AlertDescription } from '../ui/alert';
 import {
-  Zap, AlertCircle, Loader2, Search, CheckCircle2,
-  XCircle, Send, ExternalLink, Eye, ImagePlus, X, Camera, Globe, ChevronRight, ArrowLeft, Info,
+  Zap, Loader2, CheckCircle2,
+  XCircle, ExternalLink, ImagePlus, X, Camera, ChevronRight, ArrowLeft, Info,
   Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-
-
-export const ClientGenerator = ({ client: initialClient, effectiveClientId, getAuthHeaders, navigate }) => {
+export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
   const [step, setStep] = useState(1);
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(initialClient);
   const [keyword, setKeyword] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
-  const [ready, setReady] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [serpData, setSerpData] = useState(null);
-  const [gscData, setGscData] = useState(null);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [clientNotes, setClientNotes] = useState('');
   const [result, setResult] = useState(null);
@@ -44,7 +36,7 @@ export const ClientGenerator = ({ client: initialClient, effectiveClientId, getA
             setClients(res.data);
             if (res.data.length === 1) {
                 setSelectedClient(res.data[0]);
-                setStep(2); // Jump to photo step if only one site
+                setStep(2);
             } else if (initialClient) {
                 setSelectedClient(initialClient);
                 setStep(2);
@@ -57,15 +49,12 @@ export const ClientGenerator = ({ client: initialClient, effectiveClientId, getA
   }, [getAuthHeaders, initialClient]);
 
   const config = selectedClient?.configuration || {};
-  const hasApiKey = config.llm?.api_key || config.openai?.api_key;
   const gscConnected = config.gsc?.connected;
 
   const runAutoAnalysis = async () => {
     if (!keyword.trim()) { toast.error('Inserisci una keyword'); return; }
     setAnalyzing(true);
-    setReady(false);
     setSerpData(null);
-    setGscData(null);
     setResult(null);
 
     try {
@@ -74,20 +63,10 @@ export const ClientGenerator = ({ client: initialClient, effectiveClientId, getA
       }, { headers: getAuthHeaders() });
       setSerpData(serpRes.data);
 
-      let gsc = null;
-      if (gscConnected) {
-        try {
-          const gscRes = await axios.get(`${API}/clients/${selectedClient.id}/gsc-data?days=28`, { headers: getAuthHeaders() });
-          gsc = gscRes.data;
-          setGscData(gsc);
-        } catch (e) {}
-      }
-
       const lines = ['Crea un articolo SEO basandoti su questi dati:'];
       serpRes.data.extracted?.titles?.forEach((t, i) => lines.push(`${i + 1}. ${t}`));
       setGeneratedPrompt(lines.join('\n'));
-      setReady(true);
-      setStep(4); // Move to final generation step
+      setStep(4);
     } catch (error) {
       toast.error('Errore analisi. Riprova.');
     } finally { setAnalyzing(false); }
@@ -103,7 +82,6 @@ export const ClientGenerator = ({ client: initialClient, effectiveClientId, getA
     const newImages = [];
 
     for (const file of files) {
-      // Check orientation
       const isHorizontal = await new Promise((resolve) => {
           const img = new Image();
           img.onload = () => {
@@ -116,8 +94,7 @@ export const ClientGenerator = ({ client: initialClient, effectiveClientId, getA
 
       if (!isHorizontal) {
           setOrientationWarning(true);
-          toast.warning("La foto sembra verticale. Per questo articolo, consigliamo foto orizzontali.");
-          // We allow it but warn, or we could block it if the user is strict. Let's block it for now to follow rule.
+          toast.warning("La foto sembra verticale. Consigliamo foto orizzontali.");
           setUploading(false);
           return;
       }
@@ -134,9 +111,7 @@ export const ClientGenerator = ({ client: initialClient, effectiveClientId, getA
     
     setUploadedImages(prev => [...prev, ...newImages]);
     setUploading(false);
-    if (newImages.length > 0) {
-        toast.success("Immagine caricata correttamente!");
-    }
+    if (newImages.length > 0) toast.success("Immagine caricata correttamente!");
   };
 
   const removeImage = (id) => {
@@ -209,7 +184,7 @@ export const ClientGenerator = ({ client: initialClient, effectiveClientId, getA
                         className={`cursor-pointer transition-all border-slate-100 hover:shadow-xl active:scale-95 rounded-2xl overflow-hidden ${selectedClient?.id === c.id ? 'ring-2 ring-slate-900 border-transparent shadow-xl' : ''}`}
                         onClick={() => { setSelectedClient(c); setStep(2); }}
                     >
-                        <CardContent className="p-5 flex items-center justify-between">
+                        <div className="p-5 flex items-center justify-between">
                             <div className="flex items-center gap-4 text-left">
                                 <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white font-black">
                                     {c.nome?.charAt(0).toUpperCase()}
@@ -220,7 +195,7 @@ export const ClientGenerator = ({ client: initialClient, effectiveClientId, getA
                                 </div>
                             </div>
                             <ChevronRight className="w-5 h-5 text-slate-300" />
-                        </CardContent>
+                        </div>
                     </Card>
                 ))}
             </div>
@@ -246,38 +221,60 @@ export const ClientGenerator = ({ client: initialClient, effectiveClientId, getA
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
-                <label className="flex flex-col items-center justify-center gap-3 aspect-video bg-white border-4 border-dashed border-slate-100 rounded-[2.5rem] cursor-pointer hover:bg-slate-50 hover:border-slate-200 transition-all active:scale-95 overflow-hidden relative shadow-2xl shadow-slate-100">
+            <div className="space-y-4">
+                <div className="aspect-video bg-white border-4 border-dashed border-slate-100 rounded-[2.5rem] flex items-center justify-center overflow-hidden relative shadow-2xl shadow-slate-100 transition-all">
                     {uploading ? (
                         <Loader2 className="w-10 h-10 text-slate-400 animate-spin" />
                     ) : (
                         <>
                             {uploadedImages.length > 0 ? (
-                                <img src={uploadedImages[uploadedImages.length-1].preview} className="w-full h-full object-cover" alt="Preview" />
+                                <div className="relative w-full h-full group">
+                                    <img src={uploadedImages[uploadedImages.length-1].preview} className="w-full h-full object-cover" alt="Preview" />
+                                    <button 
+                                        onClick={() => removeImage(uploadedImages[uploadedImages.length-1].id)}
+                                        className="absolute top-4 right-4 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all text-red-500"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
                              ) : (
-                                <>
-                                    <ImagePlus className="w-12 h-12 text-slate-200" />
-                                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-300">Tocca per scattare/caricare</span>
-                                </>
+                                <div className="text-center space-y-3 p-8">
+                                    <ImagePlus className="w-12 h-12 text-slate-200 mx-auto" />
+                                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-300">Nessuna immagine</p>
+                                </div>
                              )}
                         </>
                     )}
-                    <input type="file" accept="image/*" capture="environment" className="hidden"
-                        onChange={handleImageUpload} disabled={uploading} />
-                </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                    <label className="flex flex-col items-center justify-center gap-3 p-4 bg-slate-900 rounded-[1.5rem] cursor-pointer hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200">
+                        <Camera className="w-6 h-6 text-white" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white">Scatta Foto</span>
+                        <input type="file" accept="image/*" capture="environment" className="hidden"
+                            onChange={handleImageUpload} disabled={uploading} />
+                    </label>
+
+                    <label className="flex flex-col items-center justify-center gap-3 p-4 bg-white border border-slate-100 rounded-[1.5rem] cursor-pointer hover:bg-slate-50 transition-all active:scale-95 shadow-xl shadow-slate-100">
+                        <ImagePlus className="w-6 h-6 text-slate-900" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Galleria</span>
+                        <input type="file" accept="image/*" className="hidden"
+                            onChange={handleImageUpload} disabled={uploading} />
+                    </label>
+                </div>
                 
                 {orientationWarning && (
                     <p className="text-[10px] text-red-500 font-bold text-center uppercase tracking-widest animate-bounce">⚠️ Per favore, carica una foto orizzontale</p>
                 )}
-            </div>
 
-            <Button 
-                onClick={() => setStep(3)} 
-                disabled={uploadedImages.length === 0}
-                className="w-full bg-slate-900 text-white h-16 rounded-[1.5rem] font-black uppercase tracking-[0.2em] shadow-2xl shadow-slate-200 active:scale-95 disabled:opacity-20"
-            >
-                Prosegui <ChevronRight className="w-5 h-5 ml-2" />
-            </Button>
+                <Button 
+                    onClick={() => setStep(3)} 
+                    disabled={uploadedImages.length === 0}
+                    className="w-full bg-slate-900 text-white h-16 rounded-[1.5rem] font-black uppercase tracking-[0.2em] shadow-2xl shadow-slate-200 active:scale-95 disabled:opacity-20 mt-8"
+                >
+                    Prosegui <ChevronRight className="w-5 h-5 ml-2" />
+                </Button>
+            </div>
         </div>
       )}
 
@@ -335,7 +332,7 @@ export const ClientGenerator = ({ client: initialClient, effectiveClientId, getA
             <Button 
                 onClick={handleGenerate} 
                 disabled={generating}
-                className="w-full bg-slate-900 text-white h-20 rounded-[2rem] font-black uppercase tracking-[0.25em] shadow-2xl shadow-slate-300 active:scale-95 animate-pulse-slow"
+                className="w-full bg-slate-900 text-white h-20 rounded-[2rem] font-black uppercase tracking-[0.25em] shadow-2xl shadow-slate-300 active:scale-95"
             >
                 {generating ? <Loader2 className="w-8 h-8 animate-spin" /> : "Lancia Pubblicazione"}
             </Button>
@@ -380,8 +377,8 @@ export const ClientGenerator = ({ client: initialClient, effectiveClientId, getA
             </div>
 
             {result.status === 'completed' && result.wordpress_link && (
-                <Card className="border-none shadow-2xl shadow-indigo-100 rounded-[2.5rem] overflow-hidden bg-white">
-                    <CardContent className="p-8 space-y-8">
+                <div className="border-none shadow-2xl shadow-indigo-100 rounded-[2.5rem] overflow-hidden bg-white">
+                    <div className="p-8 space-y-8">
                         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Titolo Articolo</p>
                              <p className="font-bold text-slate-900 leading-tight">{result.titolo}</p>
@@ -391,8 +388,8 @@ export const ClientGenerator = ({ client: initialClient, effectiveClientId, getA
                                 Vedi su WordPress <ExternalLink className="w-5 h-5 ml-2" />
                             </a>
                         </Button>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             )}
 
             {(result.status === 'completed' || result.status === 'failed') && (

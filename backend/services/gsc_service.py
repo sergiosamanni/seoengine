@@ -124,7 +124,8 @@ class GSCService:
             ).execute()
             
             pages = []
-            for row in response.get("rows", []):
+            for row in response.get("rows", []) or []:
+                if not row or not row.get("keys"): continue
                 pages.append({
                     "url": row["keys"][0],
                     "clicks": row.get("clicks", 0),
@@ -173,7 +174,8 @@ class GSCService:
             
             # Group by Query
             kw_map = {}
-            for row in response.get("rows", []):
+            for row in response.get("rows", []) or []:
+                if not row or not row.get("keys") or len(row["keys"]) < 2: continue
                 kw = row["keys"][0]
                 url = row["keys"][1]
                 if kw not in kw_map: kw_map[kw] = []
@@ -230,7 +232,8 @@ class GSCService:
             ).execute()
             
             striking = []
-            for row in response.get("rows", []):
+            for row in response.get("rows", []) or []:
+                if not row or not row.get("keys") or len(row["keys"]) < 2: continue
                 pos = row.get("position", 0)
                 if 4.0 <= pos <= 13.0:
                     striking.append({
