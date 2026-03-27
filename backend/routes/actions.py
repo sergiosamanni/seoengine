@@ -83,18 +83,21 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
             post_id = payload.get("wordpress_post_id") or payload.get("post_id")
             url_target = payload.get("url")
             new_content = payload.get("new_content")
+            new_title = payload.get("title")
+            wp_type = payload.get("wp_type", "post")
             
             if not post_id and url_target:
-                # Try to discover the ID from the URL using our new helper
-                discovered_id = await get_wp_id_by_url(
+                # Try to discover the ID and TYPE from the URL
+                discovery = await get_wp_id_by_url(
                     url=wp_config.get("url_api"),
                     username=wp_config.get("utente"),
                     password=wp_config.get("password_applicazione"),
                     target_url=url_target
                 )
-                if discovered_id:
-                    post_id = discovered_id
-                    logger.info(f"Discovered WP ID {post_id} for URL {url_target}")
+                if discovery:
+                    post_id = discovery["id"]
+                    wp_type = discovery["type"]
+                    logger.info(f"Discovered WP ID {post_id} ({wp_type}) for URL {url_target}")
 
             if not post_id or not new_content:
                 raise HTTPException(status_code=400, detail="post_id (o url target) e new_content richiesti")
@@ -104,12 +107,15 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
                 username=wp_config.get("utente"),
                 password=wp_config.get("password_applicazione"),
                 post_id=str(post_id),
-                content=new_content
+                content=new_content,
+                wp_type=wp_type,
+                title=new_title
             )
             
             if success:
-                return {"status": "success", "message": "Contenuto aggiornato su WordPress", "post_id": post_id}
+                return {"status": "success", "message": f"Contenuto aggiornato su WordPress ({wp_type})", "post_id": post_id}
             else:
+                logger.error(f"Failed to update WP {wp_type} {post_id}")
                 raise HTTPException(status_code=500, detail="Errore nell'aggiornamento WordPress")
             
         elif action_type == "SEARCH_WP":

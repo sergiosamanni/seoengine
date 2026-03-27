@@ -212,6 +212,11 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                 
                                 {actionData.type === 'FIX_CONTENT' && (
                                     <div className="space-y-2">
+                                        {actionData.payload.title && (
+                                            <div className="text-[10px] font-bold text-slate-800 bg-slate-100 p-1.5 rounded border border-slate-200">
+                                                TITOLO: {actionData.payload.title}
+                                            </div>
+                                        )}
                                         <div className="text-[10px] text-slate-600 italic">
                                             {actionData.payload.suggestion || "Aggiornamento contenuto..."}
                                         </div>

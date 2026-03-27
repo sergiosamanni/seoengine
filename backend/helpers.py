@@ -874,8 +874,8 @@ async def fetch_sitemap(sitemap_url: str) -> List[str]:
             return []
 
 
-async def get_wp_id_by_url(url: str, username: str, password: str, target_url: str) -> Optional[int]:
-    """Try to find the WordPress ID of a post/page given its public URL."""
+async def get_wp_id_by_url(url: str, username: str, password: str, target_url: str) -> Optional[Dict[str, Any]]:
+    """Try to find the WordPress ID and type (post/page) given its public URL."""
     async with httpx.AsyncClient() as http_client:
         base_url = url.replace("/posts", "")
         # Extract slug from URL
@@ -896,30 +896,39 @@ async def get_wp_id_by_url(url: str, username: str, password: str, target_url: s
                 if resp.status_code == 200:
                     results = resp.json()
                     if results:
-                        return results[0]["id"]
+                        # Return both ID and mapping to our internal 'post'/'page' strings
+                        return {
+                            "id": results[0]["id"], 
+                            "type": "page" if wp_type == "pages" else "post"
+                        }
             except Exception:
                 continue
         
-        # Fallback: Search by title if slug failed (not ideal)
         return None
 
 
-async def update_wordpress_post(url: str, username: str, password: str, post_id: str, content: str, wp_type: str = "post") -> bool:
+async def update_wordpress_post(url: str, username: str, password: str, post_id: str, content: str, wp_type: str = "post", title: str = None) -> bool:
     """Update an existing WordPress post/page."""
     async with httpx.AsyncClient() as http_client:
         base_url = url.replace("/posts", "")
         endpoint = f"{base_url}/pages/{post_id}" if wp_type == "page" else f"{url}/{post_id}"
         
-        gutenberg_content = convert_to_gutenberg_blocks(content)
-        post_data = {"content": gutenberg_content}
-        
+        post_data = {}
+        if content:
+            gutenberg_content = convert_to_gutenberg_blocks(content)
+            post_data["content"] = gutenberg_content
+        if title:
+            post_data["title"] = title
+            
         for attempt in range(3):
             try:
                 response = await http_client.post(endpoint, auth=(username, password), json=post_data, timeout=30.0)
                 if response.status_code in [200, 201]:
                     return True
+                else:
+                    logger.warning(f"WP Update failed (attempt {attempt}): {response.status_code} - {response.text}")
             except Exception as e:
-                pass
+                logger.error(f"WP Update error (attempt {attempt}): {e}")
             await asyncio.sleep(1)
         return False
 
