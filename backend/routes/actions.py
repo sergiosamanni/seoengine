@@ -82,10 +82,13 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
             # Direct update of a WordPress post
             post_id = payload.get("wordpress_post_id") or payload.get("post_id")
             url_target = payload.get("url")
-            new_content = payload.get("new_content")
+            # Support both new_content and content (alias)
+            new_content = payload.get("new_content") or payload.get("content")
             new_title = payload.get("title")
             wp_type = payload.get("wp_type", "post")
             
+            logger.info(f"FIX_CONTENT payload keys: {list(payload.keys())}")
+
             if not post_id and url_target:
                 # Try to discover the ID and TYPE from the URL
                 discovery = await get_wp_id_by_url(
@@ -99,8 +102,11 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
                     wp_type = discovery["type"]
                     logger.info(f"Discovered WP ID {post_id} ({wp_type}) for URL {url_target}")
 
-            if not post_id or not new_content:
-                raise HTTPException(status_code=400, detail="post_id (o url target) e new_content richiesti")
+            if not post_id or (not new_content and not new_title):
+                missing = []
+                if not post_id: missing.append("post_id/url")
+                if not new_content and not new_title: missing.append("new_content o title")
+                raise HTTPException(status_code=400, detail=f"Parametri richiesti mancanti: {', '.join(missing)}")
 
             success = await update_wordpress_post(
                 url=wp_config.get("url_api"),
@@ -190,6 +196,9 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
         else:
             raise HTTPException(status_code=400, detail="Tipo azione non supportato")
             
+    except HTTPException as he:
+        # Don't wrap HTTPExceptions into 500s
+        raise he
     except Exception as e:
         logger.error(f"Action execution error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Errore esecuzione: {str(e)}")
