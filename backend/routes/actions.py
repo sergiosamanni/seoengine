@@ -135,9 +135,22 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
 
         elif action_type == "GET_WP_POST":
             post_id = payload.get("post_id")
+            url_target = payload.get("url")
             wp_type = payload.get("wp_type", "post")
+            
+            if not post_id and url_target:
+                discovery = await get_wp_id_by_url(
+                    url=wp_config.get("url_api"),
+                    username=wp_config.get("utente"),
+                    password=wp_config.get("password_applicazione"),
+                    target_url=url_target
+                )
+                if discovery:
+                    post_id = discovery["id"]
+                    wp_type = discovery["type"]
+
             if not post_id:
-                raise HTTPException(status_code=400, detail="post_id richiesto")
+                raise HTTPException(status_code=400, detail="post_id o url richiesto")
             
             post = await get_wordpress_post(
                 url=wp_config.get("url_api"),
@@ -147,9 +160,9 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
                 wp_type=wp_type
             )
             if post:
-                return {"status": "success", "post": post}
+                return {"status": "success", "post": post, "wp_type": wp_type}
             else:
-                raise HTTPException(status_code=404, detail="Post non trovato")
+                raise HTTPException(status_code=404, detail=f"{wp_type} non trovato")
 
         elif action_type == "GET_SITEMAP":
             sitemap_url = payload.get("url") or config.get("seo", {}).get("sitemap_url")
