@@ -495,7 +495,21 @@ async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: st
             logger.warning(err_msg)
             errors.append(err_msg)
 
-    # 2. Try Pollinations with flux-realism model (Free, high quality)
+    # 2. Try Together.ai Flux-Schnell if key is provided (Higher reliability than free)
+    env_together_key = together_key or os.environ.get("TOGETHER_API_KEY", "")
+    if env_together_key and len(env_together_key) > 5:
+        try:
+            logger.info("Attempting image generation with Together.ai Flux-Schnell...")
+            result = await generate_image_together(prompt, user_id, env_together_key)
+            result["provider"] = "together_flux"
+            logger.info("✓ Together.ai Flux-Schnell succeeded")
+            return result
+        except Exception as e:
+            err_msg = f"Together.ai Flux failed: {str(e)}"
+            logger.warning(err_msg)
+            errors.append(err_msg)
+
+    # 3. Try Pollinations with flux-realism model (Free, high quality)
     try:
         logger.info("Attempting image generation with Pollinations (flux-realism)...")
         result = await generate_image_pollinations(prompt, user_id, model="flux-realism")
@@ -506,7 +520,7 @@ async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: st
         logger.warning(err_msg)
         errors.append(err_msg)
 
-    # 3. Try Pollinations with turbo model (faster, free)
+    # 4. Try Pollinations with turbo model (faster, free)
     try:
         logger.info("Attempting image generation with Pollinations (turbo)...")
         result = await generate_image_pollinations(prompt, user_id, model="turbo")
@@ -517,20 +531,7 @@ async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: st
         logger.warning(err_msg)
         errors.append(err_msg)
 
-    # 4. Try Together.ai Flux-Schnell (free tier)
-    env_together_key = together_key or os.environ.get("TOGETHER_API_KEY", "")
-    if env_together_key:
-        try:
-            logger.info("Attempting image generation with Together.ai Flux-Schnell...")
-            result = await generate_image_together(prompt, user_id, env_together_key)
-            logger.info("✓ Together.ai Flux-Schnell succeeded")
-            return result
-        except Exception as e:
-            err_msg = f"Together.ai Flux failed: {str(e)}"
-            logger.warning(err_msg)
-            errors.append(err_msg)
-
-    # 5. Try AI Horde (completely anonymous free)
+    # 5. Try AI Horde (completely anonymous free, but slow)
     try:
         logger.info("Attempting image generation with AI Horde...")
         result = await generate_image_horde(prompt[:300], user_id)
@@ -1598,7 +1599,12 @@ async def web_search_images(keyword: str, max_results: int = 5) -> list:
     """Search for images using DuckDuckGo. Returns a list of {image, thumbnail, url} dicts."""
     try:
         from duckduckgo_search import DDGS
-        with DDGS() as ddgs:
+        import random
+        ua_list = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        ]
+        with DDGS(headers={"User-Agent": random.choice(ua_list)}) as ddgs:
             results = list(ddgs.images(
                 keywords=keyword,
                 region="wt-wt",

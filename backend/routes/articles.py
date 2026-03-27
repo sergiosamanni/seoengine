@@ -507,15 +507,45 @@ async def serp_images(request: dict, current_user: dict = Depends(get_current_us
     try:
         from duckduckgo_search import DDGS
         import httpx as _httpx
+        import random as _random
         
-        with DDGS() as ddgs:
-            results = list(ddgs.images(
-                keywords=keyword,
-                region="wt-wt",
-                safesearch="moderate",
-                size="Large",
-                max_results=max_results + 5  # Fetch a few extra in case some fail
-            ))
+        # List of User-Agents to rotate
+        ua_list = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        ]
+        
+        results = []
+        try:
+            with DDGS(headers={"User-Agent": _random.choice(ua_list)}) as ddgs:
+                results = list(ddgs.images(
+                    keywords=keyword,
+                    region="wt-wt",
+                    safesearch="moderate",
+                    size="Large",
+                    max_results=max_results + 5
+                ))
+        except Exception as ddg_err:
+            logger.warning(f"Primary DDG image search failed: {ddg_err}. Trying fallback...")
+            # Fallback: Try a different region or just catch it as empty
+            try:
+                # Different region might bypass some IP-based blocks temporarily
+                with DDGS(headers={"User-Agent": _random.choice(ua_list)}) as ddgs:
+                    results = list(ddgs.images(
+                        keywords=keyword,
+                        region="it-it",
+                        safesearch="moderate",
+                        max_results=max_results + 5
+                    ))
+            except Exception as e2:
+                logger.error(f"Fallback DDG image search also failed: {e2}")
+                results = []
+
+        if not results:
+            # If still no results, maybe try a simple text-based search to at least see if DDG is up
+            logger.warning("No images found via DDG. Returning empty list.")
+            return {"keyword": keyword, "results": [], "total": 0}
         
         async def get_file_size(url: str, w: int, h: int) -> int:
             """Try to get real file size via HEAD request, fallback to dimension estimate."""
