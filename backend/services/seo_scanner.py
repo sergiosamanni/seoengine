@@ -24,7 +24,9 @@ class SEOScanner:
         # 2. Evaluate Editorial Plan (New Content)
         await cls.evaluate_editorial_plan(client)
         
-        # 3. Placeholder for Link Spider
+        # 3. Evaluate Internal Linking (Spider)
+        await cls.evaluate_internal_linking(client)
+        
         # 4. Placeholder for Content Gardening
         
         logger.info(f"SEO Scan completed for client {client_id}")
@@ -93,6 +95,77 @@ class SEOScanner:
                         })
         except Exception as e:
             logger.error(f"Freshness evaluation failed for {client_id}: {e}")
+
+    @classmethod
+    async def evaluate_internal_linking(cls, client):
+        client_id = client["id"]
+        config = client.get("configuration", {})
+        from services.gsc_service import GSCService
+        
+        # 1. Fetch Performance Data
+        pages = await GSCService.get_page_performance(client_id, limit=20)
+        if not pages:
+            return
+
+        # Donors: Top 5 pages
+        donors = sorted(pages, key=lambda x: x["clicks"], reverse=True)[:5]
+        # Recipients: Low click, high impression (potential)
+        recipients = sorted([p for p in pages if p["clicks"] < 5], key=lambda x: x["impressions"], reverse=True)[:5]
+        
+        if not donors or not recipients:
+            return
+
+        llm_config = config.get("llm", {}) or config.get("openai", {})
+        if not llm_config or not (llm_config.get("api_key") or llm_config.get("openai_api_key")):
+            llm_config = {
+                "provider": os.environ.get("LLM_PROVIDER", "openai"),
+                "api_key": os.environ.get("OPENAI_API_KEY"),
+                "modello": os.environ.get("LLM_MODEL", "gpt-4o-mini")
+            }
+
+        prompt = (
+            "Sei un esperto SEO Technical. Analizza questi due elenchi (Pagine Donatrici e Pagine Riceventi) "
+            "e proponi UN SOLO suggerimento di LINK INTERNO basato sulla rilevanza semantica degli URL.\n\n"
+            "DONATRICI (Alta autorità):\n" + "\n".join([f"- {d['url']}" for d in donors]) + "\n\n"
+            "RICEVENTI (Hanno bisogno di spinta):\n" + "\n".join([f"- {r['url']}" for r in recipients]) + "\n\n"
+            "FORNISCI IL RISULTATO SOLO IN JSON:\n"
+            "{\n"
+            "  \"source_url\": \"...\",\n"
+            "  \"target_url\": \"...\",\n"
+            "  \"reason\": \"Perché collegarle (max 150 car)\",\n"
+            "  \"suggestion\": \"Testo esatto dell'anchor o dove inserirlo (max 150 car)\"\n"
+            "}\n"
+        )
+
+        try:
+            response_text = await generate_with_rotation(llm_config, prompt, "Autopilot Spider Scan:")
+            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            if json_match:
+                prop = json.loads(json_match.group(0))
+                
+                # Verify keys
+                if "source_url" in prop and "target_url" in prop:
+                    # Check if task already exists
+                    exists = await db.autopilot_tasks.find_one({
+                        "source_url": prop["source_url"], 
+                        "target_url": prop["target_url"], 
+                        "status": "pending"
+                    })
+                    if not exists:
+                        await db.autopilot_tasks.insert_one({
+                            "id": str(uuid.uuid4()),
+                            "client_id": client_id,
+                            "type": "INTERNAL_LINKING",
+                            "status": "pending",
+                            "title": f"Spider: Nuovo Link Interno",
+                            "reason": prop["reason"],
+                            "suggestion": prop["suggestion"],
+                            "source_url": prop["source_url"],
+                            "target_url": prop["target_url"],
+                            "created_at": datetime.now(timezone.utc).isoformat()
+                        })
+        except Exception as e:
+            logger.error(f"Spider evaluation failed for {client_id}: {e}")
 
     @classmethod
     async def evaluate_editorial_plan(cls, client):
