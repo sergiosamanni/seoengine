@@ -4,6 +4,7 @@ from auth import get_current_user
 from datetime import datetime, timezone
 import uuid
 import logging
+from services.seo_scanner import SEOScanner
 
 logger = logging.getLogger("server")
 router = APIRouter()
@@ -84,3 +85,19 @@ async def seed_autopilot_tasks(client_id: str, current_user: dict = Depends(get_
     
     await db.autopilot_tasks.insert_many(dummy_tasks)
     return {"message": "Seeded 2 tasks", "count": 2}
+
+
+@router.post("/autopilot-tasks/{client_id}/scan")
+async def trigger_autopilot_scan(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Triggers a manual SEO scan to find new proposals."""
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+        
+    # Trigger scanner in background or wait? 
+    # For HITL UI, it's better to wait a bit so the proposals appear immediately.
+    try:
+        await SEOScanner.scan_client(client_id)
+        return {"message": "Scansione SEO completata. Nuove proposte generate."}
+    except Exception as e:
+        logger.error(f"Scan failed for client {client_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

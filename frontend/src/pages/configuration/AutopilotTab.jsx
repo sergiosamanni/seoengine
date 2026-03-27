@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 export const AutopilotTab = ({ autopilot, setAutopilot, clientId, getAuthHeaders }) => {
   const [tasks, setTasks] = useState([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [resolvingId, setResolvingId] = useState(null);
 
   const config = autopilot || { 
@@ -54,6 +55,20 @@ export const AutopilotTab = ({ autopilot, setAutopilot, clientId, getAuthHeaders
         console.error(e);
     } finally {
         setResolvingId(null);
+    }
+  };
+
+  const handleScan = async () => {
+    setScanning(true);
+    try {
+        const res = await axios.post(`${API}/autopilot-tasks/${clientId}/scan`, {}, { headers: getAuthHeaders() });
+        toast.success(res.data.message || "Scansione completata");
+        fetchTasks();
+    } catch (e) {
+        toast.error("Errore durante la scansione SEO");
+        console.error(e);
+    } finally {
+        setScanning(false);
     }
   };
 
@@ -171,6 +186,15 @@ export const AutopilotTab = ({ autopilot, setAutopilot, clientId, getAuthHeaders
                         className="data-[state=checked]:bg-emerald-500"
                     />
                 </div>
+
+                <Button 
+                    onClick={handleScan}
+                    disabled={scanning}
+                    className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold uppercase tracking-widest shadow-xl shadow-blue-100 flex items-center justify-center gap-3 transition-all active:scale-95"
+                >
+                    {scanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                    {scanning ? "Scansione in corso..." : "Avvia Scansione SEO Now"}
+                </Button>
             </CardContent>
             </Card>
         </div>
