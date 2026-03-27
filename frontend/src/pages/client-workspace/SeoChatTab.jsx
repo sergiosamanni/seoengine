@@ -15,6 +15,11 @@ import { toast } from 'sonner';
 
 
 
+const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success("URL copiato negli appunti");
+};
+
 const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQueue, onRequestStrategicAnalysis }) => {
     const [sessions, setSessions] = useState([]);
     const [currentSession, setCurrentSession] = useState(null);
@@ -180,6 +185,7 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                     <span className="text-[10px] font-bold uppercase tracking-tight text-slate-600">
                                         {actionData.type === 'PUBLISH_ARTICLE' ? 'Pubblicazione Immediata' : 
                                          actionData.type === 'SEARCH_WP' ? 'Ricerca Contenuto WP' :
+                                         actionData.type === 'GET_SITEMAP' ? 'Esplorazione Sitemap' :
                                          actionData.type === 'TRIGGER_FRESHNESS' ? 'Ottimizzazione Freshness' :
                                          actionData.type === 'CREATE_ARTICLE' ? 'Suggerimento Articolo' : 'Suggerimento Ottimizzazione'}
                                     </span>
@@ -214,6 +220,17 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                                 ID: {actionData.payload.wordpress_post_id}
                                             </Badge>
                                         )}
+                                        {actionData.payload.url && !actionData.payload.wordpress_post_id && (
+                                            <Badge variant="outline" className="text-[8px] border-amber-200 text-amber-600 bg-amber-50">
+                                                Target: {actionData.payload.url.replace(/^https?:\/\//, '')}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                )}
+
+                                {actionData.type === 'GET_SITEMAP' && (
+                                    <div className="text-[10px] text-slate-600 truncate">
+                                        Analizza: <strong>{actionData.payload.url || "Sitemap predefinita"}</strong>
                                     </div>
                                 )}
 
@@ -250,6 +267,7 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                      messages[msgIndex]?.executed ? 'Azione Completata' : 
                                      actionData.type === 'PUBLISH_ARTICLE' ? 'Pubblica ORA su WP' :
                                      actionData.type === 'SEARCH_WP' ? 'Cerca Ora' :
+                                     actionData.type === 'GET_SITEMAP' ? 'Leggi Sitemap' :
                                      actionData.type === 'TRIGGER_FRESHNESS' ? 'Attiva Freshness' :
                                      actionData.type === 'CREATE_ARTICLE' ? 'Crea Bozza Ora' : 'Applica Modifica'}
                                 </Button>
@@ -268,6 +286,22 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                         {messages[msgIndex].executionResult.results.length === 0 && (
                                             <div className="text-[10px] text-slate-400 italic py-1">Nessun risultato trovato.</div>
                                         )}
+                                    </div>
+                                )}
+
+                                {messages[msgIndex]?.executed && messages[msgIndex]?.executionResult?.urls && (
+                                    <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-100 space-y-1">
+                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mb-1">Pagine trovate ({messages[msgIndex].executionResult.urls.length}):</div>
+                                        <ScrollArea className="h-24 px-1">
+                                            {messages[msgIndex].executionResult.urls.slice(0, 50).map((u, i) => (
+                                                <div key={i} className="text-[9px] text-slate-600 p-1 border-b border-white hover:bg-white cursor-pointer truncate" onClick={() => copyToClipboard(u)}>
+                                                    {u.replace(/^https?:\/\//, '')}
+                                                </div>
+                                            ))}
+                                            {messages[msgIndex].executionResult.urls.length > 50 && (
+                                                <div className="text-[8px] text-slate-400 italic pt-1">...e altre {messages[msgIndex].executionResult.urls.length - 50} pagine.</div>
+                                            )}
+                                        </ScrollArea>
                                     </div>
                                 )}
                             </div>

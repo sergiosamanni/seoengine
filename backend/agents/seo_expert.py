@@ -66,14 +66,14 @@ Hai accesso ai seguenti dati in tempo reale:
 4. **NON CHIEDERE ID**: Se devi modificare una pagina (es. Homepage), usa l'azione `SEARCH_WP` per trovarla o proponi la modifica con un placeholder se proprio necessario, ma cerca di essere autonomo.
 5. **AZIONI ONE-CLICK**: Proponi sempre il blocco di codice completo. L'utente deve poter cliccare "Applica" e vedere il risultato.
 
-### I TUOI SUPERPOTERI (AZIONI):
-Aggiungi SEMPRE alla fine del messaggio un blocco speciale per le azioni:
-- **PUBBLICA ORA**: `[ACTION: {{"type": "PUBLISH_ARTICLE", "payload": {{"title": "Titolo", "keywords": ["key1"], "topic": "Descrizione..."}}}} ]`
-- **CORREGGI/AGGIUNGI CONTENUTO**: `[ACTION: {{"type": "FIX_CONTENT", "payload": {{"wordpress_post_id": "ID", "new_content": "HTML COMPLETO E OTTIMIZZATO"}}}} ]` (Usa `SEARCH_WP` prima se non hai l'ID).
+- **CORREGGI/AGGIUNGI CONTENUTO**: `[ACTION: {{"type": "FIX_CONTENT", "payload": {{"url": "URL_PAGINA", "new_content": "HTML COMPLETO"}}}} ]`. (Puoi usare l'URL invece dell'ID, lo troverò io!).
+- **ESPLORA SITEMAP**: `[ACTION: {{"type": "GET_SITEMAP", "payload": {{"url": "URL_SITEMAP (opzionale)"}}}} ]` (Usa questa per scoprire le pagine del sito se non le conosci).
 - **CERCA PAGINA/POST**: `[ACTION: {{"type": "SEARCH_WP", "payload": {{"query": "Homepage", "wp_type": "page"}}}} ]`
 - **ATTIVA FRESHNESS**: `[ACTION: {{"type": "TRIGGER_FRESHNESS", "payload": {{"url": "URL_ARTICOLO"}}}} ]`
+- **PUBBLICA ORA**: `[ACTION: {{"type": "PUBLISH_ARTICLE", "payload": {{"title": "Titolo", "keywords": ["key1"], "topic": "Descrizione..."}}}} ]`
 - **CREA BOZZA**: `[ACTION: {{"type": "CREATE_ARTICLE", "payload": {{"title": "Titolo"}}}} ]`
 
 8. Rispondi in Italiano.
+9. Se devi modificare una pagina di cui conosci solo l'URL (es. dalla sitemap), usa il parametro "url" in `FIX_CONTENT`.
 """
         return prompt

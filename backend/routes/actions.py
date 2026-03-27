@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from auth import get_current_user
 from services.article_service import ArticleService
-from helpers import publish_to_wordpress, update_wordpress_post, search_wordpress_post, get_wordpress_post
+from helpers import publish_to_wordpress, update_wordpress_post, search_wordpress_post, get_wordpress_post, fetch_sitemap, get_wp_id_by_url
 from database import db
 import logging
 import uuid
@@ -81,21 +81,34 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
         elif action_type == "FIX_CONTENT":
             # Direct update of a WordPress post
             post_id = payload.get("wordpress_post_id") or payload.get("post_id")
+            url_target = payload.get("url")
             new_content = payload.get("new_content")
             
+            if not post_id and url_target:
+                # Try to discover the ID from the URL using our new helper
+                discovered_id = await get_wp_id_by_url(
+                    url=wp_config.get("url_api"),
+                    username=wp_config.get("utente"),
+                    password=wp_config.get("password_applicazione"),
+                    target_url=url_target
+                )
+                if discovered_id:
+                    post_id = discovered_id
+                    logger.info(f"Discovered WP ID {post_id} for URL {url_target}")
+
             if not post_id or not new_content:
-                raise HTTPException(status_code=400, detail="post_id e new_content richiesti")
+                raise HTTPException(status_code=400, detail="post_id (o url target) e new_content richiesti")
 
             success = await update_wordpress_post(
                 url=wp_config.get("url_api"),
                 username=wp_config.get("utente"),
                 password=wp_config.get("password_applicazione"),
-                post_id=post_id,
+                post_id=str(post_id),
                 content=new_content
             )
             
             if success:
-                return {"status": "success", "message": "Contenuto aggiornato su WordPress"}
+                return {"status": "success", "message": "Contenuto aggiornato su WordPress", "post_id": post_id}
             else:
                 raise HTTPException(status_code=500, detail="Errore nell'aggiornamento WordPress")
             
@@ -131,6 +144,16 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
                 return {"status": "success", "post": post}
             else:
                 raise HTTPException(status_code=404, detail="Post non trovato")
+
+        elif action_type == "GET_SITEMAP":
+            sitemap_url = payload.get("url")
+            if not sitemap_url:
+                # Guess from WP API URL
+                base = wp_config.get("url_api").split("/wp-json")[0]
+                sitemap_url = f"{base}/sitemap.xml"
+                
+            urls = await fetch_sitemap(sitemap_url)
+            return {"status": "success", "urls": urls, "sitemap_url": sitemap_url}
 
         elif action_type == "TRIGGER_FRESHNESS":
             url = payload.get("url")

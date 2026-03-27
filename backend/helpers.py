@@ -850,6 +850,60 @@ async def get_wordpress_post(url: str, username: str, password: str, post_id: st
         return None
 
 
+async def fetch_sitemap(sitemap_url: str) -> List[str]:
+    """Fetch and parse a sitemap.xml to get all URLs."""
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(sitemap_url, timeout=30.0)
+            if response.status_code != 200:
+                return []
+            
+            # Simple regex-based URL extraction (fast and robust for sitemaps)
+            urls = re.findall(r'<loc>(https?://[^<]+)</loc>', response.text)
+            
+            # If it's a sitemap index, fetch sub-sitemaps (max 5)
+            if any('sitemap' in u for u in urls) and len(urls) < 100:
+                all_urls = []
+                for sub in urls[:5]:
+                    all_urls.extend(await fetch_sitemap(sub))
+                return list(set(all_urls))
+            
+            return list(set(urls))
+        except Exception as e:
+            logger.warning(f"Error fetching sitemap {sitemap_url}: {e}")
+            return []
+
+
+async def get_wp_id_by_url(url: str, username: str, password: str, target_url: str) -> Optional[int]:
+    """Try to find the WordPress ID of a post/page given its public URL."""
+    async with httpx.AsyncClient() as http_client:
+        base_url = url.replace("/posts", "")
+        # Extract slug from URL
+        parsed = urlparse(target_url)
+        slug = parsed.path.strip("/")
+        if "/" in slug:
+            slug = slug.split("/")[-1]
+            
+        if not slug:
+            # Maybe it's the homepage?
+            return None
+
+        # Try to find by slug first
+        for wp_type in ["posts", "pages"]:
+            try:
+                endpoint = f"{base_url}/{wp_type}"
+                resp = await http_client.get(endpoint, auth=(username, password), params={"slug": slug}, timeout=15.0)
+                if resp.status_code == 200:
+                    results = resp.json()
+                    if results:
+                        return results[0]["id"]
+            except Exception:
+                continue
+        
+        # Fallback: Search by title if slug failed (not ideal)
+        return None
+
+
 async def update_wordpress_post(url: str, username: str, password: str, post_id: str, content: str, wp_type: str = "post") -> bool:
     """Update an existing WordPress post/page."""
     async with httpx.AsyncClient() as http_client:
