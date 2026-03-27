@@ -112,6 +112,9 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
     setUploadedImages(prev => [...prev, ...newImages]);
     setUploading(false);
     if (newImages.length > 0) toast.success("Immagine caricata correttamente!");
+    
+    // Reset target value to allow uploading the same file again
+    e.target.value = '';
   };
 
   const removeImage = (id) => {
@@ -248,17 +251,17 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                    <label className="flex flex-col items-center justify-center gap-3 p-4 bg-slate-900 rounded-[1.5rem] cursor-pointer hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200">
+                    <label htmlFor="camera-input" className="flex flex-col items-center justify-center gap-3 p-4 bg-slate-900 rounded-[1.5rem] cursor-pointer hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200">
                         <Camera className="w-6 h-6 text-white" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-white">Scatta Foto</span>
-                        <input type="file" accept="image/*" capture="environment" className="hidden"
+                        <input id="camera-input" type="file" accept="image/*" capture="environment" className="hidden"
                             onChange={handleImageUpload} disabled={uploading} />
                     </label>
 
-                    <label className="flex flex-col items-center justify-center gap-3 p-4 bg-white border border-slate-100 rounded-[1.5rem] cursor-pointer hover:bg-slate-50 transition-all active:scale-95 shadow-xl shadow-slate-100">
+                    <label htmlFor="gallery-input" className="flex flex-col items-center justify-center gap-3 p-4 bg-white border border-slate-100 rounded-[1.5rem] cursor-pointer hover:bg-slate-50 transition-all active:scale-95 shadow-xl shadow-slate-100">
                         <ImagePlus className="w-6 h-6 text-slate-900" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Galleria</span>
-                        <input type="file" accept="image/*" className="hidden"
+                        <input id="gallery-input" type="file" accept="image/*" className="hidden"
                             onChange={handleImageUpload} disabled={uploading} />
                     </label>
                 </div>
