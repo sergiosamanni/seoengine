@@ -256,11 +256,19 @@ export const DashboardLayout = ({ children }) => {
       {/* Main Content Area */}
       <main className="flex-1 overflow-auto bg-[#f8fafc]">
         {/* Mobile Navbar */}
-        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[#f1f3f6] px-6 py-4 flex items-center gap-4 lg:hidden">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-[#f1f3f6]" data-testid="mobile-menu-btn">
-            <Menu className="w-5 h-5 text-slate-700" />
-          </button>
-          <span className="text-lg font-black text-slate-900 tracking-tighter">G<span className="text-emerald-500">eo</span>S</span>
+        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100/60 px-5 py-3 flex items-center justify-between lg:hidden">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSidebarOpen(true)} className="p-2.5 rounded-xl bg-slate-900 text-white shadow-lg shadow-slate-200 active:scale-95 transition-all">
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex flex-col leading-none">
+                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-400">SEO</span>
+                <span className="text-lg font-black tracking-tighter text-slate-900">Antigravity</span>
+            </div>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center">
+             <Globe className="w-4 h-4 text-emerald-500/60" />
+          </div>
         </div>
 
         {/* Dynamic Content Container */}
