@@ -29,6 +29,19 @@ async def get_citations_for_report(client_id: str, report_date: str):
         
     return citations
 
+async def get_reddit_activity_for_report(client_id: str, report_date: str):
+    """Retrieve Reddit outreach activity for a specific client and month."""
+    month_prefix = report_date[:7] # YYYY-MM
+    
+    # We look for reddit_outreach activities in activity_log
+    activities = await db.activity_log.find({
+        "client_id": client_id,
+        "type": "reddit_outreach",
+        "timestamp": {"$regex": f"^{month_prefix}"}
+    }, {"_id": 0}).to_list(100)
+    
+    return activities
+
 @router.post("/{client_id}", response_model=ReportResponse)
 async def create_report(client_id: str, report: ReportCreate, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin":
@@ -43,11 +56,15 @@ async def create_report(client_id: str, report: ReportCreate, current_user: dict
     report_dict = report.dict()
     
     # Ensure date is valid ISO or at least has the prefix we need
-    # Auto-inject citations for the selected month
+    # Auto-inject citations and reddit outreach for the selected month
     citations = await get_citations_for_report(client_id, report_dict["date"])
+    reddit_activity = await get_reddit_activity_for_report(client_id, report_dict["date"])
+    
     if "modules" not in report_dict or report_dict["modules"] is None:
         report_dict["modules"] = {}
+        
     report_dict["modules"]["citations_local"] = citations
+    report_dict["modules"]["reddit_outreach"] = reddit_activity
 
     report_dict.update({
         "id": str(uuid.uuid4()),
@@ -103,11 +120,15 @@ async def update_report(report_id: str, report_update: ReportUpdate, current_use
     await db.reports.update_one({"id": report_id}, {"$set": update_data})
     
     updated = await db.reports.find_one({"id": report_id})
-    # Also refresh citations
+    # Also refresh citations and reddit
     refreshed_citations = await get_citations_for_report(updated["client_id"], updated["date"])
+    refreshed_reddit = await get_reddit_activity_for_report(updated["client_id"], updated["date"])
+    
     if "modules" not in updated or updated["modules"] is None:
         updated["modules"] = {}
+        
     updated["modules"]["citations_local"] = refreshed_citations
+    updated["modules"]["reddit_outreach"] = refreshed_reddit
     
     return updated
 
