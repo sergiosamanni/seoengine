@@ -69,8 +69,8 @@ class SEOScanner:
             "  {\n"
             "    \"titolo\": \"...\",\n"
             "    \"url\": \"...\",\n"
-            "    \"reason\": \"Perché aggiornare (es. calo rilevanza 2024)\",\n"
-            "    \"suggestion\": \"Cosa fare esattamente (max 250 car)\"\n"
+            "    \"reason\": \"Perché aggiornare (es. calo rilevanza 2026)\",\n"
+            "    \"suggestion\": \"Cosa fare esattamente (max 250 car - cita dati 2026)\"\n"
             "  }\n"
             "]\n\nArticoli:\n"
         )

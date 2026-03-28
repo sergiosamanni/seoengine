@@ -125,12 +125,12 @@ async def seed_autopilot_tasks(client_id: str, current_user: dict = Depends(get_
         {
             "id": str(uuid.uuid4()),
             "client_id": client_id,
-            "title": "Aggiornamento Prezzi 2024",
+            "title": "Aggiornamento Prezzi 2026",
             "type": "NEW_CONTENT",
-            "reason": "Volume di ricerca in crescita per 'costo' e 'prezzi' nel tuo settore.",
-            "suggestion": "Scrivi un articolo che riepiloghi i prezzi 2024 e aggiungi le 3 FAQ suggerite dall'analisi GSC.",
+            "reason": "Volume di ricerca in crescita per 'costo' e 'prezzi' nel tuo settore per il nuovo anno fiscale.",
+            "suggestion": "Scrivi un articolo che riepiloghi i prezzi 2026 e aggiungi le 3 FAQ suggerite dall'analisi GSC aggiornata.",
             "status": "pending",
-            "url": "https://esempio.it/guida-prezzi/",
+            "url": "https://esempio.it/guida-prezzi-2026/",
             "created_at": datetime.now(timezone.utc).isoformat()
         },
         {
