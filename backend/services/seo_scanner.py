@@ -61,6 +61,7 @@ class SEOScanner:
                 "modello": os.environ.get("LLM_MODEL", "gpt-4o-mini")
             }
 
+        current_year = datetime.now().year
         prompt = (
             "Sei un SEO Strategist. Analizza questi 5 articoli datati e proponi un'azione di REVAMP "
             "per ognuno. Concentrati su aggiornamento dati, link interni e miglioramento dell'intento.\n\n"
@@ -69,8 +70,8 @@ class SEOScanner:
             "  {\n"
             "    \"titolo\": \"...\",\n"
             "    \"url\": \"...\",\n"
-            "    \"reason\": \"Perché aggiornare (es. calo rilevanza 2026)\",\n"
-            "    \"suggestion\": \"Cosa fare esattamente (max 250 car - cita dati 2026)\"\n"
+            f"    \"reason\": \"Perché aggiornare (es. calo rilevanza {current_year})\",\n"
+            f"    \"suggestion\": \"Cosa fare esattamente (max 250 car - cita dati {current_year})\"\n"
             "  }\n"
             "]\n\nArticoli:\n"
         )

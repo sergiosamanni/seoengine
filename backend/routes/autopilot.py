@@ -121,16 +121,17 @@ async def seed_autopilot_tasks(client_id: str, current_user: dict = Depends(get_
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
 
+    cy = datetime.now().year
     test_tasks = [
         {
             "id": str(uuid.uuid4()),
             "client_id": client_id,
-            "title": "Aggiornamento Prezzi 2026",
+            "title": f"Aggiornamento Prezzi {cy}",
             "type": "NEW_CONTENT",
-            "reason": "Volume di ricerca in crescita per 'costo' e 'prezzi' nel tuo settore per il nuovo anno fiscale.",
-            "suggestion": "Scrivi un articolo che riepiloghi i prezzi 2026 e aggiungi le 3 FAQ suggerite dall'analisi GSC aggiornata.",
+            "reason": f"Volume di ricerca in crescita per 'costo' e 'prezzi' nel tuo settore per il nuovo anno {cy}.",
+            "suggestion": f"Scrivi un articolo che riepiloghi i prezzi {cy} e aggiungi le 3 FAQ suggerite dall'analisi GSC aggiornata.",
             "status": "pending",
-            "url": "https://esempio.it/guida-prezzi-2026/",
+            "url": f"https://esempio.it/guida-prezzi-{cy}/",
             "created_at": datetime.now(timezone.utc).isoformat()
         },
         {
