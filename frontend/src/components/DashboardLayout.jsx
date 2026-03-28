@@ -89,7 +89,7 @@ export const DashboardLayout = ({ children }) => {
   const clientNav = [
     { label: 'Genera', icon: FileText, path: '/generate' },
   ];
-  const navItems = isAdmin ? adminNav : clientNav;
+  const navItems = isAdmin ? mainNav : clientNav; // Temporaneamente mantenuto per compatibilità o rimosso se non usato
 
   return (
     <div className="flex h-screen bg-[#f8fafc]">
