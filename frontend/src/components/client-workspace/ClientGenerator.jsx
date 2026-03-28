@@ -254,17 +254,17 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
                     )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <label htmlFor="camera-input" className="flex flex-col items-center justify-center gap-3 p-4 bg-slate-900 rounded-[1.5rem] cursor-pointer hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200">
-                        <Camera className="w-6 h-6 text-white" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white">Scatta Foto</span>
+                <div className="grid grid-cols-2 gap-3 pt-4">
+                    <label htmlFor="camera-input" className="flex items-center justify-center gap-3 h-14 bg-slate-950 rounded-2xl cursor-pointer hover:bg-slate-900 transition-all active:scale-95 shadow-lg shadow-slate-200 border border-slate-800">
+                        <Camera className="w-4 h-4 text-emerald-400" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Scatta</span>
                         <input id="camera-input" type="file" accept="image/*" capture="environment" className="hidden"
                             onChange={handleImageUpload} disabled={uploading} />
                     </label>
 
-                    <label htmlFor="gallery-input" className="flex flex-col items-center justify-center gap-3 p-4 bg-white border border-slate-100 rounded-[1.5rem] cursor-pointer hover:bg-slate-50 transition-all active:scale-95 shadow-xl shadow-slate-100">
-                        <ImagePlus className="w-6 h-6 text-slate-900" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Galleria</span>
+                    <label htmlFor="gallery-input" className="flex items-center justify-center gap-3 h-14 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all active:scale-95 shadow-sm">
+                        <ImagePlus className="w-4 h-4 text-slate-600" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">Galleria</span>
                         <input id="gallery-input" type="file" accept="image/*" className="hidden"
                             onChange={handleImageUpload} disabled={uploading} />
                     </label>
