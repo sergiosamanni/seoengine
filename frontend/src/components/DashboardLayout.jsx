@@ -154,13 +154,11 @@ export const DashboardLayout = ({ children }) => {
             <div>
               <p className="px-4 text-[9px] uppercase font-bold tracking-[0.2em] text-slate-300 mb-4">Main Menu</p>
               <nav className="space-y-1">
-                {isAdmin && (
-                  <Link to="/reddit" className="group flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold tracking-tight text-slate-500 hover:text-slate-900 transition-all">
-                    <MessageSquare className="w-4 h-4 text-orange-500" />
-                    <span>Reddit</span>
-                    <Badge className="bg-orange-100 text-orange-600 border-none text-[8px] h-4">NEW AI</Badge>
-                  </Link>
-                )}
+                <Link to="/reddit" className="group flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold tracking-tight text-slate-500 hover:text-slate-900 transition-all">
+                  <MessageSquare className="w-4 h-4 text-orange-500" />
+                  <span>Reddit</span>
+                  <Badge className="bg-orange-100 text-orange-600 border-none text-[8px] h-4">NEW AI</Badge>
+                </Link>
                 {(isAdmin ? mainNav : clientNav).map((item) => {
                   if (item.label === 'Reddit') return null; // evitiamo duplicati se il map funziona
                   const isActive = location.pathname === item.path ||
