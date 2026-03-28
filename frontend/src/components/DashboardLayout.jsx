@@ -12,7 +12,6 @@ import { Badge } from './ui/badge';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter 
 } from './ui/dialog';
-import { Badge } from './ui/badge';
 import {
   Select,
   SelectContent,
