@@ -105,11 +105,10 @@ export const LoginPage = () => {
                 <p className="text-slate-500 text-[11px] leading-snug">{feature.desc}</p>
               </div>
             ))}
-          </div>
         </div>
         
         <p className="text-slate-600 text-[10px] uppercase font-bold tracking-[0.2em] relative z-10">
-          &copy; 2024 SEO Engine. Premium Workspace.
+          &copy; {new Date().getFullYear()} GeoS. Premium Workspace.
         </p>
       </div>
       
