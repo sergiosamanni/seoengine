@@ -81,7 +81,7 @@ export const DashboardLayout = ({ children }) => {
     { label: 'Reddit', icon: MessageSquare, path: '/reddit', badge: 'NEW' },
     { label: 'Clienti', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'GMB', icon: MapPin, path: '/gmb' },
-    { label: 'Citazioni', icon: Globe, path: '/citations' },
+    { label: 'Reddit/Citazioni', icon: MessageSquare, path: '/reddit' },
     { label: 'SEO Autopilot', icon: Zap, path: '#' }, // Path dummy, apre il modal
   ];
   const secondaryNav = [
