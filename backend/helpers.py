@@ -334,9 +334,12 @@ async def generate_image_pollinations(prompt: str, user_id: str, model: str = "f
                 else:
                     raise Exception(f"Pollinations/{model} error: {response.status_code}")
             
+            if not response.headers.get("content-type", "").startswith("image/"):
+                raise Exception(f"Pollinations returned non-image content: {response.headers.get('content-type')}")
+            
             file_id = str(uuid.uuid4())
             path = f"{APP_NAME}/uploads/{user_id}/{file_id}.jpg"
-            content_type = "image/jpeg"
+            content_type = response.headers.get("content-type", "image/jpeg")
             result = put_object(path, response.content, content_type)
             file_doc = {
                 "id": file_id,
@@ -751,9 +754,10 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                             fname = record.get("original_filename", f"{img_id}.jpg").split('.')[0] + ".jpg"
                             logger.info(f"Image {img_id} optimized for WP upload (size: {len(img_data)} bytes)")
                     except Exception as resize_err:
-                        logger.warning(f"Failed to resize image {img_id}: {resize_err}. Uploading original.")
-                        ct = record.get("content_type", "image/jpeg")
-                        fname = record.get("original_filename", f"{img_id}.jpg")
+                        # If Pillow cannot identify the image, it's NOT an image (likely HTML/Corrupt)
+                        # WE SHOULD NOT UPLOAD IT to WP
+                        logger.error(f"Image {img_id} is corrupt or not an image (Pillow failed): {resize_err}. Skipping upload.")
+                        continue # Skip this image entirely
 
                     media_resp = await http_client.post(
                         f"{base_url}/media",
