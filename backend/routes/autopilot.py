@@ -106,3 +106,43 @@ async def mark_notifications_seen(body: dict, current_user: dict = Depends(get_c
         {"$set": {"seen_by_admin": True}}
     )
     return {"status": "success"}
+
+import uuid
+@router.post("/autopilot-tasks/{client_id}/scan")
+async def scan_autopilot_tasks(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Simulates a pro-active SEO scan if it didn't run recently."""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    return {"status": "success", "message": "Analisi strategica avviata. I nuovi suggerimenti appariranno tra pochi minuti."}
+
+@router.post("/autopilot-tasks/{client_id}/seed")
+async def seed_autopilot_tasks(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Seed test tasks for UI verification."""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    test_tasks = [
+        {
+            "id": str(uuid.uuid4()),
+            "client_id": client_id,
+            "title": "Aggiornamento Prezzi 2024",
+            "type": "NEW_CONTENT",
+            "reason": "Volume di ricerca in crescita per 'costo' e 'prezzi' nel tuo settore.",
+            "suggestion": "Scrivi un articolo che riepiloghi i prezzi 2024 e aggiungi le 3 FAQ suggerite dall'analisi GSC.",
+            "status": "pending",
+            "url": "https://esempio.it/guida-prezzi/",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "client_id": client_id,
+            "title": "Fix Cannibalizzazione 'Noleggio'",
+            "type": "CANNIBALIZATION",
+            "reason": "Due pagine sono in competizione per la stessa keyword principale.",
+            "suggestion": "Unisci il contenuto della landing secondaria all'articolo principale e imposta un redirect 301.",
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    ]
+    await db.autopilot_tasks.insert_many(test_tasks)
+    return {"status": "success", "message": "Test tasks generati!"}

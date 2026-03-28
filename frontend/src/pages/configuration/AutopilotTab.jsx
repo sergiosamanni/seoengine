@@ -47,8 +47,13 @@ export const AutopilotTab = ({ autopilot, setAutopilot, clientId, getAuthHeaders
   const handleResolve = async (taskId, action) => {
     setResolvingId(taskId);
     try {
-        await axios.post(`${API}/autopilot-tasks/${clientId}/${taskId}/resolve`, { action }, { headers: getAuthHeaders() });
-        toast.success(action === 'approve' ? "Azione approvata e pronta per l'esecuzione" : "Azione rimossa dalla coda");
+        if (action === 'approve') {
+            await axios.post(`${API}/autopilot-tasks/${taskId}/approve`, {}, { headers: getAuthHeaders() });
+            toast.success("Azione approvata e pronta per l'esecuzione");
+        } else {
+            await axios.delete(`${API}/autopilot-tasks/${taskId}`, { headers: getAuthHeaders() });
+            toast.success("Azione rimossa dalla coda");
+        }
         fetchTasks();
     } catch (e) {
         toast.error("Errore durante la risoluzione del task");
