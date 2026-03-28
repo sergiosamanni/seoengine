@@ -720,22 +720,52 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
         # Upload images to WordPress media library
         wp_media_ids = []
         if image_ids:
+            from io import BytesIO
+            from PIL import Image
             for img_id in image_ids:
                 try:
                     record = await db.files.find_one({"id": img_id, "is_deleted": False}, {"_id": 0})
                     if not record:
                         continue
                     img_data, _ = get_object(record["storage_path"])
-                    ct = record.get("content_type", "image/jpeg")
-                    fname = record.get("original_filename", f"{img_id}.jpg")
+                    if not img_data:
+                        continue
+                        
+                    # OPTIMIZATION: Resize image locally before uploading to WP 
+                    # This prevents 500 errors on shared hosting during WP image processing
+                    try:
+                        with Image.open(BytesIO(img_data)) as img:
+                            # Convert to RGB if needed (handles RGBA or CMYK)
+                            if img.mode in ("RGBA", "P"):
+                                img = img.convert("RGB")
+                            
+                            # Max width 1200px for web, maintaining aspect ratio
+                            max_size = (1200, 1200)
+                            if img.width > max_size[0] or img.height > max_size[1]:
+                                img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                                
+                            buffer = BytesIO()
+                            img.save(buffer, format="JPEG", quality=85, optimize=True)
+                            img_data = buffer.getvalue()
+                            ct = "image/jpeg"
+                            fname = record.get("original_filename", f"{img_id}.jpg").split('.')[0] + ".jpg"
+                            logger.info(f"Image {img_id} optimized for WP upload (size: {len(img_data)} bytes)")
+                    except Exception as resize_err:
+                        logger.warning(f"Failed to resize image {img_id}: {resize_err}. Uploading original.")
+                        ct = record.get("content_type", "image/jpeg")
+                        fname = record.get("original_filename", f"{img_id}.jpg")
+
                     media_resp = await http_client.post(
                         f"{base_url}/media",
                         auth=(username, password),
                         headers={"Content-Type": ct, "Content-Disposition": f'attachment; filename="{fname}"'},
-                        content=img_data, timeout=60.0
+                        content=img_data, timeout=90.0
                     )
+                    
                     if media_resp.status_code in [200, 201]:
                         wp_media_ids.append(media_resp.json()["id"])
+                    else:
+                        logger.error(f"WP Media Upload Failed ({media_resp.status_code}): {media_resp.text[:500]}")
                 except Exception as e:
                     logger.warning(f"Error uploading image {img_id} to WP: {e}")
 
