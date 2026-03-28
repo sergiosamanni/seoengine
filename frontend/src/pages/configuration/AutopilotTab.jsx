@@ -278,9 +278,20 @@ export const AutopilotTab = ({ autopilot, setAutopilot, clientId, getAuthHeaders
                                         </div>
                                         <div className="flex items-center gap-2 w-full sm:w-auto">
                                             {task.status === 'completed' ? (
-                                                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 animate-in fade-in zoom-in duration-300">
-                                                    <CheckCircle2 className="w-4 h-4" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest">In Coda / Approvato</span>
+                                                <div className="flex items-center gap-3 animate-in fade-in zoom-in duration-300">
+                                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
+                                                        <CheckCircle2 className="w-4 h-4" />
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">In Coda / Approvato</span>
+                                                    </div>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon"
+                                                        onClick={() => handleResolve(task.id, 'reject')}
+                                                        disabled={resolvingId === task.id}
+                                                        className="h-9 w-9 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
                                                 </div>
                                             ) : (
                                                 <>
