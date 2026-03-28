@@ -32,6 +32,7 @@ export const DashboardLayout = ({ children }) => {
   // Autopilot Notifications State
   const [notifications, setNotifications] = useState([]);
   const [notifCount, setNotifCount] = useState(0);
+  const [redditNotifCount, setRedditNotifCount] = useState(12); // Mock count for Reddit
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [checkingNotifs, setCheckingNotifs] = useState(false);
 
@@ -80,8 +81,8 @@ export const DashboardLayout = ({ children }) => {
     { label: 'Clienti', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'GMB', icon: MapPin, path: '/gmb' },
     { label: 'Citazioni', icon: Globe, path: '/citations' },
-    { label: 'Reddit', icon: MessageSquare, path: '/reddit', badge: 'NEW' },
-    { label: 'SEO Autopilot', icon: Zap, path: '#' }, // Path dummy, apre il modal
+    { label: 'Reddit', icon: MessageSquare, path: '/reddit', count: redditNotifCount },
+    { label: 'SEO Autopilot', icon: Zap, path: '#', count: notifCount }, // Path dummy, apre il modal
   ];
   const secondaryNav = [
     { label: 'SEO/GEO Guidelines', icon: BookOpen, path: '/seo-geo-guidelines' },
@@ -177,15 +178,11 @@ export const DashboardLayout = ({ children }) => {
                       <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400 opacity-60'}`} />
                       <span className="flex-1">{item.label}</span>
                       
-                      {item.badge && (
-                        <Badge className="bg-orange-100 text-orange-600 border-none text-[8px] h-4 font-black tracking-widest">{item.badge}</Badge>
-                      )}
-
-                      {isAutopilot && isAdmin && notifCount > 0 && (
+                      {isAdmin && item.count > 0 && (
                         <div className="relative flex items-center justify-center">
                            <div className="absolute inset-0 bg-emerald-500 blur-[6px] opacity-40 animate-pulse"></div>
                            <div className="relative flex items-center gap-1 px-2 h-5 bg-emerald-500 text-white rounded-full border border-emerald-400/30">
-                              <span className="text-[9px] font-black">{notifCount}</span>
+                              <span className="text-[9px] font-black">{item.count}</span>
                               <div className="w-1 h-1 bg-white rounded-full animate-ping"></div>
                            </div>
                         </div>
