@@ -32,7 +32,7 @@ export const DashboardLayout = ({ children }) => {
   // Autopilot Notifications State
   const [notifications, setNotifications] = useState([]);
   const [notifCount, setNotifCount] = useState(0);
-  const [redditNotifCount, setRedditNotifCount] = useState(12); // Mock count for Reddit
+  const [redditNotifCount, setRedditNotifCount] = useState(0); // Set to 0 (real state)
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [checkingNotifs, setCheckingNotifs] = useState(false);
 
@@ -178,13 +178,23 @@ export const DashboardLayout = ({ children }) => {
                       <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400 opacity-60'}`} />
                       <span className="flex-1">{item.label}</span>
                       
-                      {isAdmin && item.count > 0 && (
+                      {isAdmin && (
                         <div className="relative flex items-center justify-center">
-                           <div className={`absolute inset-0 blur-[6px] opacity-40 animate-pulse ${item.label === 'Reddit' ? 'bg-orange-500' : 'bg-emerald-500'}`}></div>
-                           <div className={`relative flex items-center gap-1 px-2 h-5 text-white rounded-full border border-white/20 ${item.label === 'Reddit' ? 'bg-orange-500' : 'bg-emerald-500'}`}>
-                              <span className="text-[9px] font-black">{item.count}</span>
-                              <div className="w-1 h-1 bg-white rounded-full animate-ping"></div>
-                           </div>
+                           {item.count > 0 ? (
+                             <>
+                               <div className={`absolute inset-0 blur-[6px] opacity-40 animate-pulse ${item.label === 'Reddit' ? 'bg-orange-500' : 'bg-emerald-500'}`}></div>
+                               <div className={`relative flex items-center gap-1 px-2 h-5 text-white rounded-full border border-white/20 ${item.label === 'Reddit' ? 'bg-orange-500' : 'bg-emerald-500'}`}>
+                                  <span className="text-[9px] font-black">{item.count}</span>
+                                  <div className="w-1 h-1 bg-white rounded-full animate-ping"></div>
+                               </div>
+                             </>
+                           ) : (
+                             // Minimalist "Premium Monitoring" Dot for Reddit or Autopilot when idle
+                             <div className="relative flex items-center justify-center w-5 h-5 group-hover:scale-110 transition-transform">
+                                <div className={`absolute w-1.5 h-1.5 rounded-full blur-[2px] animate-pulse ${item.label === 'Reddit' ? 'bg-orange-500/60' : 'bg-emerald-500/60'}`}></div>
+                                <div className={`w-1 h-1 rounded-full ${item.label === 'Reddit' ? 'bg-orange-500' : 'bg-emerald-500'}`}></div>
+                             </div>
+                           )}
                         </div>
                       )}
                     </div>
