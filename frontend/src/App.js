@@ -14,7 +14,7 @@ import { CitationsPage } from './pages/CitationsPage';
 import { GmbPage } from './pages/GmbPage';
 import { ReportEditPage } from './pages/reports/ReportEditPage';
 import { SeoGeoGuidelines } from './pages/SeoGeoGuidelines';
-import { RedditPage } from './pages/RedditPage';
+import RedditPage from './pages/RedditPage';
 import './App.css';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
