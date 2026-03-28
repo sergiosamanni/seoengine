@@ -207,6 +207,22 @@ export const DashboardLayout = ({ children }) => {
           </Button>
         </div>
       </aside>
+      
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-auto bg-[#f8fafc]">
+        {/* Mobile Navbar */}
+        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[#f1f3f6] px-6 py-4 flex items-center gap-4 lg:hidden">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-[#f1f3f6]" data-testid="mobile-menu-btn">
+            <Menu className="w-5 h-5 text-slate-700" />
+          </button>
+          <span className="text-sm font-bold text-slate-900 tracking-tight">Antigravity Console</span>
+        </div>
+
+        {/* Dynamic Content Container */}
+        <div className="p-6 sm:p-10 max-w-7xl mx-auto min-h-full">
+          {children}
+        </div>
+      </main>
 
       {/* Autopilot Notifications Dialog */}
       <Dialog open={showNotifModal} onOpenChange={setShowNotifModal}>
