@@ -105,12 +105,13 @@ export const DashboardLayout = ({ children }) => {
         {/* Brand */}
         <div className="p-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shadow-lg shadow-slate-200">
-               <Globe className="w-5 h-5 text-emerald-500" />
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center border border-slate-700/30 shadow-xl overflow-hidden relative">
+               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.15),transparent_70%)]"></div>
+               <Globe className="w-4 h-4 text-emerald-500/80 relative z-10" />
             </div>
-            <div className="leading-none flex flex-col pt-1">
-              <span className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 -mb-1">SEO</span>
-              <h1 className="text-[15px] font-light tracking-tighter text-emerald-500 leading-none">
+            <div className="leading-none flex flex-col pt-0.5 ml-1">
+              <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-400 -mb-0.5">SEO</span>
+              <h1 className="text-[17px] font-black tracking-tighter text-slate-900 leading-none">
                 Antigravity
               </h1>
             </div>

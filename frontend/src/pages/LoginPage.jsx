@@ -74,22 +74,23 @@ export const LoginPage = () => {
         </div>
 
         {/* Brand Tag */}
-        <div className="absolute top-10 left-10 flex items-center gap-2">
-          <div className="w-8 h-8 bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg flex items-center justify-center">
-            <Globe className="w-4 h-4 text-emerald-400" />
+        <div className="absolute top-10 left-10 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center relative overflow-hidden">
+             <div className="absolute inset-0 bg-emerald-500/10 animate-pulse"></div>
+             <Globe className="w-4 h-4 text-emerald-400/80 relative z-10" />
           </div>
           <div className="flex flex-col leading-none pt-0.5">
-            <span className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-400 -mb-1">SEO</span>
-            <span className="text-md font-light tracking-tighter text-white">Antigravity</span>
+            <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-500 -mb-0.5">SEO</span>
+            <span className="text-[19px] font-black tracking-tighter text-white">Antigravity</span>
           </div>
         </div>
 
         {/* Hero Content */}
         <div className="relative max-w-lg">
           <h1 className="text-5xl lg:text-7xl font-black tracking-tighter text-white leading-[0.85] mb-8">
-            AI Content <br />
-            Revolution <br />
-            <span className="text-emerald-400 italic underline decoration-emerald-400/30 underline-offset-8">Antigravity</span>.
+            AI CONTENT <br />
+            REVOLUTION <br />
+            <span className="text-emerald-500/90 italic underline decoration-white/10 underline-offset-8">Antigravity</span>.
           </h1>
           <p className="text-lg text-slate-400 font-medium leading-relaxed max-w-sm">
             Generazione contenuti e ottimizzazione SEO con intelligenza artificiale di nuova generazione.
@@ -103,13 +104,13 @@ export const LoginPage = () => {
                 className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
               >
                 <feature.icon className="w-5 h-5 text-slate-400 mb-4" />
-                <h3 className="text-white text-xs font-bold uppercase tracking-wider mb-1">{feature.title}</h3>
+                <h3 className="text-white text-[10px] font-bold uppercase tracking-[0.2em] mb-1 opacity-70">{feature.title}</h3>
                 <p className="text-slate-500 text-[11px] leading-snug">{feature.desc}</p>
               </div>
             ))}
         </div>
         
-        <p className="text-slate-600 text-[10px] uppercase font-bold tracking-[0.2em] relative z-10">
+        <p className="text-slate-600 text-[10px] uppercase font-bold tracking-[0.3em] relative z-10">
           &copy; {new Date().getFullYear()} SEO Antigravity. Premium AI Intelligence.
         </p>
       </div>
@@ -120,8 +121,8 @@ export const LoginPage = () => {
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-12 justify-center text-center">
              <div className="flex flex-col leading-none">
-                <span className="text-[14px] font-black uppercase tracking-[0.5em] text-slate-400 mb-1">SEO</span>
-                <span className="text-lg font-light text-slate-900 tracking-tighter">Antigravity</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400 mb-1 pl-1">SEO</span>
+                <span className="text-3xl font-black text-slate-900 tracking-tighter">Antigravity</span>
              </div>
           </div>
           
