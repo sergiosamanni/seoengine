@@ -475,6 +475,21 @@ async def generate_image_together(prompt: str, user_id: str, api_key: str = None
             raise
 
 
+async def generate_image_prompt(llm_config: dict, title: str) -> str:
+    """Generate a descriptive prompt for an AI image based on the article title."""
+    try:
+        sys = "Sei un esperto di prompt per Generative AI. Crea un prompt in INGLESE per un'immagine fotorealistica di alta qualità basata sul titolo dell'articolo fornito. Sii descrittivo ma conciso. Non includere testo nell'immagine. Restituisci SOLO il prompt."
+        user = f"Titolo Articolo: {title}"
+        prompt = await generate_with_rotation(llm_config, sys, user)
+        if prompt:
+            return prompt.strip().strip('"')
+    except Exception as e:
+        logger.error(f"Failed to generate image prompt: {e}")
+    
+    # Fallback prompt
+    return f"Professional high-quality photography for an article about '{title}', elegant, modern, clean composition."
+
+
 async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: str = None, together_key: str = None) -> dict:
     """Try multiple image generation providers in sequence with smart fallback.
     

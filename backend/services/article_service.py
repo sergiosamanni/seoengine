@@ -211,13 +211,31 @@ class ArticleService:
         publish_to_wp: bool, system_prompt: str, llm_config: dict, 
         wp_config: dict, kb: dict, combo: dict, titolo_suggerito: str = "", 
         content_type: str = "articolo", image_ids: list = None, 
-        existing_published: list = None
+        existing_published: list = None, generate_cover: bool = False
     ):
         """Standardized single article generation and task finalization."""
         provider = llm_config.get("provider", "openai")
         titolo = titolo_suggerito or keyword.strip()
         await log_activity(client_id, "article_generate", "running", {"titolo": titolo, "step": "generazione"})
         
+        # Determine image_ids - if generate_cover and no ids provided, generate one
+        if generate_cover and not image_ids:
+            try:
+                from helpers import generate_image_with_fallback, generate_image_prompt
+                # Let's use a specialized prompt if possible
+                img_prompt = await generate_image_prompt(llm_config, titolo)
+                await log_activity(client_id, "image_generate", "running", {"titolo": titolo, "prompt": img_prompt})
+                image_res = await generate_image_with_fallback(
+                    img_prompt, client_id, 
+                    openai_key=llm_config.get("api_key") if llm_config.get("provider") == "openai" else None
+                )
+                if image_res and image_res.get("id"):
+                    image_ids = [image_res["id"]]
+                    await log_activity(client_id, "image_generate", "success", {"titolo": titolo, "image_id": image_res["id"]})
+            except Exception as e:
+                logger.error(f"AI Image generation failed during simple-generate: {e}")
+                await log_activity(client_id, "image_generate", "failed", {"titolo": titolo, "error": str(e)})
+
         try:
             content = None
             gen_error = None
