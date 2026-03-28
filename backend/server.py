@@ -11,7 +11,7 @@ load_dotenv(ROOT_DIR / '.env')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="GeoS Engine")
+app = FastAPI(title="SEO Antigravity AI Engine")
 
 from routes.auth_users import router as auth_router
 from routes.clients import router as clients_router
@@ -58,7 +58,7 @@ api_router.include_router(reddit_router)
 
 @app.get("/")
 async def app_root():
-    return {"message": "GeoS Engine API", "version": "2.1", "docs": "/docs"}
+    return {"message": "SEO Antigravity AI Engine API", "version": "2.1", "docs": "/docs"}
 
 @app.get("/health")
 async def app_health_check():

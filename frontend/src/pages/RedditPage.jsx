@@ -119,7 +119,7 @@ const RedditPage = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black tracking-tighter text-slate-900 flex items-center gap-3">
-            G<span className="text-emerald-500">eo</span>S <span className="text-orange-500 italic">Reddit Outreach</span>
+            SEO <span className="text-emerald-500">Antigravity</span> <span className="text-orange-500 italic">Reddit Outreach</span>
           </h1>
           <p className="text-slate-500 font-medium mt-1">Intervieni nelle community e crea discussioni di valore per i tuoi clienti.</p>
         </div>

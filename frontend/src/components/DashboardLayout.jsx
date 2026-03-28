@@ -110,9 +110,9 @@ export const DashboardLayout = ({ children }) => {
             </div>
             <div className="leading-none">
               <h1 className="text-xl font-black tracking-tighter text-slate-900 leading-none">
-                G<span className="text-emerald-500">eo</span>S
+                SEO <span className="text-emerald-500">Antigravity</span>
               </h1>
-              <p className="text-[9px] text-slate-400 mt-1 uppercase tracking-[0.2em] font-bold">{isAdmin ? 'Enterprise' : 'Workspace'}</p>
+              <p className="text-[9px] text-slate-400 mt-1 uppercase tracking-[0.2em] font-bold">{isAdmin ? 'AI Console' : 'Workspace'}</p>
             </div>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-900">
