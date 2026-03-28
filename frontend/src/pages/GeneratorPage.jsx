@@ -154,7 +154,7 @@ export const GeneratorPage = () => {
   return (
     <div className="space-y-8 animate-fade-in max-w-5xl mx-auto pb-20">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="hidden lg:flex items-center justify-between">
         <div className="flex items-center gap-5">
           <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} className="h-10 w-10 rounded-xl bg-white border border-[#f1f3f6] hover:bg-slate-50 shadow-sm">
             <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-slate-900" />
@@ -202,7 +202,7 @@ export const GeneratorPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="w-full justify-start bg-transparent p-0 h-auto flex-wrap mb-10 border-b border-[#f1f3f6] rounded-none gap-6">
+        <TabsList className="hidden lg:flex w-full justify-start bg-transparent p-0 h-auto flex-wrap mb-10 border-b border-[#f1f3f6] rounded-none gap-6">
           {isAdmin && (
             <>
               <TabsTrigger value="config" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all">
