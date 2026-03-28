@@ -521,7 +521,7 @@ async def generate_image_prompt(llm_config: dict, title: str) -> str:
     return f"Professional high-quality photography for an article about '{title}', elegant, modern, clean composition."
 
 
-async def generate_image_from_web(prompt: str, user_id: str) -> dict:
+async def generate_image_from_web(prompt: str, user_id: str, article_title: str = "") -> dict:
     """Search for a relevant stock photo online, download it, and store it.
     Uses DDG image search with Wikimedia Commons fallback.
     This is the most reliable fallback since it doesn't depend on AI generation."""
@@ -530,14 +530,20 @@ async def generate_image_from_web(prompt: str, user_id: str) -> dict:
     from PIL import Image
     from storage import put_object, APP_NAME
     
-    # Extract search keywords from the AI prompt (simplify for stock photo search)
-    # Remove AI-specific language like "photorealistic", "high quality", etc.
-    search_query = prompt
+    # Use the article title for search (MUCH better than AI prompt)
+    # If no title provided, try to extract keywords from the AI prompt
+    if article_title:
+        search_query = article_title
+    else:
+        search_query = prompt
+    
+    # Clean up the query for stock photo search
     for noise in ["photorealistic", "Photorealistic", "high-quality", "high quality", 
                   "professional", "Professional", "elegant", "modern", "image of", "photo of",
-                  "photography", "depicting", "showing", "A ", "an ", "the "]:
+                  "photography", "depicting", "showing", "A ", "an ", "the ",
+                  "offerte 2026", "offerte 2025", ":", "?", "!"]:
         search_query = search_query.replace(noise, "")
-    search_query = " ".join(search_query.split())[:100]  # Clean up whitespace, limit length
+    search_query = " ".join(search_query.split())[:80]  # Clean up whitespace, limit length
     
     logger.info(f"Web stock photo search for: '{search_query}'")
     
@@ -617,7 +623,7 @@ async def generate_image_from_web(prompt: str, user_id: str) -> dict:
     raise Exception("All stock photo download attempts failed")
 
 
-async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: str = None, together_key: str = None) -> dict:
+async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: str = None, together_key: str = None, article_title: str = "") -> dict:
     """Try multiple image generation providers in sequence with smart fallback.
     
     Chain: DALL-E (if key) → Together.ai (if key) → Pollinations/flux → Pollinations/turbo → Web Stock Photo → AI Horde
@@ -676,7 +682,7 @@ async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: st
     # 5. Web stock photo search (very reliable, doesn't need AI generation)
     try:
         logger.info("Attempting web stock photo search as fallback...")
-        result = await generate_image_from_web(prompt, user_id)
+        result = await generate_image_from_web(prompt, user_id, article_title=article_title)
         logger.info("✓ Web stock photo succeeded")
         return result
     except Exception as e:

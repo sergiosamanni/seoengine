@@ -182,7 +182,7 @@ async def generate_topic_image(body: dict, current_user: dict = Depends(get_curr
     try:
         user_id = current_user.get("user_id", "admin")
         together_key = config.get("together_api_key") or os.environ.get("TOGETHER_API_KEY")
-        result = await generate_image_with_fallback(crafted_prompt, user_id, openai_key=llm_key, together_key=together_key)
+        result = await generate_image_with_fallback(crafted_prompt, user_id, openai_key=llm_key, together_key=together_key, article_title=title)
         
         # Use an absolute URL for the image
         token = body.get("token") or ""

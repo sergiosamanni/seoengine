@@ -227,7 +227,8 @@ class ArticleService:
                 await log_activity(client_id, "image_generate", "running", {"titolo": titolo, "prompt": img_prompt})
                 image_res = await generate_image_with_fallback(
                     img_prompt, client_id, 
-                    openai_key=llm_config.get("api_key") if llm_config.get("provider") == "openai" else None
+                    openai_key=llm_config.get("api_key") if llm_config.get("provider") == "openai" else None,
+                    article_title=titolo
                 )
                 if image_res and image_res.get("id"):
                     image_ids = [image_res["id"]]
