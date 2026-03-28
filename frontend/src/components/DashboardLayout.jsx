@@ -180,8 +180,8 @@ export const DashboardLayout = ({ children }) => {
                       
                       {isAdmin && item.count > 0 && (
                         <div className="relative flex items-center justify-center">
-                           <div className="absolute inset-0 bg-emerald-500 blur-[6px] opacity-40 animate-pulse"></div>
-                           <div className="relative flex items-center gap-1 px-2 h-5 bg-emerald-500 text-white rounded-full border border-emerald-400/30">
+                           <div className={`absolute inset-0 blur-[6px] opacity-40 animate-pulse ${item.label === 'Reddit' ? 'bg-orange-500' : 'bg-emerald-500'}`}></div>
+                           <div className={`relative flex items-center gap-1 px-2 h-5 text-white rounded-full border border-white/20 ${item.label === 'Reddit' ? 'bg-orange-500' : 'bg-emerald-500'}`}>
                               <span className="text-[9px] font-black">{item.count}</span>
                               <div className="w-1 h-1 bg-white rounded-full animate-ping"></div>
                            </div>
