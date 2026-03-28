@@ -337,16 +337,33 @@ async def generate_image_pollinations(prompt: str, user_id: str, model: str = "f
             if not response.headers.get("content-type", "").startswith("image/"):
                 raise Exception(f"Pollinations returned non-image content: {response.headers.get('content-type')}")
             
+            # Convert to JPEG in-memory to guarantee compatibility with PIL and WordPress
+            img_bytes = response.content
+            try:
+                from io import BytesIO
+                from PIL import Image
+                with Image.open(BytesIO(img_bytes)) as pil_img:
+                    if pil_img.mode in ("RGBA", "P", "LA"):
+                        pil_img = pil_img.convert("RGB")
+                    elif pil_img.mode != "RGB":
+                        pil_img = pil_img.convert("RGB")
+                    buf = BytesIO()
+                    pil_img.save(buf, format="JPEG", quality=90, optimize=True)
+                    img_bytes = buf.getvalue()
+                    logger.info(f"Pollinations image converted to JPEG ({len(img_bytes)} bytes)")
+            except Exception as conv_err:
+                logger.warning(f"Could not convert Pollinations image to JPEG: {conv_err}. Saving raw bytes.")
+            
             file_id = str(uuid.uuid4())
             path = f"{APP_NAME}/uploads/{user_id}/{file_id}.jpg"
-            content_type = response.headers.get("content-type", "image/jpeg")
-            result = put_object(path, response.content, content_type)
+            content_type = "image/jpeg"
+            result = put_object(path, img_bytes, content_type)
             file_doc = {
                 "id": file_id,
                 "storage_path": result["path"],
                 "original_filename": f"pollinations-{model}-{file_id[:8]}.jpg",
                 "content_type": content_type,
-                "size": len(response.content),
+                "size": len(img_bytes),
                 "user_id": user_id,
                 "is_deleted": False,
                 "created_at": datetime.now(timezone.utc).isoformat()
@@ -733,13 +750,31 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                     img_data, _ = get_object(record["storage_path"])
                     if not img_data:
                         continue
+                    
+                    # Ensure we have valid image data - detect format via magic bytes
+                    is_valid_image = False
+                    raw_format = "unknown"
+                    if img_data[:4] == b'\x89PNG':
+                        raw_format = "PNG"
+                    elif img_data[:2] == b'\xff\xd8':
+                        raw_format = "JPEG"
+                    elif img_data[:4] == b'RIFF' and img_data[8:12] == b'WEBP':
+                        raw_format = "WEBP"
+                    elif img_data[:3] == b'GIF':
+                        raw_format = "GIF"
+                    else:
+                        logger.warning(f"Image {img_id}: unknown format (magic: {img_data[:12].hex()}). Will try PIL.")
+                    
+                    logger.info(f"Image {img_id}: raw format detected as {raw_format}, size={len(img_data)} bytes")
                         
-                    # OPTIMIZATION: Resize image locally before uploading to WP 
+                    # OPTIMIZATION: Resize and convert to JPEG before uploading to WP 
                     # This prevents 500 errors on shared hosting during WP image processing
+                    ct = "image/jpeg"
+                    fname = record.get("original_filename", f"{img_id}.jpg").split('.')[0] + ".jpg"
                     try:
                         with Image.open(BytesIO(img_data)) as img:
-                            # Convert to RGB if needed (handles RGBA or CMYK)
-                            if img.mode in ("RGBA", "P"):
+                            # Convert to RGB if needed (handles RGBA, CMYK, P, LA)
+                            if img.mode != "RGB":
                                 img = img.convert("RGB")
                             
                             # Max width 1200px for web, maintaining aspect ratio
@@ -750,14 +785,21 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                             buffer = BytesIO()
                             img.save(buffer, format="JPEG", quality=85, optimize=True)
                             img_data = buffer.getvalue()
-                            ct = "image/jpeg"
-                            fname = record.get("original_filename", f"{img_id}.jpg").split('.')[0] + ".jpg"
-                            logger.info(f"Image {img_id} optimized for WP upload (size: {len(img_data)} bytes)")
+                            is_valid_image = True
+                            logger.info(f"Image {img_id} optimized for WP upload (JPEG, {len(img_data)} bytes)")
                     except Exception as resize_err:
-                        # If Pillow cannot identify the image, it's NOT an image (likely HTML/Corrupt)
-                        # WE SHOULD NOT UPLOAD IT to WP
-                        logger.error(f"Image {img_id} is corrupt or not an image (Pillow failed): {resize_err}. Skipping upload.")
-                        continue # Skip this image entirely
+                        logger.warning(f"PIL failed for image {img_id} ({raw_format}): {resize_err}")
+                        # Last resort: if PIL fails but we know it's an image format, try uploading raw
+                        if raw_format in ("JPEG", "PNG", "WEBP", "GIF"):
+                            ct_map = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp", "GIF": "image/gif"}
+                            ext_map = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp", "GIF": ".gif"}
+                            ct = ct_map[raw_format]
+                            fname = record.get("original_filename", f"{img_id}").split('.')[0] + ext_map[raw_format]
+                            is_valid_image = True
+                            logger.info(f"Uploading image {img_id} raw as {raw_format} (PIL conversion failed)")
+                        else:
+                            logger.error(f"Image {img_id} is corrupt or not an image. Skipping upload.")
+                            continue
 
                     media_resp = await http_client.post(
                         f"{base_url}/media",
@@ -768,6 +810,7 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                     
                     if media_resp.status_code in [200, 201]:
                         wp_media_ids.append(media_resp.json()["id"])
+                        logger.info(f"Image {img_id} uploaded to WP media (wp_id: {media_resp.json()['id']})")
                     else:
                         logger.error(f"WP Media Upload Failed ({media_resp.status_code}): {media_resp.text[:500]}")
                 except Exception as e:
