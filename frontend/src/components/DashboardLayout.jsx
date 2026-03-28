@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import {
-  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X, Globe, MapPin, BookOpen, Zap
+  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X, Globe, MapPin, BookOpen, Zap, MessageSquare
 } from 'lucide-react';
 import axios from 'axios';
 import { API_URL as API } from '../config';
@@ -80,6 +80,7 @@ export const DashboardLayout = ({ children }) => {
     { label: 'Clienti', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'GMB', icon: MapPin, path: '/gmb' },
     { label: 'Citazioni', icon: Globe, path: '/citations' },
+    { label: 'Reddit', icon: MessageSquare, path: '/reddit' },
     { label: 'SEO Autopilot', icon: Zap, path: '#' }, // Path dummy, apre il modal
   ];
   const secondaryNav = [

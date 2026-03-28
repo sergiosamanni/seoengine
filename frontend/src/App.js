@@ -14,6 +14,7 @@ import { CitationsPage } from './pages/CitationsPage';
 import { GmbPage } from './pages/GmbPage';
 import { ReportEditPage } from './pages/reports/ReportEditPage';
 import { SeoGeoGuidelines } from './pages/SeoGeoGuidelines';
+import { RedditPage } from './pages/RedditPage';
 import './App.css';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -47,6 +48,7 @@ function AppRoutes() {
       <Route path="/reports/:reportId" element={<ProtectedRoute adminOnly><ReportEditPage /></ProtectedRoute>} />
       <Route path="/citations" element={<ProtectedRoute adminOnly><CitationsPage /></ProtectedRoute>} />
       <Route path="/gmb" element={<ProtectedRoute adminOnly><GmbPage /></ProtectedRoute>} />
+      <Route path="/reddit" element={<ProtectedRoute adminOnly><RedditPage /></ProtectedRoute>} />
       <Route path="/seo-geo-guidelines" element={<ProtectedRoute adminOnly><SeoGeoGuidelines /></ProtectedRoute>} />
 
       {/* Shared: Activity Log */}
