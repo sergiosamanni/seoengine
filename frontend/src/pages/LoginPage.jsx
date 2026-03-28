@@ -73,24 +73,28 @@ export const LoginPage = () => {
             <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-slate-500 rounded-full blur-[100px]"></div>
         </div>
 
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-24">
-            <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
-              <Zap className="w-5 h-5 text-black" />
-            </div>
-            <span className="text-xl font-bold text-white tracking-widest uppercase text-sm">SEO Engine</span>
+        {/* Brand Tag */}
+        <div className="absolute top-10 left-10 flex items-center gap-2">
+          <div className="w-8 h-8 bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg flex items-center justify-center">
+            <Zap className="w-4 h-4 text-emerald-400 fill-emerald-400" />
           </div>
-          
-          <h1 className="text-5xl font-bold text-white mb-8 tracking-tighter leading-tight max-w-lg">
-            Intelligenza Artificiale<br />
-            per la tua <span className="text-slate-500">SEO</span>.
+          <span className="text-sm font-bold tracking-tighter text-white">
+            G<span className="text-emerald-400">eo</span>S
+          </span>
+        </div>
+
+        {/* Hero Content */}
+        <div className="relative max-w-lg">
+          <h1 className="text-5xl lg:text-6xl font-black tracking-tighter text-white leading-[0.9] mb-8">
+            Intelligenza Artificiale <br />
+            per <span className="text-emerald-400 italic underline decoration-emerald-400/30 underline-offset-8">G<span className="text-white">eo</span>S</span>.
           </h1>
-          
-          <p className="text-slate-500 text-lg mb-16 max-w-sm leading-relaxed">
-            Gestione clienti, generazione contenuti e automazione Search Console in un unico ambiente minimale.
+          <p className="text-lg text-slate-400 font-medium leading-relaxed max-w-sm">
+            Gestione clienti, generazione contenuti e ottimizzazione GEO e SEO in un unico ambiente minimale.
           </p>
-          
-          <div className="grid grid-cols-2 gap-4 max-w-md">
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 max-w-md">
             {features.map((feature, i) => (
               <div 
                 key={feature.title}

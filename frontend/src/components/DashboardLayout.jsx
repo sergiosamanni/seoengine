@@ -104,10 +104,12 @@ export const DashboardLayout = ({ children }) => {
         <div className="p-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-200">
-               <span className="text-sm font-bold tracking-tighter italic">AG</span>
+               <span className="text-sm font-bold tracking-tighter italic">GS</span>
             </div>
             <div className="leading-none">
-              <h1 className="text-sm font-bold tracking-tight text-slate-900">Antigravity</h1>
+              <h1 className="text-xl font-black tracking-tighter text-slate-900 leading-none">
+                G<span className="text-emerald-500">eo</span>S
+              </h1>
               <p className="text-[9px] text-slate-400 mt-1 uppercase tracking-[0.2em] font-bold">{isAdmin ? 'Enterprise' : 'Workspace'}</p>
             </div>
           </div>
@@ -245,7 +247,7 @@ export const DashboardLayout = ({ children }) => {
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-[#f1f3f6]" data-testid="mobile-menu-btn">
             <Menu className="w-5 h-5 text-slate-700" />
           </button>
-          <span className="text-sm font-bold text-slate-900 tracking-tight">Antigravity Console</span>
+          <span className="text-lg font-black text-slate-900 tracking-tighter">G<span className="text-emerald-500">eo</span>S</span>
         </div>
 
         {/* Dynamic Content Container */}
