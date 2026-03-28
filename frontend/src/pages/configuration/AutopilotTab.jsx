@@ -50,11 +50,13 @@ export const AutopilotTab = ({ autopilot, setAutopilot, clientId, getAuthHeaders
         if (action === 'approve') {
             await axios.post(`${API}/autopilot-tasks/${taskId}/approve`, {}, { headers: getAuthHeaders() });
             toast.success("Azione approvata e pronta per l'esecuzione");
+            // Optimistic update
+            setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' } : t));
         } else {
             await axios.delete(`${API}/autopilot-tasks/${taskId}`, { headers: getAuthHeaders() });
             toast.success("Azione rimossa dalla coda");
+            setTasks(prev => prev.filter(t => t.id !== taskId));
         }
-        fetchTasks();
     } catch (e) {
         toast.error("Errore durante la risoluzione del task");
         console.error(e);
@@ -275,22 +277,31 @@ export const AutopilotTab = ({ autopilot, setAutopilot, clientId, getAuthHeaders
                                             <h4 className="text-md font-bold text-slate-900">{task.title}</h4>
                                         </div>
                                         <div className="flex items-center gap-2 w-full sm:w-auto">
-                                            <Button 
-                                                variant="outline" 
-                                                onClick={() => handleResolve(task.id, 'reject')}
-                                                disabled={resolvingId === task.id}
-                                                className="flex-1 sm:flex-none h-10 px-4 rounded-xl text-slate-400 border-slate-100 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all font-bold text-xs"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                            <Button 
-                                                onClick={() => handleResolve(task.id, 'approve')}
-                                                disabled={resolvingId === task.id}
-                                                className="flex-3 sm:flex-none h-10 px-6 rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200 transition-all active:scale-95 font-bold text-xs"
-                                            >
-                                                {resolvingId === task.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-                                                Approva
-                                            </Button>
+                                            {task.status === 'completed' ? (
+                                                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 animate-in fade-in zoom-in duration-300">
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">In Coda / Approvato</span>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <Button 
+                                                        variant="outline" 
+                                                        onClick={() => handleResolve(task.id, 'reject')}
+                                                        disabled={resolvingId === task.id}
+                                                        className="flex-1 sm:flex-none h-10 px-4 rounded-xl text-slate-400 border-slate-100 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all font-bold text-xs"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button 
+                                                        onClick={() => handleResolve(task.id, 'approve')}
+                                                        disabled={resolvingId === task.id}
+                                                        className="flex-3 sm:flex-none h-10 px-6 rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200 transition-all active:scale-95 font-bold text-xs"
+                                                    >
+                                                        {resolvingId === task.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                                                        Approva
+                                                    </Button>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
 
