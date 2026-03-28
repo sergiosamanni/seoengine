@@ -105,14 +105,14 @@ export const DashboardLayout = ({ children }) => {
         {/* Brand */}
         <div className="p-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-200">
-               <span className="text-sm font-bold tracking-tighter italic">GS</span>
+            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shadow-lg shadow-slate-200">
+               <Globe className="w-5 h-5 text-emerald-500" />
             </div>
-            <div className="leading-none">
-              <h1 className="text-xl font-black tracking-tighter text-slate-900 leading-none">
-                SEO <span className="text-emerald-500">Antigravity</span>
+            <div className="leading-none flex flex-col pt-1">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 -mb-0.5">SEO</span>
+              <h1 className="text-xl font-black tracking-tighter text-emerald-500 leading-none">
+                Antigravity
               </h1>
-              <p className="text-[9px] text-slate-400 mt-1 uppercase tracking-[0.2em] font-bold">{isAdmin ? 'AI Console' : 'Workspace'}</p>
             </div>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-900">

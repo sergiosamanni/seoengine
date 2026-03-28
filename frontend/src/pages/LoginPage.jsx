@@ -76,21 +76,23 @@ export const LoginPage = () => {
         {/* Brand Tag */}
         <div className="absolute top-10 left-10 flex items-center gap-2">
           <div className="w-8 h-8 bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg flex items-center justify-center">
-            <Zap className="w-4 h-4 text-emerald-400 fill-emerald-400" />
+            <Globe className="w-4 h-4 text-emerald-400" />
           </div>
-          <span className="text-sm font-bold tracking-tighter text-white">
-            G<span className="text-emerald-400">eo</span>S
-          </span>
+          <div className="flex flex-col leading-none pt-0.5">
+            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 -mb-0.5">SEO</span>
+            <span className="text-sm font-black tracking-tighter text-white">Antigravity</span>
+          </div>
         </div>
 
         {/* Hero Content */}
         <div className="relative max-w-lg">
-          <h1 className="text-5xl lg:text-6xl font-black tracking-tighter text-white leading-[0.9] mb-8">
-            Intelligenza Artificiale <br />
-            per <span className="text-emerald-400 italic underline decoration-emerald-400/30 underline-offset-8">G<span className="text-white">eo</span>S</span>.
+          <h1 className="text-5xl lg:text-7xl font-black tracking-tighter text-white leading-[0.85] mb-8">
+            AI Content <br />
+            Revolution <br />
+            <span className="text-emerald-400 italic underline decoration-emerald-400/30 underline-offset-8">Antigravity</span>.
           </h1>
           <p className="text-lg text-slate-400 font-medium leading-relaxed max-w-sm">
-            Gestione clienti, generazione contenuti e ottimizzazione GEO e SEO in un unico ambiente minimale.
+            Generazione contenuti e ottimizzazione SEO con intelligenza artificiale di nuova generazione.
           </p>
         </div>
         
@@ -108,7 +110,7 @@ export const LoginPage = () => {
         </div>
         
         <p className="text-slate-600 text-[10px] uppercase font-bold tracking-[0.2em] relative z-10">
-          &copy; {new Date().getFullYear()} GeoS. Premium Workspace.
+          &copy; {new Date().getFullYear()} SEO Antigravity. Premium AI Intelligence.
         </p>
       </div>
       
@@ -116,11 +118,11 @@ export const LoginPage = () => {
       <div className="flex-1 flex items-center justify-center p-8 bg-[#f9fafb]">
         <div className="w-full max-w-sm">
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-12 justify-center">
-            <div className="w-8 h-8 bg-black rounded flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-slate-900 tracking-widest uppercase text-sm">SEO Engine</span>
+          <div className="lg:hidden flex items-center gap-3 mb-12 justify-center text-center">
+             <div className="flex flex-col leading-none">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 mb-1">SEO</span>
+                <span className="text-2xl font-black text-slate-900 tracking-tighter">Antigravity</span>
+             </div>
           </div>
           
           <div className="space-y-8">
