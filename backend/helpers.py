@@ -303,12 +303,14 @@ async def generate_image_pollinations(prompt: str, user_id: str, model: str = "f
     import urllib.parse
     from storage import put_object, APP_NAME
     
-    # Pollinations can fail with 500 if the prompt is too long or has too many special chars
-    safe_prompt = prompt[:500] if len(prompt) > 500 else prompt
+    # Pollinations can fail with 400/500 if the prompt is too long or complex
+    # Let's cap it at 300 characters for free providers to be safe
+    safe_prompt = prompt[:300] if len(prompt) > 300 else prompt
     
     seed = random.randint(1, 1000000)
     encoded_prompt = urllib.parse.quote(safe_prompt)
-    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model={model}&width=1024&height=1024&nologo=true&seed={seed}"
+    # Use direct pollinations.ai domain which is often more stable for the generation redirect
+    image_url = f"https://pollinations.ai/p/{encoded_prompt}?model={model}&width=1024&height=1024&nologo=true&seed={seed}"
     
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
@@ -382,8 +384,8 @@ async def generate_image_horde(prompt: str, user_id: str) -> dict:
             
             job_id = submit_res.json()["id"]
             
-            # Poll for results (max 60s)
-            for _ in range(12):
+            # Poll for results (max 120s)
+            for _ in range(24):
                 await asyncio.sleep(5)
                 status_res = await client.get(f"https://stablehorde.net/api/v2/generate/status/{job_id}", headers=headers, timeout=10.0)
                 if status_res.status_code == 200:
@@ -478,7 +480,7 @@ async def generate_image_together(prompt: str, user_id: str, api_key: str = None
 async def generate_image_prompt(llm_config: dict, title: str) -> str:
     """Generate a descriptive prompt for an AI image based on the article title."""
     try:
-        sys = "Sei un esperto di prompt per Generative AI. Crea un prompt in INGLESE per un'immagine fotorealistica di alta qualità basata sul titolo dell'articolo fornito. Sii descrittivo ma conciso. Non includere testo nell'immagine. Restituisci SOLO il prompt."
+        sys = "Sei un esperto di prompt per Generative AI. Crea un prompt in INGLESE per un'immagine fotorealistica di alta qualità basata sul titolo fornito. Sii MOLTO CONCISO (max 40 parole). Non includere testo nell'immagine. Restituisci SOLO il prompt."
         user = f"Titolo Articolo: {title}"
         prompt = await generate_with_rotation(llm_config, sys, user)
         if prompt:
