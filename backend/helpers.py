@@ -1308,7 +1308,19 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
             await asyncio.sleep(2 * (attempt + 1))
 
     if not search_urls:
-        logger.warning(f"SERP search failed after 3 attempts for '{keyword}'")
+        logger.warning(f"SERP search (Lite) failed after 3 attempts for '{keyword}'. Attempting fallback...")
+        try:
+            # Try our other search helper which uses the DDGS library (different API)
+            fallback_res = await web_search_text(keyword, max_results=num_results)
+            if fallback_res:
+                for r in fallback_res:
+                    search_urls.append({"url": r["url"], "title": r["title"], "description": r["body"]})
+                logger.info(f"✓ Fallback SERP search succeeded with {len(search_urls)} results.")
+        except Exception as fe:
+            logger.error(f"Fallback search also failed: {fe}")
+
+    if not search_urls:
+        logger.warning(f"All SERP search attempts failed for '{keyword}'")
         return []
 
     async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
@@ -1721,8 +1733,8 @@ async def web_search_text(query: str, max_results: int = 5) -> list:
         for r in results:
             formatted.append({
                 "title": r.get("title", ""),
-                "body": r.get("body", ""),
-                "url": r.get("href", ""),
+                "body": r.get("body", r.get("snippet", "")),
+                "url": r.get("href", r.get("url", "")),
             })
         return formatted
     except Exception as e:
