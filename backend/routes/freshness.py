@@ -78,9 +78,17 @@ async def freshness_audit(client_id: str, request: dict, current_user: dict = De
 
     articles = request.get("articles", [])[:10]
     
+    # Fetch Global SEO/GEO Guidelines
+    global_settings = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
+    global_g = global_settings.get("seo_geo_guidelines", []) if global_settings else []
+    guidelines_text = "\n".join([f"- {g}" for g in global_g])
+
     prompt = (
         "Sei un SEO Technical Expert. Esamina questi articoli (titolo e keyword attili) che necessitano "
         "di un aggiornamento 'Freshness' perché sono datati o underperforming.\n\n"
+        "### REGOLE PADRE SEO/GEO (DA SEGUIRE RIGOROSAMENTE):\n"
+        f"{guidelines_text}\n\n"
+        "### TASK:\n"
         "Per ognuno fornisci 1 singola indicazione strategica focalizzata su:\n"
         "- Miglioramento Semantico e LSI\n"
         "- Ottimizzazione dell'intento di ricerca\n"

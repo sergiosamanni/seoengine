@@ -1427,9 +1427,19 @@ async def generate_internal_link_update(provider: str, api_key: str, model: str,
                                         old_article_title: str, old_article_content: str, 
                                         new_article_title: str, new_article_keyword: str, new_article_url: str) -> str:
     """Generates a new paragraph to be appended to an old article, which links to the new article."""
-    system_prompt = """Sei un esperto SEO responsabile dell'internal linking.
+    # Fetch Global SEO/GEO Guidelines
+    from database import db
+    global_settings = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
+    global_g = global_settings.get("seo_geo_guidelines", []) if global_settings else []
+    guidelines_text = "\n".join([f"- {g}" for g in global_g])
+
+    system_prompt = f"""Sei un esperto SEO responsabile dell'internal linking e copywriting strategico.
 Il tuo compito è scrivere UN SINGOLO PARAGRAFO (2-3 frasi) da aggiungere alla fine di un articolo esistente per linkare un nuovo articolo appena pubblicato sullo stesso sito.
-REGOLE RIGIDE:
+
+### REGOLE PADRE SEO/GEO (DA SEGUIRE RIGOROSAMENTE):
+{guidelines_text}
+
+### REGOLE RIGIDE LINKING:
 1. Usa "anchor text" SEO-friendly: breve (max 5 parole), rilevante e pertinente (exact-match o varianti naturali di keyword per il nuovo articolo).
 2. Evita anchor text generici ("clicca qui", "leggi di più", "questo articolo").
 3. Assicurati che il paragrafo si leghi in modo naturale ("Se ti è piaciuto questo argomento...", "Per approfondire...", ecc.).
@@ -1444,7 +1454,7 @@ Titolo: {new_article_title}
 Keyword Rilevante: {new_article_keyword}
 URL: {new_article_url}
 
-Scrivi il paragrafo HTML con il link interno.
+Scrivi il paragrafo HTML con il link interno seguendo le REGOLE PADRE.
 """
     try:
         content = await generate_with_llm(provider, api_key, model, temperature, system_prompt, user_prompt)

@@ -222,10 +222,19 @@ async def refine_objective(request: dict, current_user: dict = Depends(get_curre
     llm_config = config.get("llm", {}) or config.get("openai", {})
     kb = config.get("knowledge_base", {})
 
+    # Fetch Global SEO/GEO Guidelines
+    global_settings = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
+    global_g = global_settings.get("seo_geo_guidelines", []) if global_settings else []
+    guidelines_text = "\n".join([f"- {g}" for g in global_g])
+
     from helpers import generate_with_rotation
 
     sys_prompt = f"""Sei un esperto SEO Strategist. 
 Il tuo compito è migliorare e raffinare l' 'Obiettivo Strategico' per la generazione di un articolo.
+
+### REGOLE PADRE SEO/GEO (DA SEGUIRE RIGOROSAMENTE):
+{guidelines_text}
+
 Usa le informazioni della Knowledge Base del cliente ({client_doc.get('nome')}) e la strategia definita per creare un obiettivo chiaro, professionale e orientato ai risultati.
 
 KB CLIENTE:
