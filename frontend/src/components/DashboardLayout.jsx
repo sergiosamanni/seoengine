@@ -76,13 +76,15 @@ export const DashboardLayout = ({ children }) => {
     }
   };
 
-  const adminNav = [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'Utenti', icon: Users, path: '/users' },
+  const mainNav = [
+    { label: 'Clienti', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'GMB', icon: MapPin, path: '/gmb' },
     { label: 'Citazioni', icon: Globe, path: '/citations' },
-    { label: 'Activity Log', icon: Activity, path: '/activity-log' },
+    { label: 'SEO Autopilot', icon: Zap, path: '#' }, // Path dummy, apre il modal
+  ];
+  const secondaryNav = [
     { label: 'SEO/GEO Guidelines', icon: BookOpen, path: '/seo-geo-guidelines' },
+    { label: 'Activity Log', icon: Activity, path: '/activity-log' },
   ];
   const clientNav = [
     { label: 'Genera', icon: FileText, path: '/generate' },
@@ -148,48 +150,67 @@ export const DashboardLayout = ({ children }) => {
             <div>
               <p className="px-4 text-[9px] uppercase font-bold tracking-[0.2em] text-slate-300 mb-4">Main Menu</p>
               <nav className="space-y-1">
-                {navItems.map((item) => {
+                {(isAdmin ? mainNav : clientNav).map((item) => {
                   const isActive = location.pathname === item.path ||
                     (item.path === '/dashboard' && location.pathname.startsWith('/clients'));
+                  
+                  const isAutopilot = item.label === 'SEO Autopilot';
+                  
                   return (
-                    <Link key={item.path} to={item.path}
-                       onClick={() => setSidebarOpen(false)}
-                       className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold tracking-tight transition-all duration-200 ${
+                    <div key={item.label} 
+                      onClick={() => {
+                        if (isAutopilot) {
+                          setShowNotifModal(true);
+                        } else {
+                          navigate(item.path);
+                          setSidebarOpen(false);
+                        }
+                      }}
+                      className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold tracking-tight transition-all duration-200 cursor-pointer ${
                          isActive 
                          ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' 
                          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                       }`}
-                       data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}>
+                       }`}>
                       <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400 opacity-60'}`} />
                       <span className="flex-1">{item.label}</span>
                       
-                      {item.label === 'Dashboard' && isAdmin && notifCount > 0 && (
-                        <div 
-                          onClick={(e) => { 
-                            e.preventDefault(); 
-                            e.stopPropagation(); 
-                            setShowNotifModal(true); 
-                          }}
-                          className="relative flex items-center justify-center cursor-pointer group/badge transition-all hover:scale-110"
-                        >
-                           {/* Premium Glow Effect */}
-                           <div className="absolute inset-0 bg-emerald-500 blur-[8px] opacity-40 group-hover:opacity-70 transition-opacity animate-pulse"></div>
-                           
-                           {/* Main Badge Body */}
-                           <div className="relative flex items-center gap-1.5 px-2.5 h-6 bg-emerald-500 text-white rounded-full border border-emerald-400/30 shadow-[0_0_15px_rgba(16,185,129,0.3)] backdrop-blur-md">
-                              <Zap className="w-2.5 h-2.5 fill-white" />
-                              <span className="text-[10px] font-black tracking-tighter leading-none">{notifCount}</span>
-                              
-                              {/* New indicator dot */}
-                              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-white rounded-full border-2 border-emerald-500 animate-bounce"></div>
+                      {isAutopilot && isAdmin && notifCount > 0 && (
+                        <div className="relative flex items-center justify-center">
+                           <div className="absolute inset-0 bg-emerald-500 blur-[6px] opacity-40 animate-pulse"></div>
+                           <div className="relative flex items-center gap-1 px-2 h-5 bg-emerald-500 text-white rounded-full border border-emerald-400/30">
+                              <span className="text-[9px] font-black">{notifCount}</span>
+                              <div className="w-1 h-1 bg-white rounded-full animate-ping"></div>
                            </div>
                         </div>
                       )}
-                    </Link>
+                    </div>
                   );
                 })}
               </nav>
             </div>
+
+            {isAdmin && (
+              <div className="pt-4 border-t border-slate-50">
+                <p className="px-4 text-[9px] uppercase font-bold tracking-[0.2em] text-slate-300 mb-4">Governance</p>
+                <nav className="space-y-1">
+                  {secondaryNav.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <Link key={item.path} to={item.path}
+                         onClick={() => setSidebarOpen(false)}
+                         className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold tracking-tight transition-all duration-200 ${
+                           isActive 
+                           ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' 
+                           : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                         }`}>
+                        <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400 opacity-60'}`} />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </nav>
+              </div>
+            )}
           </div>
         </ScrollArea>
 
