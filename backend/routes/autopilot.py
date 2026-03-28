@@ -46,6 +46,55 @@ async def get_autopilot_notifications(current_user: dict = Depends(get_current_u
         "unread_clients_count": len(client_ids)
     }
 
+@router.get("/autopilot-tasks/{client_id}")
+async def get_autopilot_tasks(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Fetch all pending autopilot tasks for a specific client."""
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    cursor = db.autopilot_tasks.find({"client_id": client_id})
+    tasks = []
+    async for t in cursor:
+        t["_id"] = str(t["_id"])
+        tasks.append(t)
+    return {"tasks": tasks}
+
+@router.post("/autopilot-tasks/{task_id}/approve")
+async def approve_autopilot_task(task_id: str, current_user: dict = Depends(get_current_user)):
+    """Approve a task. Logic varies based on task type."""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    task = await db.autopilot_tasks.find_one({"id": task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task non trovato")
+
+    # Mark as completed
+    await db.autopilot_tasks.update_one({"id": task_id}, {"$set": {"status": "completed", "executed_at": datetime.now(timezone.utc).isoformat()}})
+
+    # Optional: logic to actually launch the generation (ArticleService, etc.)
+    # For NEW_CONTENT, we might want to push it to the editorial queue
+    if task["type"] == "NEW_CONTENT" and "payload" in task:
+        client_id = task["client_id"]
+        client = await db.clients.find_one({"id": client_id})
+        current_queue = client.get("configuration", {}).get("editorial_queue", [])
+        
+        # Add to queue: [NEW] Title : Prompt/Outline
+        new_item = f"[AUTOPILOT] {task['title']} : {task['suggestion']}"
+        if new_item not in current_queue:
+            await db.clients.update_one({"id": client_id}, {"$push": {"configuration.editorial_queue": new_item}})
+
+    return {"status": "success", "message": "Task approvato"}
+
+@router.delete("/autopilot-tasks/{task_id}")
+async def refuse_autopilot_task(task_id: str, current_user: dict = Depends(get_current_user)):
+    """Refuse/delete a task."""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    await db.autopilot_tasks.delete_one({"id": task_id})
+    return {"status": "success"}
+
 @router.post("/autopilot/notifications/mark-seen")
 async def mark_notifications_seen(body: dict, current_user: dict = Depends(get_current_user)):
     """Mark all current notifications as seen."""
