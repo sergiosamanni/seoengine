@@ -178,7 +178,7 @@ export const DashboardLayout = ({ children }) => {
                       <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400 opacity-60'}`} />
                       <span className="flex-1">{item.label}</span>
                       
-                      {isAdmin && (
+                      {isAdmin && item.count !== undefined && (
                         <div className="relative flex items-center justify-center">
                            {item.count > 0 ? (
                              <>
