@@ -296,56 +296,65 @@ async def generate_with_openai(api_key: str, model: str, temperature: float, sys
 async def generate_image_pollinations(prompt: str, user_id: str, model: str = "flux") -> dict:
     """Generate an image using Pollinations.ai (Free, no key required).
     
-    Available models: flux (default), flux-realism, turbo, stable-diffusion
+    Uses image.pollinations.ai/prompt/ API endpoint with retry logic.
+    Available models: flux (default), flux-realism, turbo
     """
     import uuid
     import random
     import urllib.parse
     from storage import put_object, APP_NAME
+    from io import BytesIO
+    from PIL import Image
     
-    # Pollinations can fail with 400/500 if the prompt is too long or complex
-    # Let's cap it at 300 characters for free providers to be safe
     safe_prompt = prompt[:300] if len(prompt) > 300 else prompt
-    
     seed = random.randint(1, 1000000)
     encoded_prompt = urllib.parse.quote(safe_prompt)
-    # Use direct pollinations.ai domain which is often more stable for the generation redirect
-    image_url = f"https://pollinations.ai/p/{encoded_prompt}?model={model}&width=1024&height=1024&nologo=true&seed={seed}"
+    
+    # Use the API endpoint (image.pollinations.ai/prompt/) NOT the web UI (pollinations.ai/p/)
+    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model={model}&width=1024&height=1024&nologo=true&seed={seed}"
     
     headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "image/*"
     }
     
     async with httpx.AsyncClient(follow_redirects=True) as client:
         try:
-            logger.info(f"Pollinations/{model} request (len={len(safe_prompt)}): {image_url[:100]}...")
-            response = await client.get(image_url, headers=headers, timeout=90.0)
-            
-            if response.status_code != 200:
-                logger.error(f"Pollinations/{model} error status: {response.status_code}")
-                if response.status_code == 500:
-                   await asyncio.sleep(1)
-                   tiny_prompt = prompt[:200]
-                   tiny_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(tiny_prompt)}?model={model}&width=1024&height=1024&nologo=true&seed={seed+1}"
-                   logger.info(f"Retrying Pollinations/{model} with tiny prompt...")
-                   response = await client.get(tiny_url, headers=headers, timeout=60.0)
-                   if response.status_code != 200:
-                       raise Exception(f"Pollinations/{model} retry failed: {response.status_code}")
-                else:
+            # Retry loop: Pollinations image generation is async, may return HTML on first attempts
+            max_retries = 3
+            for attempt in range(max_retries):
+                logger.info(f"Pollinations/{model} attempt {attempt+1}/{max_retries} (len={len(safe_prompt)}): {image_url[:100]}...")
+                response = await client.get(image_url, headers=headers, timeout=120.0)
+                
+                if response.status_code == 401:
+                    raise Exception(f"Pollinations/{model} requires authentication (401)")
+                
+                if response.status_code != 200:
+                    logger.warning(f"Pollinations/{model} status {response.status_code} on attempt {attempt+1}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(5)
+                        continue
                     raise Exception(f"Pollinations/{model} error: {response.status_code}")
+                
+                ct = response.headers.get("content-type", "")
+                if ct.startswith("image/"):
+                    break  # Got an image!
+                
+                # Got HTML/text instead of image - generation might still be processing
+                logger.warning(f"Pollinations/{model} returned {ct} on attempt {attempt+1}, retrying in 8s...")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(8)
+                    # Change seed on retry for a fresh attempt
+                    seed += 1
+                    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model={model}&width=1024&height=1024&nologo=true&seed={seed}"
+                else:
+                    raise Exception(f"Pollinations returned non-image content after {max_retries} attempts: {ct}")
             
-            if not response.headers.get("content-type", "").startswith("image/"):
-                raise Exception(f"Pollinations returned non-image content: {response.headers.get('content-type')}")
-            
-            # Convert to JPEG in-memory to guarantee compatibility with PIL and WordPress
+            # Convert to JPEG in-memory for WordPress compatibility
             img_bytes = response.content
             try:
-                from io import BytesIO
-                from PIL import Image
                 with Image.open(BytesIO(img_bytes)) as pil_img:
-                    if pil_img.mode in ("RGBA", "P", "LA"):
-                        pil_img = pil_img.convert("RGB")
-                    elif pil_img.mode != "RGB":
+                    if pil_img.mode != "RGB":
                         pil_img = pil_img.convert("RGB")
                     buf = BytesIO()
                     pil_img.save(buf, format="JPEG", quality=90, optimize=True)
@@ -512,10 +521,106 @@ async def generate_image_prompt(llm_config: dict, title: str) -> str:
     return f"Professional high-quality photography for an article about '{title}', elegant, modern, clean composition."
 
 
+async def generate_image_from_web(prompt: str, user_id: str) -> dict:
+    """Search for a relevant stock photo online, download it, and store it.
+    Uses DDG image search with Wikimedia Commons fallback.
+    This is the most reliable fallback since it doesn't depend on AI generation."""
+    import uuid
+    from io import BytesIO
+    from PIL import Image
+    from storage import put_object, APP_NAME
+    
+    # Extract search keywords from the AI prompt (simplify for stock photo search)
+    # Remove AI-specific language like "photorealistic", "high quality", etc.
+    search_query = prompt
+    for noise in ["photorealistic", "Photorealistic", "high-quality", "high quality", 
+                  "professional", "Professional", "elegant", "modern", "image of", "photo of",
+                  "photography", "depicting", "showing", "A ", "an ", "the "]:
+        search_query = search_query.replace(noise, "")
+    search_query = " ".join(search_query.split())[:100]  # Clean up whitespace, limit length
+    
+    logger.info(f"Web stock photo search for: '{search_query}'")
+    
+    # Search for images
+    results = await web_search_images(search_query, max_results=5)
+    if not results:
+        # Try with even simpler keywords
+        simple_query = " ".join(search_query.split()[:3])
+        logger.info(f"No results, retrying with simpler query: '{simple_query}'")
+        results = await web_search_images(simple_query, max_results=5)
+    
+    if not results:
+        raise Exception(f"No stock photos found for '{search_query}'")
+    
+    # Try to download the first available image
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        for idx, img_result in enumerate(results):
+            img_url = img_result.get("image", "")
+            if not img_url:
+                continue
+            try:
+                logger.info(f"Downloading stock image {idx+1}/{len(results)}: {img_url[:80]}...")
+                resp = await client.get(img_url, headers={
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                    "Accept": "image/*"
+                }, timeout=30.0)
+                
+                if resp.status_code != 200:
+                    logger.warning(f"Stock image download failed: {resp.status_code}")
+                    continue
+                
+                ct = resp.headers.get("content-type", "")
+                if not ct.startswith("image/"):
+                    logger.warning(f"Stock image URL returned non-image: {ct}")
+                    continue
+                
+                # Convert to JPEG for WordPress compatibility
+                img_bytes = resp.content
+                try:
+                    with Image.open(BytesIO(img_bytes)) as pil_img:
+                        if pil_img.mode != "RGB":
+                            pil_img = pil_img.convert("RGB")
+                        # Resize if too large
+                        max_size = (1200, 1200)
+                        if pil_img.width > max_size[0] or pil_img.height > max_size[1]:
+                            pil_img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                        buf = BytesIO()
+                        pil_img.save(buf, format="JPEG", quality=85, optimize=True)
+                        img_bytes = buf.getvalue()
+                except Exception as pil_err:
+                    logger.warning(f"PIL conversion failed for stock image: {pil_err}")
+                    # Only continue if it's actually image bytes
+                    if len(img_bytes) < 1000:
+                        continue
+                
+                file_id = str(uuid.uuid4())
+                path = f"{APP_NAME}/uploads/{user_id}/{file_id}.jpg"
+                content_type = "image/jpeg"
+                result = put_object(path, img_bytes, content_type)
+                file_doc = {
+                    "id": file_id,
+                    "storage_path": result["path"],
+                    "original_filename": f"stock-{file_id[:8]}.jpg",
+                    "content_type": content_type,
+                    "size": len(img_bytes),
+                    "user_id": user_id,
+                    "is_deleted": False,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.files.insert_one(file_doc)
+                logger.info(f"✓ Stock photo downloaded and stored ({len(img_bytes)} bytes)")
+                return {"id": file_id, "url": img_url, "storage_path": result["path"], "provider": "web_stock"}
+            except Exception as dl_err:
+                logger.warning(f"Failed to download stock image {idx+1}: {dl_err}")
+                continue
+    
+    raise Exception("All stock photo download attempts failed")
+
+
 async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: str = None, together_key: str = None) -> dict:
     """Try multiple image generation providers in sequence with smart fallback.
     
-    Chain: DALL-E (if key) → Pollinations/flux-realism → Pollinations/turbo → Together.ai/Flux-Schnell → AI Horde
+    Chain: DALL-E (if key) → Together.ai (if key) → Pollinations/flux → Pollinations/turbo → Web Stock Photo → AI Horde
     """
     errors = []
     
@@ -532,7 +637,7 @@ async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: st
             logger.warning(err_msg)
             errors.append(err_msg)
 
-    # 2. Try Together.ai Flux-Schnell if key is provided (Higher reliability than free)
+    # 2. Try Together.ai Flux-Schnell if key is provided
     env_together_key = together_key or os.environ.get("TOGETHER_API_KEY", "")
     if env_together_key and len(env_together_key) > 5:
         try:
@@ -546,7 +651,7 @@ async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: st
             logger.warning(err_msg)
             errors.append(err_msg)
 
-    # 3. Try Pollinations with flux-realism model (Free, high quality)
+    # 3. Try Pollinations with flux model (uses new API endpoint with retry)
     try:
         logger.info("Attempting image generation with Pollinations (flux-realism)...")
         result = await generate_image_pollinations(prompt, user_id, model="flux-realism")
@@ -557,7 +662,7 @@ async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: st
         logger.warning(err_msg)
         errors.append(err_msg)
 
-    # 4. Try Pollinations with turbo model (faster, free)
+    # 4. Try Pollinations with turbo model
     try:
         logger.info("Attempting image generation with Pollinations (turbo)...")
         result = await generate_image_pollinations(prompt, user_id, model="turbo")
@@ -568,7 +673,18 @@ async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: st
         logger.warning(err_msg)
         errors.append(err_msg)
 
-    # 5. Try AI Horde (completely anonymous free, but slow)
+    # 5. Web stock photo search (very reliable, doesn't need AI generation)
+    try:
+        logger.info("Attempting web stock photo search as fallback...")
+        result = await generate_image_from_web(prompt, user_id)
+        logger.info("✓ Web stock photo succeeded")
+        return result
+    except Exception as e:
+        err_msg = f"Web stock photo failed: {str(e)}"
+        logger.warning(err_msg)
+        errors.append(err_msg)
+
+    # 6. Try AI Horde (completely anonymous free, but slow and unreliable)
     try:
         logger.info("Attempting image generation with AI Horde...")
         result = await generate_image_horde(prompt[:300], user_id)
