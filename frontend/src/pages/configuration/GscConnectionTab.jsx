@@ -79,9 +79,8 @@ export const GscConnectionTab = ({ clientId, getAuthHeaders, isAdmin }) => {
         }
         setConnecting(true);
         try {
-            // Use current window origin for fallback, but backend handles callback routing
-            const currentRedirectUri = `${window.location.origin}/api/gsc/callback`;
-            const res = await axios.get(`${API}/gsc/authorize/${clientId}?redirect_uri=${encodeURIComponent(currentRedirectUri)}`, { 
+            // Let the backend determine the best redirect URI based on its own domain
+            const res = await axios.get(`${API}/gsc/authorize/${clientId}`, { 
                 headers: getAuthHeaders() 
             });
             window.location.href = res.data.authorization_url;
