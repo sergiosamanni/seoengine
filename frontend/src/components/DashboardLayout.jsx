@@ -8,6 +8,10 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { API_URL as API } from '../config';
+import { 
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter 
+} from './ui/dialog';
+import { Badge } from './ui/badge';
 import {
   Select,
   SelectContent,
@@ -24,6 +28,12 @@ export const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [clients, setClients] = useState([]);
+  
+  // Autopilot Notifications State
+  const [notifications, setNotifications] = useState([]);
+  const [notifCount, setNotifCount] = useState(0);
+  const [showNotifModal, setShowNotifModal] = useState(false);
+  const [checkingNotifs, setCheckingNotifs] = useState(false);
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
@@ -34,6 +44,37 @@ export const DashboardLayout = ({ children }) => {
         .catch(err => console.error('Error fetching plants for switcher', err));
     }
   }, [user?.client_ids, isAdmin, getAuthHeaders]);
+
+  // Notifications Polling
+  const fetchNotifications = React.useCallback(async () => {
+    if (!isAdmin || !user) return;
+    try {
+      setCheckingNotifs(true);
+      const res = await axios.get(`${API}/autopilot/notifications`, { headers: getAuthHeaders() });
+      setNotifications(res.data.notifications || []);
+      setNotifCount(res.data.count || 0);
+    } catch (e) {
+      console.error("Notif fetch failed", e);
+    } finally {
+      setCheckingNotifs(false);
+    }
+  }, [isAdmin, user, getAuthHeaders]);
+
+  React.useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 1000 * 60 * 5); // 5 mins
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  const handleMarkSeen = async () => {
+    try {
+      await axios.post(`${API}/autopilot/notifications/mark-seen`, {}, { headers: getAuthHeaders() });
+      setNotifCount(0);
+      setNotifications([]);
+    } catch (e) {
+      console.error("Mark seen failed", e);
+    }
+  };
 
   const adminNav = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
@@ -113,14 +154,28 @@ export const DashboardLayout = ({ children }) => {
                   return (
                     <Link key={item.path} to={item.path}
                        onClick={() => setSidebarOpen(false)}
-                       className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold tracking-tight transition-all duration-200 ${
+                       className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold tracking-tight transition-all duration-200 ${
                          isActive 
                          ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' 
                          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                        }`}
                        data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}>
                       <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400 opacity-60'}`} />
-                      {item.label}
+                      <span className="flex-1">{item.label}</span>
+                      
+                      {item.label === 'Dashboard' && isAdmin && notifCount > 0 && (
+                        <div 
+                          onClick={(e) => { 
+                            e.preventDefault(); 
+                            e.stopPropagation(); 
+                            setShowNotifModal(true); 
+                          }}
+                          className="flex items-center justify-center min-w-5 h-5 bg-emerald-500 text-white text-[10px] rounded-full shadow-lg shadow-emerald-200 animate-pulse cursor-pointer hover:scale-110 transition-transform"
+                        >
+                           <Zap className="w-2.5 h-2.5 fill-white mr-0.5" />
+                           {notifCount}
+                        </div>
+                      )}
                     </Link>
                   );
                 })}
@@ -153,21 +208,75 @@ export const DashboardLayout = ({ children }) => {
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-auto bg-[#f8fafc]">
-        {/* Mobile Navbar */}
-        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[#f1f3f6] px-6 py-4 flex items-center gap-4 lg:hidden">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-[#f1f3f6]" data-testid="mobile-menu-btn">
-            <Menu className="w-5 h-5 text-slate-700" />
-          </button>
-          <span className="text-sm font-bold text-slate-900 tracking-tight">Antigravity Console</span>
-        </div>
-
-        {/* Dynamic Content Container */}
-        <div className="p-6 sm:p-10 max-w-7xl mx-auto min-h-full">
-          {children}
-        </div>
-      </main>
+      {/* Autopilot Notifications Dialog */}
+      <Dialog open={showNotifModal} onOpenChange={setShowNotifModal}>
+        <DialogContent className="max-w-2xl bg-white rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+          <div className="bg-slate-900 p-8 text-white relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+                <Zap className="w-48 h-48 fill-white" />
+             </div>
+             <div className="relative z-10">
+                <Badge className="bg-emerald-500/20 text-emerald-300 border-none mb-3 text-[10px] font-bold uppercase tracking-widest px-3">Aggiornamento {new Date().toLocaleDateString()}</Badge>
+                <DialogTitle className="text-2xl font-black tracking-tighter">SEO Autopilot Intelligence</DialogTitle>
+                <DialogDescription className="text-slate-400 mt-2 text-sm font-medium">Abbiamo analizzato i tuoi domini e trovato nuove opportunità di ottimizzazione.</DialogDescription>
+             </div>
+          </div>
+          
+          <ScrollArea className="max-h-[60vh] p-6">
+            <div className="space-y-4">
+              {notifications.length === 0 ? (
+                <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
+                   <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 border border-slate-100">
+                      <LayoutDashboard className="w-8 h-8" />
+                   </div>
+                   <p className="text-sm font-bold text-slate-400">Nessuna nuova segnalazione autopilot.</p>
+                </div>
+              ) : (
+                notifications.map((task) => (
+                  <div 
+                    key={task.id} 
+                    className="group bg-slate-50/50 border border-slate-100 p-5 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-100 hover:border-slate-200 transition-all cursor-pointer"
+                    onClick={() => {
+                        setShowNotifModal(false);
+                        navigate(`/clients/${task.client_id}/generate?tab=autopilot`);
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-[#1c64f2] bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">{task.client_name}</span>
+                                <span className="text-[10px] font-bold text-slate-400">• {new Date(task.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <h4 className="text-[14px] font-black tracking-tight text-slate-900 group-hover:text-emerald-600 transition-colors">{task.title}</h4>
+                            <p className="text-[11px] text-slate-500 mt-2 font-medium leading-relaxed italic">"{task.reason}"</p>
+                        </div>
+                        <div className="w-10 h-10 bg-white rounded-xl border border-slate-100 flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                            <Zap className="w-4 h-4" />
+                        </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+          
+          <div className="p-6 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between">
+              <Button 
+                variant="ghost" 
+                className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900"
+                onClick={() => { handleMarkSeen(); setShowNotifModal(false); }}
+              >
+                Segna tutti come visti
+              </Button>
+              <Button 
+                className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl px-6 h-10 text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-slate-200"
+                onClick={() => setShowNotifModal(false)}
+              >
+                Chiudi
+              </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
