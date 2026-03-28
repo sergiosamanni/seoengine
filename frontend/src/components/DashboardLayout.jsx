@@ -170,10 +170,19 @@ export const DashboardLayout = ({ children }) => {
                             e.stopPropagation(); 
                             setShowNotifModal(true); 
                           }}
-                          className="flex items-center justify-center min-w-5 h-5 bg-emerald-500 text-white text-[10px] rounded-full shadow-lg shadow-emerald-200 animate-pulse cursor-pointer hover:scale-110 transition-transform"
+                          className="relative flex items-center justify-center cursor-pointer group/badge transition-all hover:scale-110"
                         >
-                           <Zap className="w-2.5 h-2.5 fill-white mr-0.5" />
-                           {notifCount}
+                           {/* Premium Glow Effect */}
+                           <div className="absolute inset-0 bg-emerald-500 blur-[8px] opacity-40 group-hover:opacity-70 transition-opacity animate-pulse"></div>
+                           
+                           {/* Main Badge Body */}
+                           <div className="relative flex items-center gap-1.5 px-2.5 h-6 bg-emerald-500 text-white rounded-full border border-emerald-400/30 shadow-[0_0_15px_rgba(16,185,129,0.3)] backdrop-blur-md">
+                              <Zap className="w-2.5 h-2.5 fill-white" />
+                              <span className="text-[10px] font-black tracking-tighter leading-none">{notifCount}</span>
+                              
+                              {/* New indicator dot */}
+                              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-white rounded-full border-2 border-emerald-500 animate-bounce"></div>
+                           </div>
                         </div>
                       )}
                     </Link>
