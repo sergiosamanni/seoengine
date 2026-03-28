@@ -79,8 +79,8 @@ export const LoginPage = () => {
             <Globe className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="flex flex-col leading-none pt-0.5">
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 -mb-1">SEO</span>
-            <span className="text-lg font-black tracking-tighter text-white">Antigravity</span>
+            <span className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-400 -mb-1">SEO</span>
+            <span className="text-md font-light tracking-tighter text-white">Antigravity</span>
           </div>
         </div>
 
@@ -120,8 +120,8 @@ export const LoginPage = () => {
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-12 justify-center text-center">
              <div className="flex flex-col leading-none">
-                <span className="text-[12px] font-black uppercase tracking-[0.5em] text-slate-400 mb-1">SEO</span>
-                <span className="text-xl font-black text-slate-900 tracking-tighter">Antigravity</span>
+                <span className="text-[14px] font-black uppercase tracking-[0.5em] text-slate-400 mb-1">SEO</span>
+                <span className="text-lg font-light text-slate-900 tracking-tighter">Antigravity</span>
              </div>
           </div>
           
