@@ -109,8 +109,8 @@ export const DashboardLayout = ({ children }) => {
                <Globe className="w-5 h-5 text-emerald-500" />
             </div>
             <div className="leading-none flex flex-col pt-1">
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 -mb-0.5">SEO</span>
-              <h1 className="text-xl font-black tracking-tighter text-emerald-500 leading-none">
+              <span className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-400 -mb-0.5">SEO</span>
+              <h1 className="text-lg font-black tracking-tighter text-emerald-500 leading-none">
                 Antigravity
               </h1>
             </div>
