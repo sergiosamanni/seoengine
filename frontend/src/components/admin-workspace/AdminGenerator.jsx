@@ -65,6 +65,7 @@ const AdminGenerator = ({
     const [singleKeywords, setSingleKeywords] = useState('');
     const [singleObjective, setSingleObjective] = useState('');
     const [singleGenerating, setSingleGenerating] = useState(false);
+    const [refiningObjective, setRefiningObjective] = useState(false);
     const [singleResult, setSingleResult] = useState(null);
     const [singleScheduledDate, setSingleScheduledDate] = useState('');
 
@@ -284,6 +285,44 @@ const AdminGenerator = ({
     const strategyDone = contentStrategy.funnel_stage && contentStrategy.modello_copywriting;
     const serpDone = serpData && serpData.competitors?.length > 0;
     const promptDone = advancedPrompt.trim().length > 20;
+
+    // Auto-fill Strategic Objective based on Step 1, 4 and KB
+    useEffect(() => {
+        if (step === 5 && genMode === 'single' && !singleObjective) {
+            const kb = client?.configuration?.knowledge_base || {};
+            const strategy = contentStrategy || {};
+            
+            const autoObjective = `Obiettivo: Generare un contenuto ${strategy.funnel_stage || 'TOFU'} seguendo il modello ${strategy.modello_copywriting || 'PAS'}. 
+Target: ${kb.pubblico_target_primario || 'Audience generale'}.
+Focus: ${singleTitle || singleKeywords || 'Keyword principale'}.
+Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nello Step 4.' : 'Ottimizzazione standard.'}`;
+            
+            setSingleObjective(autoObjective);
+        }
+    }, [step, genMode, contentStrategy, advancedPrompt, client]);
+
+    const handleImproveObjective = async () => {
+        if (!effectiveClientId) return;
+        setRefiningObjective(true);
+        try {
+            const res = await axios.post(`${API}/articles/refine-objective`, {
+                client_id: effectiveClientId,
+                objective: singleObjective,
+                strategy: contentStrategy,
+                prompt_context: advancedPrompt.substring(0, 500) // Pass snippet of prompt for context
+            }, { headers: getAuthHeaders() });
+            
+            if (res.data.refined_objective) {
+                setSingleObjective(res.data.refined_objective);
+                toast.success("Obiettivo migliorato con l'IA!");
+            }
+        } catch (error) {
+            toast.error("Errore durante il miglioramento dell'obiettivo");
+            console.error(error);
+        } finally {
+            setRefiningObjective(false);
+        }
+    };
 
 
     const handleAdminImageUpload = async (e) => {
@@ -1029,8 +1068,20 @@ const AdminGenerator = ({
                                                 />
                                                 <p className="text-[10px] text-slate-400">Inserisci la parola chiave principale per l'ottimizzazione SEO</p>
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-bold text-slate-700">Obiettivo Strategico</Label>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="text-sm font-bold text-slate-700">Obiettivo Strategico</Label>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        onClick={handleImproveObjective}
+                                                        disabled={refiningObjective || !singleObjective}
+                                                        className="h-8 px-3 rounded-lg text-[10px] font-bold uppercase tracking-wider text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border border-indigo-100 shadow-sm transition-all"
+                                                    >
+                                                        {refiningObjective ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
+                                                        Migliora con IA
+                                                    </Button>
+                                                </div>
                                                 <Textarea 
                                                     className="min-h-[140px] rounded-xl text-sm bg-slate-50/50 border-slate-200 focus-visible:ring-orange-500 transition-all leading-relaxed" 
                                                     value={singleObjective} 

@@ -204,6 +204,58 @@ async def generate_topic_image(body: dict, current_user: dict = Depends(get_curr
         raise HTTPException(status_code=500, detail=detail)
 
 
+@router.post("/articles/refine-objective")
+async def refine_objective(request: dict, current_user: dict = Depends(get_current_user)):
+    client_id = request.get("client_id")
+    objective = request.get("objective", "")
+    strategy = request.get("strategy", {})
+    prompt_context = request.get("prompt_context", "")
+
+    if not client_id:
+        raise HTTPException(status_code=400, detail="client_id richiesto")
+
+    client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+
+    config = client_doc.get("configuration") or {}
+    llm_config = config.get("llm", {}) or config.get("openai", {})
+    kb = config.get("knowledge_base", {})
+
+    from helpers import generate_with_rotation
+
+    sys_prompt = f"""Sei un esperto SEO Strategist. 
+Il tuo compito è migliorare e raffinare l' 'Obiettivo Strategico' per la generazione di un articolo.
+Usa le informazioni della Knowledge Base del cliente ({client_doc.get('nome')}) e la strategia definita per creare un obiettivo chiaro, professionale e orientato ai risultati.
+
+KB CLIENTE:
+- Business: {kb.get('descrizione_attivita')}
+- Target: {kb.get('pubblico_target_primario')}
+- Punti di forza: {', '.join(kb.get('punti_di_forza', []))}
+
+STRATEGIA DEFINITA:
+- Funnel: {strategy.get('funnel_stage')}
+- Modello: {strategy.get('modello_copywriting')}
+- Intent: {strategy.get('search_intent')}
+
+Il tuo obiettivo deve istruire l'agente che scriverà l'articolo su:
+1. Angolo di attacco (angle)
+2. Tono e stile (basandosi sulla KB)
+3. Azione desiderata (CTA)
+4. Specifiche tecniche SEO (es. internal linking o stile dei titoli)
+
+Restituisci SOLO il testo dell'obiettivo raffinato, senza commenti o introduzioni. Sii conciso ma molto denso di valore (max 120 parole)."""
+
+    user_prompt = f"Obiettivo Attuale: {objective}\nContesto Prompt Precedente: {prompt_context}"
+
+    try:
+        refined = await generate_with_rotation(llm_config, sys_prompt, user_prompt)
+        return {"refined_objective": refined.strip()}
+    except Exception as e:
+        logger.error(f"Error refining objective: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/articles/import-external-image")
 async def import_external_image(request: dict, current_user: dict = Depends(get_current_user)):
     url = request.get("url")
