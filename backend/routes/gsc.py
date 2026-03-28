@@ -24,12 +24,21 @@ def _get_gsc_redirect_uri(base_url: str = None):
     override = os.environ.get("GSC_REDIRECT_URI", "")
     if override:
         return override
+    
+    final_url = ""
     if base_url:
-        return f"{base_url.rstrip('/')}/api/gsc/callback"
-    frontend_url = os.environ.get("FRONTEND_URL", "")
-    if not frontend_url:
-        raise HTTPException(status_code=500, detail="FRONTEND_URL non configurato")
-    return f"{frontend_url}/api/gsc/callback"
+        final_url = f"{base_url.rstrip('/')}/api/gsc/callback"
+    else:
+        frontend_url = os.environ.get("FRONTEND_URL", "")
+        if not frontend_url:
+            raise HTTPException(status_code=500, detail="FRONTEND_URL non configurato")
+        final_url = f"{frontend_url}/api/gsc/callback"
+        
+    # Force HTTPS for non-localhost domains (Google requirement)
+    if "localhost" not in final_url and "127.0.0.1" not in final_url:
+        final_url = final_url.replace("http://", "https://")
+    
+    return final_url
 
 
 def _require_gsc_credentials():
