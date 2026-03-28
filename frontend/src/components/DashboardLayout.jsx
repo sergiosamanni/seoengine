@@ -78,10 +78,10 @@ export const DashboardLayout = ({ children }) => {
   };
 
   const mainNav = [
-    { label: 'Reddit', icon: MessageSquare, path: '/reddit', badge: 'NEW' },
     { label: 'Clienti', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'GMB', icon: MapPin, path: '/gmb' },
-    { label: 'Reddit/Citazioni', icon: MessageSquare, path: '/reddit' },
+    { label: 'Citazioni', icon: Globe, path: '/citations' },
+    { label: 'Reddit', icon: MessageSquare, path: '/reddit', badge: 'NEW' },
     { label: 'SEO Autopilot', icon: Zap, path: '#' }, // Path dummy, apre il modal
   ];
   const secondaryNav = [
@@ -91,7 +91,7 @@ export const DashboardLayout = ({ children }) => {
   const clientNav = [
     { label: 'Genera', icon: FileText, path: '/generate' },
   ];
-  const navItems = isAdmin ? mainNav : clientNav; // Temporaneamente mantenuto per compatibilità o rimosso se non usato
+  const navItems = isAdmin ? mainNav : clientNav;
 
   return (
     <div className="flex h-screen bg-[#f8fafc]">
@@ -110,7 +110,7 @@ export const DashboardLayout = ({ children }) => {
             </div>
             <div className="leading-none">
               <h1 className="text-xl font-black tracking-tighter text-slate-900 leading-none">
-                G<span className="text-emerald-500">Ξo</span>S
+                G<span className="text-emerald-500">eo</span>S
               </h1>
               <p className="text-[9px] text-slate-400 mt-1 uppercase tracking-[0.2em] font-bold">{isAdmin ? 'Enterprise' : 'Workspace'}</p>
             </div>
@@ -154,13 +154,7 @@ export const DashboardLayout = ({ children }) => {
             <div>
               <p className="px-4 text-[9px] uppercase font-bold tracking-[0.2em] text-slate-300 mb-4">Main Menu</p>
               <nav className="space-y-1">
-                <Link to="/reddit" className="group flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold tracking-tight text-slate-500 hover:text-slate-900 transition-all">
-                  <MessageSquare className="w-4 h-4 text-orange-500" />
-                  <span>Reddit</span>
-                  <Badge className="bg-orange-100 text-orange-600 border-none text-[8px] h-4">NEW AI</Badge>
-                </Link>
                 {(isAdmin ? mainNav : clientNav).map((item) => {
-                  if (item.label === 'Reddit') return null; // evitiamo duplicati se il map funziona
                   const isActive = location.pathname === item.path ||
                     (item.path === '/dashboard' && location.pathname.startsWith('/clients'));
                   
@@ -184,6 +178,10 @@ export const DashboardLayout = ({ children }) => {
                       <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400 opacity-60'}`} />
                       <span className="flex-1">{item.label}</span>
                       
+                      {item.badge && (
+                        <Badge className="bg-orange-100 text-orange-600 border-none text-[8px] h-4 font-black tracking-widest">{item.badge}</Badge>
+                      )}
+
                       {isAutopilot && isAdmin && notifCount > 0 && (
                         <div className="relative flex items-center justify-center">
                            <div className="absolute inset-0 bg-emerald-500 blur-[6px] opacity-40 animate-pulse"></div>
