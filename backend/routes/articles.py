@@ -107,15 +107,21 @@ async def publish_articles(request: ArticlePublish, current_user: dict = Depends
             failed.append({"id": article_id, "error": "Cliente non trovato"}); continue
         config = client.get("configuration", {})
         wp_config = config.get("wordpress", {})
-        if not wp_config.get("url_api"):
-            failed.append({"id": article_id, "error": "URL API WordPress non configurato"}); continue
-        if not wp_config.get("utente") or not wp_config.get("password_applicazione"):
-            failed.append({"id": article_id, "error": "Credenziali WordPress non configurate"}); continue
+        # Robust credential extraction (support aliases)
+        wp_user = wp_config.get("utente") or wp_config.get("username")
+        wp_pass = wp_config.get("password_applicazione") or wp_config.get("password")
+        wp_url = wp_config.get("url_api")
+        
+        if not wp_url:
+            failed.append({"id": article_id, "error": "URL API WordPress non configurato (url_api mancante)"}); continue
+        if not wp_user or not wp_pass:
+            failed.append({"id": article_id, "error": f"Credenziali WordPress non trovate per Arredo Horeca (mancano utente/pass)"}); continue
+            
         try:
             seo_metadata = article.get("seo_metadata", {})
             result = await publish_to_wordpress(
-                url=wp_config["url_api"], username=wp_config["utente"],
-                password=wp_config["password_applicazione"], title=article["titolo"],
+                url=wp_url, username=wp_user,
+                password=wp_pass, title=article["titolo"],
                 content=article["contenuto"], wp_status=wp_config.get("stato_pubblicazione", "draft"),
                 seo_metadata=seo_metadata, tags=seo_metadata.get("tags", []))
             await db.articles.update_one({"id": article_id}, {"$set": {
