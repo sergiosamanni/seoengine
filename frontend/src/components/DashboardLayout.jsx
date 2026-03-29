@@ -86,6 +86,7 @@ export const DashboardLayout = ({ children }) => {
   ];
   const secondaryNav = [
     { label: 'SEO/GEO Guidelines', icon: BookOpen, path: '/seo-geo-guidelines' },
+    ...(isAdmin ? [{ label: 'Utenti', icon: Users, path: '/users' }] : []),
     { label: 'Activity Log', icon: Activity, path: '/activity-log' },
   ];
   const clientNav = [
