@@ -374,11 +374,21 @@ async def simple_generate_article(request: SimpleGenerateRequest, current_user: 
 
     job_id = await ArticleService.create_job(client_id, 1)
     asyncio.create_task(ArticleService.run_simple_article_generation(
-        job_id, client_id, request.keyword, request.topic, request.publish_to_wordpress,
-        system_prompt, config.get("llm", {}), config.get("wordpress", {}), kb, 
-        {"servizio": request.keyword, "citta": kb.get("citta_principale", ""), "tipo": request.objective},
-        request.titolo_suggerito or "", request.content_type, request.image_ids or [], existing_published,
-        request.generate_cover
+        job_id=job_id,
+        client_id=client_id,
+        keyword=request.keyword,
+        topic=request.topic,
+        publish_to_wp=request.publish_to_wordpress, # Fix: Map correct parameter
+        system_prompt=system_prompt,
+        llm_config=config.get("llm", {}),
+        wp_config=config.get("wordpress", {}),
+        kb=kb,
+        combo={"servizio": request.keyword, "citta": kb.get("citta_principale", ""), "tipo": request.objective},
+        titolo_suggerito=request.titolo_suggerito or "",
+        content_type=request.content_type,
+        image_ids=request.image_ids or [],
+        existing_published=existing_published,
+        generate_cover=request.generate_cover
     ))
     return {"job_id": job_id, "status": "running", "keyword": request.keyword}
 
