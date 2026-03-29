@@ -9,7 +9,7 @@ from storage import put_object, get_object, ALLOWED_EXTENSIONS, MAX_FILE_SIZE, A
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
-JWT_SECRET = os.environ.get('JWT_SECRET')
+from auth import JWT_SECRET
 
 
 def _decode_token(token: str) -> dict:
