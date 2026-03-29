@@ -74,45 +74,44 @@ export const LoginPage = () => {
         </div>
 
         {/* Brand Tag */}
-        <div className="absolute top-10 left-10 flex items-center gap-3 z-10">
-          <div className="w-10 h-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center relative shadow-xl overflow-hidden">
+        <div className="absolute top-12 left-12 flex items-center gap-4 z-20">
+          <div className="w-10 h-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center relative overflow-hidden">
              <div className="absolute inset-0 bg-emerald-500/10"></div>
              <Globe className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="flex flex-col leading-none pt-0.5 ml-1">
-            <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-500 -mb-0.5">SEO</span>
-            <span className="text-[19px] font-black tracking-tighter text-white">Antigravity</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500 -mb-0.5">SEO</span>
+            <span className="text-[20px] font-black tracking-tighter text-white">Antigravity</span>
           </div>
         </div>
 
         {/* Hero Content */}
-        <div className="relative max-w-xl pr-10">
-          <h1 className="text-4xl lg:text-6xl font-black tracking-tighter text-white leading-none mb-6">
+        <div className="relative max-w-xl pr-10 pt-48 lg:pt-32">
+          <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-white leading-none mb-8">
             AI CONTENT <br />
             REVOLUTION <br />
-            <span className="text-emerald-500 italic underline decoration-white/5 underline-offset-8">Antigravity</span>.
+            <span className="text-emerald-500 italic underline decoration-white/5 underline-offset-[12px]">Antigravity</span>.
           </h1>
-          <p className="text-lg text-slate-400 font-medium leading-relaxed max-w-md mb-12">
+          <p className="text-lg text-slate-400 font-medium leading-relaxed max-w-sm mb-16">
             Generazione contenuti e ottimizzazione SEO con intelligenza artificiale di nuova generazione.
           </p>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4 max-w-md">
+          
+          <div className="space-y-6 max-w-sm">
             {features.map((feature, i) => (
-              <div 
-                key={feature.title}
-                className="p-6 rounded-2xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] transition-all duration-300 hover:scale-[1.01] group"
-              >
-                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-4 group-hover:bg-emerald-500/10 transition-colors">
-                    <feature.icon className="w-5 h-5 text-slate-400 group-hover:text-emerald-400 transition-colors" />
-                </div>
-                <h3 className="text-white text-[10px] font-black uppercase tracking-[0.2em] mb-1 opacity-70">{feature.title}</h3>
-                <p className="text-slate-500 text-[10px] leading-snug font-medium line-clamp-2">{feature.desc}</p>
+              <div key={feature.title} className="flex items-center gap-4 group">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <div>
+                    <h3 className="text-white text-[10px] font-black uppercase tracking-[0.2em] opacity-80">{feature.title}</h3>
+                    <p className="text-slate-500 text-[10px] font-medium tracking-tight">
+                        {feature.title === 'Generazione AI' ? 'Articoli SEO Strategici' : feature.desc}
+                    </p>
+                  </div>
               </div>
             ))}
+          </div>
         </div>
         
-        <p className="mt-12 text-slate-600 text-[10px] uppercase font-bold tracking-[0.3em] relative z-10">
+        <p className="mt-24 text-slate-600 text-[10px] uppercase font-bold tracking-[0.4em] relative z-10 opacity-50">
           &copy; {new Date().getFullYear()} SEO Antigravity. Premium AI Intelligence.
         </p>
       </div>
