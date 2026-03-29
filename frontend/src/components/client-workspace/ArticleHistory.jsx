@@ -51,6 +51,31 @@ export const ArticleHistory = ({ effectiveClientId, getAuthHeaders }) => {
     setIsConfirmOpen(true);
   };
 
+  const [publishingId, setPublishingId] = useState(null);
+
+  const handleManualPublish = async (e, id) => {
+    e.stopPropagation();
+    setPublishingId(id);
+    const tId = toast.loading('Pubblicazione su WordPress...');
+    try {
+      const res = await axios.post(`${API}/articles/publish`, { article_ids: [id] }, { headers: getAuthHeaders() });
+      if (res.data.published.length > 0) {
+        toast.success('Articolo pubblicato con successo!', { id: tId });
+        // Refresh local state for this article
+        const updatedArticles = articles.map(art => 
+          art.id === id ? { ...art, stato: 'published', wordpress_link: res.data.published[0].link } : art
+        );
+        setArticles(updatedArticles);
+      } else {
+        throw new Error(res.data.failed[0]?.error || 'Errore pubblicazione');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Errore durante la pubblicazione', { id: tId });
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
   const deleteArticle = async (id) => {
     try {
       await axios.delete(`${API}/articles/${id}`, { headers: getAuthHeaders() });
@@ -124,6 +149,18 @@ export const ArticleHistory = ({ effectiveClientId, getAuthHeaders }) => {
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                            {a.stato !== 'published' && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                disabled={publishingId === a.id}
+                                onClick={(e) => handleManualPublish(e, a.id)} 
+                                className="h-8 w-8 rounded-xl text-blue-400 hover:text-blue-600 hover:bg-blue-50" 
+                                title="Pubblica su WordPress"
+                              >
+                                {publishingId === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19L17.5 13M17.5 13L20 15.5M17.5 13L15 15.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 20H6.5C4.01472 20 2 17.9853 2 15.5C2 13.0147 4.01472 11 6.5 11C6.67603 11 6.85108 11.0102 7.02307 11.0303C7.51139 8.16913 10.003 6 13 6C16.3137 6 19 8.68629 19 12V12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                              </Button>
+                            )}
                             {a.wordpress_link && (
                               <>
                                 <Button variant="ghost" size="icon" onClick={(e) => requestIndexing(e, a.wordpress_link)} className="h-8 w-8 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50" title="Richiedi Indicizzazione">
