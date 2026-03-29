@@ -20,25 +20,30 @@ logger = logging.getLogger("server")
 
 def clean_llm_output(raw: str) -> str:
     """Clean LLM output: remove markdown fences, full HTML doc structure, extract body content."""
+    if not raw or not isinstance(raw, str):
+        return ""
+    
     content = raw.strip()
-    # Remove markdown code fences (```html ... ``` or ```...```)
+    original_backup = content
+
+    # Remove markdown code fences
     content = re.sub(r'^```\w*\s*\n?', '', content)
     content = re.sub(r'\n?```\s*$', '', content)
     content = content.strip()
-    # Remove META_DESCRIPTION comment if present
+    
+    # Remove META_DESCRIPTION comment
     content = re.sub(r'<!--\s*META_DESCRIPTION:.*?-->', '', content, flags=re.DOTALL).strip()
-    # If it's a full HTML document, extract body/article content
-    if '<html' in content.lower() or '<!doctype' in content.lower():
-        soup = BeautifulSoup(content, 'html.parser')
-        # Try to find article or body
-        article = soup.find('article')
-        if article:
-            content = article.decode_contents()
-        else:
-            body = soup.find('body')
-            if body:
-                content = body.decode_contents()
-        content = content.strip()
+    
+    # Simple extraction for common full-document wrappers
+    if "<body" in content.lower():
+        match = re.search(r'<body[^>]*>(.*?)</body>', content, re.DOTALL | re.IGNORECASE)
+        if match:
+            content = match.group(1).strip()
+    
+    # Use original if cleaning results in something too small
+    if len(content) < 50 and len(original_backup) > 50:
+        return original_backup
+        
     # Remove standalone <title> tags
     content = re.sub(r'<title[^>]*>.*?</title>', '', content, flags=re.DOTALL | re.IGNORECASE).strip()
     return content
