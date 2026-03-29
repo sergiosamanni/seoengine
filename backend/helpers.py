@@ -1009,6 +1009,17 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                 if response.status_code in [200, 201]:
                     data = response.json()
                     return {"post_id": data.get("id"), "link": data.get("link"), "slug": data.get("slug"), "status": "success"}
+                
+                # FALLBACK: If 400 Bad Request, maybe 'meta' fields (Yoast/Rankmath) are not supported by the REST API setup
+                if response.status_code == 400 and "meta" in post_data:
+                    logger.warning(f"WordPress rejected 'meta' fields. Retrying without SEO metadata fallback...")
+                    cleaned_data = {k: v for k, v in post_data.items() if k != "meta"}
+                    retry_resp = await http_client.post(endpoint, auth=(username, password), json=cleaned_data, timeout=60.0)
+                    if retry_resp.status_code in [200, 201]:
+                        data = retry_resp.json()
+                        return {"post_id": data.get("id"), "link": data.get("link"), "slug": data.get("slug"), "status": "success", "note": "published without meta"}
+                    else:
+                        last_error = f"WP Retry Error: {retry_resp.status_code} - {retry_resp.text}"
                 elif response.status_code == 401:
                     raise Exception("Autenticazione WordPress fallita. Verifica username e password applicazione.")
                 elif response.status_code == 403:
@@ -1023,7 +1034,7 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                 last_error = "Impossibile connettersi al server WordPress"
             except Exception as e:
                 last_error = str(e)
-                if "401" in str(e) or "403" in str(e) or "404" in str(e):
+                if any(err in str(e) for err in ["401", "403", "404"]):
                     raise
             if attempt < max_retries - 1:
                 await asyncio.sleep(2 ** attempt)
