@@ -1686,15 +1686,20 @@ IMPORTANTE: Rispondi SOLO con il JSON puro, senza markdown block.
 """
     try:
         response = await generate_with_llm(provider, api_key, model, 0.3, prompt, "Knowledge Base Extraction")
-        # Clean potential markdown
+        # Clean potential markdown or conversational noise
         cleaned = response.strip()
-        if cleaned.startswith("```"):
-            cleaned = re.sub(r'^```(json)?\s*', '', cleaned)
-            cleaned = re.sub(r'\s*```$', '', cleaned)
+        
+        # Try to find the first { and last } to extract JSON even if there is noise
+        start_idx = cleaned.find('{')
+        end_idx = cleaned.rfind('}')
+        
+        if start_idx != -1 and end_idx != -1:
+            cleaned = cleaned[start_idx:end_idx+1]
+        
         data = json.loads(cleaned)
         return data
     except Exception as e:
-        logger.error(f"Error in extract_structured_kb_with_llm: {e}")
+        logger.error(f"Error in extract_structured_kb_with_llm: {e}. Raw response: {response[:200] if 'response' in locals() else 'N/A'}")
         return {}
 
 

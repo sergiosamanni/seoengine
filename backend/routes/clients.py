@@ -217,19 +217,23 @@ async def scrape_website_for_kb(client_id: str, request: dict, current_user: dic
     info = await scrape_website_info(urls, max_pages=6)
     
     # 2. Refine with LLM if possible
-    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
-    if client:
-        config = client.get("configuration", {})
-        llm_config = config.get("llm", {}) or config.get("openai", {})
-        if llm_config.get("api_key"):
-            provider = llm_config.get("provider", "openai")
-            model = llm_config.get("modello", "gpt-4o") # Use gpt-4o for better extraction
-            refined_info = await extract_structured_kb_with_llm(info, provider, llm_config["api_key"], model)
-            if refined_info:
-                # Merge refined info back into info, keeping raw data for debugging/fallback
-                for key, value in refined_info.items():
-                    if value:
-                        info[key] = value
+    try:
+        client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+        if client:
+            config = client.get("configuration", {})
+            llm_config = config.get("llm", {}) or config.get("openai", {})
+            if llm_config and llm_config.get("api_key"):
+                provider = llm_config.get("provider", "openai")
+                model = llm_config.get("modello", "gpt-4o") # Use gpt-4o for better extraction
+                refined_info = await extract_structured_kb_with_llm(info, provider, llm_config["api_key"], model)
+                if refined_info:
+                    # Merge refined info back into info, keeping raw data for debugging/fallback
+                    for key, value in refined_info.items():
+                        if value:
+                            info[key] = value
+    except Exception as e:
+        logger.error(f"Error refining scraped website info with LLM: {e}")
+        # We still return the 'info' we got from scraping even if refinement fails
     
     return info
 
