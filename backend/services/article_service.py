@@ -284,11 +284,13 @@ class ArticleService:
                 await log_activity(client_id, "article_generate", "success", {"titolo": titolo, "article_id": article_id})
 
                 # Ensure we have a valid status, prioritizing client configuration
-                target_status = wp_config.get("stato_pubblicazione")
-                if not target_status or target_status == "bozza":
-                    target_status = "draft"
-                elif target_status == "pubblicato":
+                raw_status = str(wp_config.get("stato_pubblicazione", "")).lower().strip()
+                if raw_status in ("pubblicato", "publish", "pubblica"):
                     target_status = "publish"
+                elif raw_status in ("bozza", "draft"):
+                    target_status = "draft"
+                else:
+                    target_status = "draft" # Default to draft for safety
                 
                 if publish_to_wp and wp_config.get("url_api") and wp_config.get("utente"):
                     try:

@@ -138,15 +138,20 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
       const poll = async () => {
         try {
           const jr = await axios.get(`${API}/jobs/${jobId}`, { headers: getAuthHeaders() });
-          if (jr.data.status === 'completed' || jr.data.status === 'failed') {
+          
+          // Only stop if we have a clear status from the job
+          if (jr.data && (jr.data.status === 'completed' || jr.data.status === 'failed')) {
             const r = jr.data.results?.[0] || {};
             setResult({ ...res.data, ...r, status: jr.data.status });
             setGenerating(false);
             return;
           }
+          
+          // If status is still running, continue
           setTimeout(poll, 3000);
         } catch (e) { 
-          console.error("Polling error:", e);
+          // Silently handle network errors during polling (common on mobile)
+          console.log("Network glitch during polling, retrying...", e.message);
           setTimeout(poll, 3000); 
         }
       };
