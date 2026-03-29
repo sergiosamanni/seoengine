@@ -147,18 +147,24 @@ export const ArticleHistory = ({ effectiveClientId, getAuthHeaders }) => {
                             <span className="text-[9px] uppercase font-bold tracking-widest text-slate-300">{new Date(a.created_at).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
                             {a.stato !== 'published' && (
                               <Button 
-                                variant="ghost" 
-                                size="icon" 
+                                variant="secondary" 
+                                size="sm" 
                                 disabled={publishingId === a.id}
                                 onClick={(e) => handleManualPublish(e, a.id)} 
-                                className="h-8 w-8 rounded-xl text-blue-400 hover:text-blue-600 hover:bg-blue-50" 
-                                title="Pubblica su WordPress"
+                                className="h-7 px-3 rounded-lg bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-600 hover:text-white text-[9px] uppercase font-bold tracking-widest transition-all"
                               >
-                                {publishingId === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19L17.5 13M17.5 13L20 15.5M17.5 13L15 15.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 20H6.5C4.01472 20 2 17.9853 2 15.5C2 13.0147 4.01472 11 6.5 11C6.67603 11 6.85108 11.0102 7.02307 11.0303C7.51139 8.16913 10.003 6 13 6C16.3137 6 19 8.68629 19 12V12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                {publishingId === a.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <>
+                                    <svg className="w-3 h-3 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19L17.5 13M17.5 13L20 15.5M17.5 13L15 15.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 20H6.5C4.01472 20 2 17.9853 2 15.5C2 13.0147 4.01472 11 6.5 11C6.67603 11 6.85108 11.0102 7.02307 11.0303C7.51139 8.16913 10.003 6 13 6C16.3137 6 19 8.68629 19 12V12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                    Pubblica
+                                  </>
+                                )}
                               </Button>
                             )}
                             {a.wordpress_link && (
