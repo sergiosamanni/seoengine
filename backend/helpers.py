@@ -962,6 +962,11 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                 img_blocks.append(f'<!-- wp:image {{"id":{mid},"sizeSlug":"large"}} -->\n<figure class="wp-block-image size-large"><img src="{src_url}" alt="" class="wp-image-{mid}"/></figure>\n<!-- /wp:image -->')
             gutenberg_content = distribute_images_in_blocks(gutenberg_content, img_blocks)
 
+        # SAFEGUARD: Normalize status to lowercase for WP API compatibility
+        wp_status = (wp_status or "draft").lower().strip()
+        if wp_status in ["pubblica", "published", "live"]:
+            wp_status = "publish"
+        
         if schedule_date and wp_status == "publish":
             wp_status = "future"
             
