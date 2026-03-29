@@ -74,43 +74,45 @@ export const LoginPage = () => {
         </div>
 
         {/* Brand Tag */}
-        <div className="absolute top-10 left-10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute top-12 left-12 flex items-center gap-4 z-20">
+          <div className="w-11 h-11 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center relative overflow-hidden shadow-2xl">
              <div className="absolute inset-0 bg-emerald-500/10 animate-pulse"></div>
-             <Globe className="w-4 h-4 text-emerald-400/80 relative z-10" />
+             <Globe className="w-5 h-5 text-emerald-400/80 relative z-10" />
           </div>
           <div className="flex flex-col leading-none pt-0.5">
-            <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-500 -mb-0.5">SEO</span>
-            <span className="text-[19px] font-black tracking-tighter text-white">Antigravity</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500 -mb-0.5">SEO</span>
+            <span className="text-[22px] font-black tracking-tighter text-white">Antigravity</span>
           </div>
         </div>
 
         {/* Hero Content */}
-        <div className="relative max-w-lg">
-          <h1 className="text-5xl lg:text-7xl font-black tracking-tighter text-white leading-[0.85] mb-8">
+        <div className="relative max-w-2xl px-4 lg:px-0 mt-12 lg:mt-0">
+          <h1 className="text-5xl lg:text-8xl font-black tracking-tighter text-white leading-[0.8] mb-12">
             AI CONTENT <br />
             REVOLUTION <br />
-            <span className="text-emerald-500/90 italic underline decoration-white/10 underline-offset-8">Antigravity</span>.
+            <span className="text-emerald-500 italic underline decoration-white/5 underline-offset-10">Antigravity</span>.
           </h1>
-          <p className="text-lg text-slate-400 font-medium leading-relaxed max-w-sm">
+          <p className="text-xl text-slate-400 font-medium leading-relaxed max-w-lg mb-16">
             Generazione contenuti e ottimizzazione SEO con intelligenza artificiale di nuova generazione.
           </p>
         </div>
         
-        <div className="grid grid-cols-2 gap-4 max-w-md">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
             {features.map((feature, i) => (
               <div 
                 key={feature.title}
-                className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                className="p-8 rounded-[2rem] bg-white/[0.03] border border-white/10 hover:bg-white/[0.07] transition-all duration-500 hover:scale-[1.02] cursor-default group"
               >
-                <feature.icon className="w-5 h-5 text-slate-400 mb-4" />
-                <h3 className="text-white text-[10px] font-bold uppercase tracking-[0.2em] mb-1 opacity-70">{feature.title}</h3>
-                <p className="text-slate-500 text-[11px] leading-snug">{feature.desc}</p>
+                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-6 group-hover:bg-emerald-500/10 transition-colors">
+                    <feature.icon className="w-6 h-6 text-slate-400 group-hover:text-emerald-400 transition-colors" />
+                </div>
+                <h3 className="text-white text-[12px] font-black uppercase tracking-[0.25em] mb-2 opacity-80">{feature.title}</h3>
+                <p className="text-slate-500 text-xs leading-relaxed font-medium">{feature.desc}</p>
               </div>
             ))}
         </div>
         
-        <p className="text-slate-600 text-[10px] uppercase font-bold tracking-[0.3em] relative z-10">
+        <p className="mt-20 text-slate-600 text-[11px] uppercase font-bold tracking-[0.4em] relative z-10 opacity-60">
           &copy; {new Date().getFullYear()} SEO Antigravity. Premium AI Intelligence.
         </p>
       </div>
