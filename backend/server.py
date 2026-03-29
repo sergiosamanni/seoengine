@@ -31,12 +31,13 @@ from routes.reddit import router as reddit_router
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://seoengine-eta.vercel.app",
+    allow_origins=["*"] if os.environ.get("ENVIRONMENT") == "development" else [
+        "https://seoengine-eta.vercel.app", 
         "https://seoengine-dashboard.vercel.app",
-    ] + [o.strip() for o in os.environ.get('CORS_ORIGINS', '').split(',') if o.strip()],
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app", # This is the magic line
     allow_methods=["*"],
     allow_headers=["*"],
 )
