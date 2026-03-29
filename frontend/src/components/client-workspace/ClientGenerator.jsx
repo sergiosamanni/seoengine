@@ -374,11 +374,10 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
                 </div>
                 <div>
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-                        {generating ? 'Scrittura in corso...' : result.status === 'completed' ? 'Pubblicato!' : 'Ops! Errore'}
+                        {generating ? 'Scrittura in corso...' : (result.publish_status === 'success' || (result.status === 'completed' && !result.publish_error)) ? 'Pubblicato!' : 'Ops! Errore'}
                     </h2>
-                    <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mt-2">
-                        {generating ? 'L\'IA sta scrivendo l\'articolo perfetto' : 
-                         result.status === 'completed' ? 'L\'articolo è ora nel tuo WordPress' : 'Qualcosa è andato storto, riprova'}
+                    <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mt-2 px-6">
+                        {generating ? 'L\'IA sta scrivendo l\'articolo perfetto' : (result.publish_status === 'success' || (result.status === 'completed' && !result.publish_error)) ? 'L\'articolo è ora nel tuo WordPress' : (result.publish_error || result.generation_error || 'Qualcosa è andato storto, riprova')}
                     </p>
                 </div>
             </div>

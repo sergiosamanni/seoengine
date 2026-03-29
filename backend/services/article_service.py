@@ -283,13 +283,20 @@ class ArticleService:
                 res_item["generation_status"] = "success"
                 await log_activity(client_id, "article_generate", "success", {"titolo": titolo, "article_id": article_id})
 
+                # Ensure we have a valid status, prioritizing client configuration
+                target_status = wp_config.get("stato_pubblicazione")
+                if not target_status or target_status == "bozza":
+                    target_status = "draft"
+                elif target_status == "pubblicato":
+                    target_status = "publish"
+                
                 if publish_to_wp and wp_config.get("url_api") and wp_config.get("utente"):
                     try:
                         wp_type = "page" if content_type in ("landing_page", "pillar_page") else "post"
                         wp_res = await publish_to_wordpress(
                             url=wp_config["url_api"], username=wp_config["utente"],
                             password=wp_config["password_applicazione"], title=titolo,
-                            content=content, wp_status=wp_config.get("stato_pubblicazione", "draft"),
+                            content=content, wp_status=target_status,
                             seo_metadata=seo_metadata, tags=seo_metadata.get("tags", []), 
                             wp_type=wp_type, image_ids=image_ids or []
                         )
@@ -319,8 +326,14 @@ class ArticleService:
                     res_item["publish_status"] = "skipped"
 
             # Complete job
+            job_status = "completed"
+            if res_item["generation_status"] == "failed":
+                job_status = "failed"
+            elif publish_to_wp and res_item["publish_status"] == "failed":
+                job_status = "failed" # Error during mandatory publication
+                
             await db.jobs.update_one({"id": job_id}, {"$set": {
-                "status": "completed", "completed": 1, "results": [res_item],
+                "status": job_status, "completed": 1, "results": [res_item],
                 "summary": {"total": 1, "generated_ok": 1 if res_item["generation_status"] == "success" else 0, "published_ok": 1 if res_item["publish_status"] == "success" else 0},
                 "finished_at": datetime.now(timezone.utc).isoformat()
             }})
