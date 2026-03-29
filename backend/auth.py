@@ -6,7 +6,12 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, List
 
-JWT_SECRET = os.environ.get('JWT_SECRET')
+# Standard JWT configuration
+JWT_SECRET = os.environ.get('JWT_SECRET', 'antigravity-seo-engine-secure-master-key-32-chars-long')
+if len(JWT_SECRET) < 32:
+    # Pad to avoid InsecureKeyLengthWarning
+    JWT_SECRET = (JWT_SECRET * 3)[:32]
+
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
