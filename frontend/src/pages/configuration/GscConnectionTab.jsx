@@ -45,7 +45,24 @@ export const GscConnectionTab = ({ clientId, getAuthHeaders, isAdmin }) => {
     };
 
     useEffect(() => {
-        if (clientId) fetchStatus();
+        if (clientId) {
+            fetchStatus();
+            
+            // Listen for GSC callback in the URL
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('gsc_connected') === 'true') {
+                import('react-hot-toast').then(({ toast }) => {
+                    toast.success('Search Console connessa con successo!');
+                    // Clean URL to avoid repeating toast on refresh
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                });
+            } else if (params.get('gsc_error')) {
+                import('react-hot-toast').then(({ toast }) => {
+                    toast.error('Errore autorizzazione Google. Riprova.');
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                });
+            }
+        }
     }, [clientId]);
 
     const handleSaveConfig = async () => {

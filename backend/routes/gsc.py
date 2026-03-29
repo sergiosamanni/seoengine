@@ -164,10 +164,13 @@ async def gsc_callback(code: str, state: str):
         )
     except Exception as e:
         logger.error(f"GSC OAuth error: {e}")
-        frontend_url = os.environ.get("FRONTEND_URL", "")
-        return RedirectResponse(url=f"{frontend_url}/clients/{client_id}/gsc?error=auth_failed")
-    frontend_url = os.environ.get("FRONTEND_URL", "")
-    return RedirectResponse(url=f"{frontend_url}/clients/{client_id}/gsc?gsc_connected=true")
+        frontend_url = os.environ.get("FRONTEND_URL", "").rstrip("/")
+        # Redirect to the configuration page with an error flag
+        return RedirectResponse(url=f"{frontend_url}/clients/{client_id}?tab=gsc&gsc_error=auth_failed")
+
+    frontend_url = os.environ.get("FRONTEND_URL", "").rstrip("/")
+    # Success redirect to the specific GSC tab
+    return RedirectResponse(url=f"{frontend_url}/clients/{client_id}?tab=gsc&gsc_connected=true")
 
 
 @router.post("/clients/{client_id}/gsc-disconnect")
