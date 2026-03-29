@@ -80,6 +80,11 @@ export const WordPressTab = ({ wordpress, setWordpress }) => {
               </Select>
             </div>
           </div>
+          <div className="pt-4 border-t border-slate-50 flex justify-end">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed max-w-sm text-right">
+                Ricorda di premere il tasto di salvataggio generale nella barra in alto per rendere effettive le modifiche su Arredo Horeca.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

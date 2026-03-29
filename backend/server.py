@@ -98,7 +98,13 @@ async def startup():
         del_res = await db.articles.delete_many({"client_id": client_id})
         logger.info(f"STARTUP REPAIR: Forced Arredo Horeca to 'publish' status and deleted {del_res.deleted_count} articles.")
         
-        logger.info("Application startup complete.")
+        # Diagnostic for Arredo Horeca
+    arredo = await db.clients.find_one({"id": "de7cb45c-99e3-4665-bda2-3daeb1a0ba96"})
+    if arredo:
+        wp = arredo.get("configuration", {}).get("wordpress", {})
+        logger.info(f"STARTUP DIAGNOSTIC (Arredo): URL={wp.get('url_api')}, User={wp.get('utente')}, PassLen={len(wp.get('password_applicazione', ''))}")
+    
+    logger.info("Application startup complete.")
     except Exception as e:
         logger.error(f"Seeding failed: {e}")
 
