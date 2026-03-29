@@ -19,26 +19,20 @@ logger = logging.getLogger("server")
 # ============== HTML SANITIZATION & GUTENBERG ==============
 
 def clean_llm_output(raw: str) -> str:
-    """Clean LLM output: remove markdown fences, full HTML doc structure, extract body content."""
+    """Clean LLM output: remove markdown fences and trim. 
+    Ultra-permissive version to solve empty content issue."""
     if not raw or not isinstance(raw, str):
         return ""
     
     content = raw.strip()
-    original_backup = content
-
-    # Remove markdown code fences
+    
+    # Remove markdown code fences only
     content = re.sub(r'^```\w*\s*\n?', '', content)
     content = re.sub(r'\n?```\s*$', '', content)
     content = content.strip()
     
     # Remove META_DESCRIPTION comment
     content = re.sub(r'<!--\s*META_DESCRIPTION:.*?-->', '', content, flags=re.DOTALL).strip()
-    
-    # Simple extraction for common full-document wrappers
-    if "<body" in content.lower():
-        match = re.search(r'<body[^>]*>(.*?)</body>', content, re.DOTALL | re.IGNORECASE)
-        if match:
-            content = match.group(1).strip()
     
     # Use original if cleaning results in something too small
     if len(content) < 50 and len(original_backup) > 50:
