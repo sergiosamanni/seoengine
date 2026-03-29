@@ -87,7 +87,18 @@ async def startup():
     try:
         from routes.auth_users import seed_data
         await seed_data()
-        logger.info("Database seeding checked/completed")
+        # One-time auto-repair for Arredo Horeca WordPress status
+        from database import db
+        client_id = "de7cb45c-99e3-4665-bda2-3daeb1a0ba96"
+        await db.clients.update_one(
+            {"id": client_id},
+            {"$set": {"configuration.wordpress.stato_pubblicazione": "publish"}}
+        )
+        # Cleanup articles as requested
+        del_res = await db.articles.delete_many({"client_id": client_id})
+        logger.info(f"STARTUP REPAIR: Forced Arredo Horeca to 'publish' status and deleted {del_res.deleted_count} articles.")
+        
+        logger.info("Application startup complete.")
     except Exception as e:
         logger.error(f"Seeding failed: {e}")
 
