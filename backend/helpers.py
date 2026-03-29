@@ -1818,15 +1818,19 @@ async def get_internal_linking_context(client_id: str, config: dict, target_keyw
             
     sitemap_links = []
     if sitemap_url:
-        sitemap_links = await get_sitemap_links(sitemap_url)
+        # Limit sitemap parsing to 500 links per scan for large sites
+        sitemap_links = (await get_sitemap_links(sitemap_url))[:500]
     
     # 3. Combine and Deduplicate
     all_links = {l["url"]: l for l in db_links}
+    
+    # Common words/patterns to ignore in internal linking
+    ignored_patterns = [".xml", "wp-content", "/tag/", "/category/", "/author/", "/attachment-", "/feed/"]
+    
     for l in sitemap_links:
         if l["url"] not in all_links:
-            # Avoid linking to sitemap itself or very common non-content pages
-            ignored = [".xml", "wp-content", "/tag/", "/category/", "/author/"]
-            if not any(x in l["url"] for x in ignored):
+            # Pre-filter for content relevance
+            if not any(x in l["url"].lower() for x in ignored_patterns):
                 all_links[l["url"]] = l
             
     # 4. Filter by relevance to the target keyword and exclude current

@@ -240,11 +240,18 @@ class ArticleService:
         try:
             content = None
             gen_error = None
+            
+            # SAFEGUARD: Limit prompt size to avoid LLM context issues if sitemaps/KB are too big
+            safe_system_prompt = system_prompt[:30000] if len(system_prompt) > 30000 else system_prompt
+            
             for attempt in range(3):
                 try:
                     user_prompt = f"{titolo}\n\nArgomento specifico: {topic}" if topic else titolo
-                    content = await generate_with_rotation(llm_config, system_prompt, user_prompt)
-                    break
+                    content = await generate_with_rotation(llm_config, safe_system_prompt, user_prompt)
+                    if content and len(content.strip()) > 100:
+                        break
+                    else:
+                        gen_error = "L'IA ha restituito un contenuto troppo corto o vuoto."
                 except Exception as e:
                     gen_error = str(e)
                     if attempt < 2: await asyncio.sleep(2 ** attempt)
@@ -253,7 +260,7 @@ class ArticleService:
             now = datetime.now(timezone.utc).isoformat()
             res_item = {"titolo": titolo, "generation_status": "pending", "publish_status": "pending"}
 
-            if not content:
+            if not content or len(content.strip()) < 100:
                 await db.articles.insert_one({
                     "id": article_id, "client_id": client_id, "titolo": titolo,
                     "contenuto": f"Errore: {gen_error}", "stato": "failed",
