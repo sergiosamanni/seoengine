@@ -85,8 +85,14 @@ async def gsc_authorize(client_id: str, request: Request, redirect_uri: str = Qu
     
     gsc_config = client_doc.get("configuration", {}).get("gsc", {})
     # Use client credentials if available, otherwise global
-    c_id = gsc_config.get("oauth_client_id") or GSC_OAUTH_CLIENT_ID
-    c_secret = gsc_config.get("oauth_client_secret") or GSC_OAUTH_CLIENT_SECRET
+    raw_c_id = gsc_config.get("oauth_client_id") or GSC_OAUTH_CLIENT_ID
+    raw_c_secret = gsc_config.get("oauth_client_secret") or GSC_OAUTH_CLIENT_SECRET
+    
+    c_id = raw_c_id.strip() if raw_c_id else ""
+    c_secret = raw_c_secret.strip() if raw_c_secret else ""
+    
+    source = "CLIENT-SPECIFIC" if gsc_config.get("oauth_client_id") else "GLOBAL"
+    logger.info(f"GSC Authorize request for {client_id} using {source} credentials. ID starts with: {c_id[:10]}...")
     
     if not c_id or not c_secret:
         raise HTTPException(status_code=400, detail="Credenziali OAuth GSC non configurate.")
@@ -131,8 +137,13 @@ async def gsc_callback(code: str, state: str):
     redirect_uri = saved_redirect_uri or _get_gsc_redirect_uri()
     client_doc = await db.clients.find_one({"id": client_id}, {"configuration.gsc": 1})
     gsc_config = (client_doc.get("configuration", {}) or {}).get("gsc", {}) or {}
-    c_id = gsc_config.get("oauth_client_id") or GSC_OAUTH_CLIENT_ID
-    c_secret = gsc_config.get("oauth_client_secret") or GSC_OAUTH_CLIENT_SECRET
+    
+    raw_c_id = gsc_config.get("oauth_client_id") or GSC_OAUTH_CLIENT_ID
+    raw_c_secret = gsc_config.get("oauth_client_secret") or GSC_OAUTH_CLIENT_SECRET
+    c_id = raw_c_id.strip() if raw_c_id else ""
+    c_secret = raw_c_secret.strip() if raw_c_secret else ""
+    
+    logger.info(f"GSC Callback for client {client_id}. Exchange using ID: {c_id[:10]}...")
 
     from google_auth_oauthlib.flow import Flow
     client_config = {
