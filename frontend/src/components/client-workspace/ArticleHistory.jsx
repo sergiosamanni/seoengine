@@ -146,6 +146,12 @@ export const ArticleHistory = ({ effectiveClientId, getAuthHeaders }) => {
                             <div className="w-px h-3 bg-slate-100 mx-1" />
                             <span className="text-[9px] uppercase font-bold tracking-widest text-slate-300">{new Date(a.created_at).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                           </div>
+                          {a.publish_error && (
+                            <div className="mt-2 py-1.5 px-3 bg-red-50/50 border border-red-100 rounded-lg flex items-center gap-2">
+                                <span className="w-1 h-1 rounded-full bg-red-400 shrink-0" />
+                                <p className="text-[9px] font-bold text-red-500 uppercase tracking-wider">Errore WP: {a.publish_error}</p>
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-2">

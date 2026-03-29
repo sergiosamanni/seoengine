@@ -166,6 +166,8 @@ class ArticleResponse(BaseModel):
     created_at: str
     published_at: Optional[str] = None
     combination: Optional[Dict] = None
+    publish_status: Optional[str] = None
+    publish_error: Optional[str] = None
 
 
 class UserCreate(BaseModel):
