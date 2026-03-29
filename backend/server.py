@@ -34,6 +34,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://seoengine-eta.vercel.app",
+        "https://seoengine-dashboard.vercel.app",
     ] + [o.strip() for o in os.environ.get('CORS_ORIGINS', '').split(',') if o.strip()],
     allow_methods=["*"],
     allow_headers=["*"],
