@@ -40,6 +40,10 @@ async def get_articles(client_id: Optional[str] = None, stato: Optional[str] = N
     if stato:
         query["stato"] = stato
     articles = await db.articles.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    # Ensure contenuto_html compatibility for the frontend
+    for a in articles:
+        if a.get("contenuto") and not a.get("contenuto_html"):
+            a["contenuto_html"] = a["contenuto"]
     return [ArticleResponse(**a) for a in articles]
 
 
@@ -50,6 +54,9 @@ async def get_article(article_id: str, current_user: dict = Depends(get_current_
         raise HTTPException(status_code=404, detail="Articolo non trovato")
     if current_user["role"] != "admin" and article["client_id"] not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    if article.get("contenuto") and not article.get("contenuto_html"):
+        article["contenuto_html"] = article["contenuto"]
     return ArticleResponse(**article)
 
 
@@ -60,6 +67,9 @@ async def get_article_full(article_id: str, current_user: dict = Depends(get_cur
         raise HTTPException(status_code=404, detail="Articolo non trovato")
     if current_user["role"] != "admin" and article["client_id"] not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    if article.get("contenuto") and not article.get("contenuto_html"):
+        article["contenuto_html"] = article["contenuto"]
     return article
 
 

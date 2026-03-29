@@ -159,6 +159,7 @@ class ArticleResponse(BaseModel):
     client_id: str
     titolo: str
     contenuto: str
+    contenuto_html: Optional[str] = None
     stato: str
     wordpress_post_id: Optional[str] = None
     wordpress_link: Optional[str] = None
