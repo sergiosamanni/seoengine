@@ -307,9 +307,14 @@ class ArticleService:
                         res_item["publish_status"] = "success"
                         res_item["wordpress_link"] = wp_res.get("link")
                     except Exception as wp_err:
-                        logger.error(f"Auto-publish failed for {article_id}: {wp_err}")
+                        err_msg = str(wp_err)
+                        logger.error(f"Auto-publish failed for {article_id}: {err_msg}")
+                        await db.articles.update_one({"id": article_id}, {"$set": {
+                            "stato": "publish_failed",
+                            "publish_error": err_msg
+                        }})
                         res_item["publish_status"] = "failed"
-                        res_item["publish_error"] = str(wp_err)
+                        res_item["publish_error"] = err_msg
                 res_item["id"] = article_id
                 res_item["generation_status"] = "success"
                 await log_activity(client_id, "article_generate", "success", {"titolo": titolo, "article_id": article_id})
