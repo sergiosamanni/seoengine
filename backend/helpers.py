@@ -271,7 +271,7 @@ async def generate_with_rotation(llm_config: dict, system_prompt: str, user_prom
     for attempt in rotation_queue:
         try:
             logger.info(f"LLM Attempt: {attempt['provider']}/{attempt['model']}")
-            return await generate_with_llm(
+            raw_result = await generate_with_llm(
                 attempt["provider"], 
                 attempt["api_key"], 
                 attempt["model"], 
@@ -279,6 +279,16 @@ async def generate_with_rotation(llm_config: dict, system_prompt: str, user_prom
                 system_prompt, 
                 user_prompt
             )
+            
+            # CLEAN the output immediately
+            cleaned = clean_llm_output(raw_result)
+            
+            if not cleaned or len(cleaned.strip()) < 100:
+                logger.warning(f"LLM {attempt['provider']} returned too short/empty cleaned content. Prompt may be problematic or provider failed silently.")
+                # We raise an exception to trigger the retry/rotation logic
+                raise Exception("Empty or insufficient content from LLM provider")
+                
+            return cleaned
         except Exception as e:
             err_str = str(e).lower()
             if "429" in err_str or "quota" in err_str or "exhaust" in err_str or "limit" in err_str:

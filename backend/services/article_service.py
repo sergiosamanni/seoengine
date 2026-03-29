@@ -271,10 +271,10 @@ class ArticleService:
                 res_item["generation_error"] = gen_error
                 await log_activity(client_id, "article_generate", "failed", {"titolo": titolo, "error": gen_error})
             else:
+                # Meta description is extracted but we don't truncate 'content' here
+                # because it's already pre-cleaned by the generator helper.
                 meta_match = re.search(r'<!--\s*META_DESCRIPTION:\s*(.+?)\s*-->', content)
                 llm_meta_desc = meta_match.group(1).strip() if meta_match else None
-                if meta_match:
-                    content = content[:meta_match.start()].rstrip() + content[meta_match.end():]
                 
                 seo_metadata = generate_seo_metadata(titolo, content, kb, combo)
                 if llm_meta_desc and len(llm_meta_desc) >= 80:
