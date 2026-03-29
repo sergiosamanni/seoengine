@@ -288,10 +288,9 @@ class ArticleService:
                 })
                 
                 # AUTO-PUBLISH logic based on client configuration
-                wp_config = config.get("wordpress", {})
-                should_publish = publish_to_wordpress or wp_config.get("stato_pubblicazione", "draft").lower() == "publish"
+                should_publish = publish_to_wp or (wp_config and wp_config.get("stato_pubblicazione", "draft").lower() == "publish")
                 
-                if should_publish and wp_config.get("url_api") and wp_config.get("utente"):
+                if should_publish and wp_config and wp_config.get("url_api") and wp_config.get("utente"):
                     try:
                         from helpers import publish_to_wordpress as wp_helper
                         logger.info(f"Auto-publishing article {article_id} to WordPress for client {client_id}")
