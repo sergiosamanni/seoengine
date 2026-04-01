@@ -182,7 +182,7 @@ const AdminGenerator = ({
     const removeTargetKeyword = (kw) => {
         setTargetKeywords(targetKeywords.filter(k => k !== kw));
     };
-    const useTopicInGenerator = (topic) => {
+    const handleUseTopic = (topic) => {
         setGenMode('single');
         setSingleTitle(topic.titolo || '');
         setSingleKeywords(topic.keyword || '');
@@ -1542,7 +1542,7 @@ const AdminGenerator = ({
                                                                 />
                                                             </div>
                                                             <div className="flex items-center gap-1">
-                                                                <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => useTopicInGenerator(topic)}>
+                                                                <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => handleUseTopic(topic)}>
                                                                     <ChevronRight className="w-3 h-3" />
                                                                 </Button>
                                                                 <Button
