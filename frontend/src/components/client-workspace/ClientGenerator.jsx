@@ -109,9 +109,15 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
       } catch (err) { toast.error(`Errore upload ${file.name}`); }
     }
     
+    if (uploadedImages.length + newImages.length > 3) {
+      toast.error("Puoi caricare massimo 3 immagini.");
+      setUploading(false);
+      return;
+    }
+    
     setUploadedImages(prev => [...prev, ...newImages]);
     setUploading(false);
-    if (newImages.length > 0) toast.success("Immagine caricata correttamente!");
+    if (newImages.length > 0) toast.success(`${newImages.length} ${newImages.length === 1 ? 'immagine caricata' : 'immagini caricate'} correttamente!`);
     
     // Reset target value to allow uploading the same file again
     e.target.value = '';
@@ -361,7 +367,7 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">Media: {uploadedImages.length} foto caricata</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">Media: {uploadedImages.length} {uploadedImages.length === 1 ? 'foto caricata' : 'foto caricate'}</p>
                 </div>
             </div>
         </div>

@@ -47,6 +47,7 @@ Raffina questo articolo (Step 2) rendendolo più umano e naturale.
 - Assicurati che i tag H3 siano distribuiti fluidamente.
 - Verifica che gli anchor text dei link siano di ALMENO 3 PAROLE e SEO-oriented.
 - Rinforza i riferimenti alla Knowledge Base (Città: {kb.get('citta_principale')}).
+- MANTENI e OTTIMIZZA la posizione dei placeholder [IMAGE_1], [IMAGE_2] se presenti, assicurandoti che siano vicini a testo descrittivo pertinente.
 Restituisci solo l'articolo raffinato in HTML (frammento)."""
         
         user_prompt = f"TITOLO ARTICOLO: {titolo}\n\nCONTENUTO:\n{content}"
@@ -253,6 +254,12 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
         """Standardized single article generation and task finalization."""
         provider = llm_config.get("provider", "openai")
         titolo = titolo_suggerito or keyword.strip()
+        # Fetch full client data for step-2 pipeline
+        client_doc = await db.clients.find_one({"id": client_id})
+        if not client_doc:
+            raise Exception("Client non trovato")
+        config = client_doc.get("configuration", {})
+        
         await log_activity(client_id, "article_generate", "running", {"titolo": titolo, "step": "generazione"})
         
         # Determine image_ids - if generate_cover and no ids provided, generate one
@@ -284,14 +291,22 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
             for attempt in range(3):
                 try:
                     user_prompt = f"{titolo}\n\nArgomento specifico: {topic}" if topic else titolo
+                    
+                    if image_ids and len(image_ids) > 1:
+                        num_extra = len(image_ids) - 1
+                        user_prompt += f"\n\nIMPORTANTE - IMMAGINI DEL CLIENTE: Sono disponibili {num_extra} immagini reali caricate dal cliente (oltre a quella in evidenza)."
+                        user_prompt += f"\nInserisci nel testo HTML i placeholder {', '.join([f'[IMAGE_{i+1}]' for i in range(min(num_extra, 2))])} in punti strategici, naturali e contestuali dove una foto starebbe bene."
+                    
                     content = await generate_with_rotation(llm_config, safe_system_prompt, user_prompt)
                     
-                    # --- TWO-STEP PIPELINE: REFINEMENT WITH OPENAI ---
-                    openai_config = (await db.clients.find_one({"id": client_id}) or {}).get("configuration", {}).get("openai")
+                    openai_config = config.get("openai")
                     if content and openai_config and openai_config.get("api_key"):
-                        # Extract KB and tone again or pass from initial fetch
-                        # (In run_simple_article_generation kb/tone are already in scope)
-                        content = await cls._refine_with_openai(content, openai_config, kb, config.get("tono_e_stile", {}), client_name=client_doc["nome"], titolo=titolo)
+                        content = await cls._refine_with_openai(
+                            content, openai_config, kb, 
+                            config.get("tono_e_stile", {}), 
+                            client_name=client_doc["nome"], 
+                            titolo=titolo
+                        )
                     # -------------------------------------------------
                     
                     if content and len(content.strip()) > 100:

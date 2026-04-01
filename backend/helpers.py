@@ -108,28 +108,48 @@ def convert_to_gutenberg_blocks(html_content: str, remove_h1: bool = True) -> st
 
 
 def distribute_images_in_blocks(blocks_str: str, image_blocks: list) -> str:
-    """Distribute image blocks evenly among paragraph blocks."""
+    """
+    Distribute image blocks in the content.
+    Prioritizes explicit placeholders like [IMAGE_1], [IMAGE_2] etc.
+    If no placeholders are found, falls back to even distribution.
+    """
     if not image_blocks:
         return blocks_str
-    # Split into individual blocks
-    parts = re.split(r'\n\n(?=<!-- wp:)', blocks_str)
+
+    content = blocks_str
+    used_indices = set()
+
+    # 1. Try to find explicit placeholders [IMAGE_1], [IMAGE_2]...
+    for i, img_block in enumerate(image_blocks):
+        placeholder = f"[IMAGE_{i+1}]"
+        if placeholder in content:
+            # Replace placeholder with the image block
+            content = content.replace(placeholder, f"\n\n{img_block}\n\n")
+            used_indices.add(i)
+    
+    # Remaining images that didn't have a placeholder
+    remaining_images = [img for i, img in enumerate(image_blocks) if i not in used_indices]
+    if not remaining_images:
+        return content
+
+    # 2. Fallback to even distribution for any remaining images
+    parts = re.split(r'\n\n(?=<!-- wp:)', content)
     if len(parts) < 2:
-        return blocks_str + '\n\n' + '\n\n'.join(image_blocks)
-    # Find paragraph block indices (good places to insert images after)
+        return content + '\n\n' + '\n\n'.join(remaining_images)
+
     para_indices = [i for i, p in enumerate(parts) if '<!-- wp:paragraph -->' in p]
     if not para_indices or len(para_indices) < 2:
-        # Fallback: just append
-        return blocks_str + '\n\n' + '\n\n'.join(image_blocks)
-    # Calculate evenly spaced insertion points (skip first paragraph)
-    usable = para_indices[1:]  # Don't insert after the very first paragraph
-    step = max(1, len(usable) // (len(image_blocks) + 1))
-    insert_positions = []
-    for idx, img in enumerate(image_blocks):
-        pos_idx = min((idx + 1) * step, len(usable) - 1)
-        insert_positions.append((usable[pos_idx], img))
+        return content + '\n\n' + '\n\n'.join(remaining_images)
+
+    usable = para_indices[1:]
+    step = max(1, len(usable) // (len(remaining_images) + 1))
+    
     # Insert in reverse order to maintain indices
-    for pos, img_block in reversed(insert_positions):
-        parts.insert(pos + 1, img_block)
+    for idx, img in enumerate(reversed(remaining_images)):
+        # Calculate position from the end to be simpler
+        pos_idx = min((len(remaining_images) - idx) * step, len(usable) - 1)
+        parts.insert(usable[pos_idx] + 1, img)
+        
     return '\n\n'.join(parts)
 
 
