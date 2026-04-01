@@ -347,6 +347,23 @@ async def simple_generate_article(request: SimpleGenerateRequest, current_user: 
             raise HTTPException(status_code=403, detail="Non hai i permessi per questo cliente")
             
     if not client_id: raise HTTPException(status_code=400, detail="client_id richiesto")
+    
+    # --- IDEMPOTENCY CHECK (Safety for double-taps on mobile) ---
+    # Check if a job/article for this client and keyword was started in the last 60 seconds
+    from datetime import datetime, timedelta, timezone
+    one_minute_ago = (datetime.now(timezone.utc) - timedelta(seconds=60)).isoformat()
+    existing_job = await db.jobs.find_one({
+        "client_id": client_id,
+        "keyword": request.keyword,
+        "created_at": {"$gte": one_minute_ago},
+        "status": "running"
+    })
+    
+    if existing_job:
+        logger.warning(f"Idempotency triggered: Duplicate generation request for client {client_id} and keyword {request.keyword}")
+        return {"job_id": existing_job["id"], "status": "running", "keyword": request.keyword, "idempotency": True}
+    # ------------------------------------------------------------
+
     client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client_doc: raise HTTPException(status_code=404, detail="Cliente non trovato")
     config = client_doc.get("configuration") or {}

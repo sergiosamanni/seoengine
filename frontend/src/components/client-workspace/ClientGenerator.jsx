@@ -122,6 +122,7 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
   };
 
   const handleGenerate = async () => {
+    if (generating) return; // Immediate lock for mobile double-taps
     setGenerating(true);
     setResult(null);
     try {
