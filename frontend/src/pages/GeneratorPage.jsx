@@ -66,7 +66,8 @@ export const GeneratorPage = () => {
 
   // Configuration States
   const [wordpress, setWordpress] = useState({ url_api: '', utente: '', password_applicazione: '', stato_pubblicazione: 'draft' });
-  const [llm, setLlm] = useState({ provider: 'openai', api_key: '', modello: 'gpt-4-turbo-preview', temperatura: 0.7 });
+  const [llm, setLlm] = useState({ provider: 'deepseek', api_key: '', modello: 'deepseek-chat', temperatura: 0.7 });
+  const [openai, setOpenai] = useState({ api_key: '', modello: 'gpt-4o', temperatura: 0.6 });
   const [seo, setSeo] = useState({ lingua: 'italiano', lunghezza_minima_parole: 1500, include_faq_in_fondo: false });
   const [tono, setTono] = useState({ registro: 'professionale_accessibile', persona_narrativa: 'seconda_singolare', descrizione_tono_libera: '', aggettivi_brand: [], parole_vietate: [], frasi_vietate: [] });
   const [knowledge, setKnowledge] = useState({ descrizione_attivita: '', storia_brand: '', citta_principale: '', regione: '', descrizione_geografica: '', punti_di_interesse_locali: [], punti_di_forza: [], pubblico_target_primario: '', pubblico_target_secondario: '', call_to_action_principale: '' });
@@ -108,7 +109,8 @@ export const GeneratorPage = () => {
       const config = client.configuration || {};
       if (config.wordpress) setWordpress(config.wordpress);
       if (config.llm) setLlm(config.llm);
-      else if (config.openai) setLlm({ provider: 'openai', api_key: config.openai.api_key || '', modello: config.openai.modello || 'gpt-4-turbo-preview', temperatura: config.openai.temperatura || 0.7 });
+      if (config.openai) setOpenai(config.openai);
+      else if (config.llm && config.llm.provider === 'openai') setOpenai({ api_key: config.llm.api_key || '', modello: config.llm.modello || 'gpt-4o', temperatura: config.llm.temperatura || 0.6 });
       if (config.seo) setSeo(config.seo);
       if (config.tono_e_stile) setTono(config.tono_e_stile);
       if (config.knowledge_base) setKnowledge(config.knowledge_base);
@@ -127,7 +129,7 @@ export const GeneratorPage = () => {
 
   const handleSaveConfig = async () => {
     await updateConfiguration(effectiveClientId, {
-      wordpress, llm, openai: llm, seo,
+      wordpress, llm, openai, seo,
       tono_e_stile: tono, knowledge_base: knowledge,
       autopilot
     });
@@ -234,12 +236,17 @@ export const GeneratorPage = () => {
             <div className="grid grid-cols-1 gap-8">
                 <Tabs defaultValue="kb" className="w-full">
                     <TabsList className="bg-slate-100/50 p-1 mb-8 rounded-2xl inline-flex h-auto">
+                        <TabsTrigger value="api" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">API Keys</TabsTrigger>
                         <TabsTrigger value="kb" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">Knowledge Base</TabsTrigger>
                         <TabsTrigger value="tono" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">Tono & Stile</TabsTrigger>
                         <TabsTrigger value="seo" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">SEO Settings</TabsTrigger>
                         <TabsTrigger value="wp" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">WordPress</TabsTrigger>
                         <TabsTrigger value="gsc_setup" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">Google Link</TabsTrigger>
                     </TabsList>
+
+                    <TabsContent value="api" className="m-0 animate-in fade-in duration-300">
+                        <ApiKeysTab llm={llm} setLlm={setLlm} openai={openai} setOpenai={setOpenai} wordpress={wordpress} setWordpress={setWordpress} />
+                    </TabsContent>
 
                     <TabsContent value="kb" className="m-0 animate-in fade-in duration-300">
                         <KnowledgeBaseTab knowledge={knowledge} setKnowledge={setKnowledge} isAdmin={isAdmin} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
