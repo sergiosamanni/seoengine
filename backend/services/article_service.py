@@ -348,34 +348,6 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                     "image_ids": image_ids or []
                 })
                 
-                # AUTO-PUBLISH logic based on client configuration
-                should_publish = publish_to_wp or (wp_config and wp_config.get("stato_pubblicazione", "draft").lower() == "publish")
-                
-                if should_publish and wp_config and wp_config.get("url_api") and wp_config.get("utente"):
-                    try:
-                        from helpers import publish_to_wordpress as wp_helper
-                        logger.info(f"Auto-publishing article {article_id} to WordPress for client {client_id}")
-                        wp_res = await wp_helper(
-                            url=wp_config["url_api"], username=wp_config["utente"],
-                            password=wp_config["password_applicazione"], title=titolo,
-                            content=content, wp_status="publish",
-                            seo_metadata=seo_metadata, image_ids=image_ids
-                        )
-                        await db.articles.update_one({"id": article_id}, {"$set": {
-                            "stato": "published", "wordpress_post_id": str(wp_res["post_id"]),
-                            "wordpress_link": wp_res.get("link"), "published_at": datetime.now(timezone.utc).isoformat()
-                        }})
-                        res_item["publish_status"] = "success"
-                        res_item["wordpress_link"] = wp_res.get("link")
-                    except Exception as wp_err:
-                        err_msg = str(wp_err)
-                        logger.error(f"Auto-publish failed for {article_id}: {err_msg}")
-                        await db.articles.update_one({"id": article_id}, {"$set": {
-                            "stato": "publish_failed",
-                            "publish_error": err_msg
-                        }})
-                        res_item["publish_status"] = "failed"
-                        res_item["publish_error"] = err_msg
                 res_item["id"] = article_id
                 res_item["generation_status"] = "success"
                 await log_activity(client_id, "article_generate", "success", {"titolo": titolo, "article_id": article_id})
