@@ -22,6 +22,10 @@ export const GeneratorPage = () => {
 
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState(null);
+  const [targetKeywords, setTargetKeywords] = useState([]);
+  const [automation, setAutomation] = useState({ enabled: false, articles_per_week: 1 });
+  const [branding, setBranding] = useState({});
+  const [saving, setSaving] = useState(false);
 
   const effectiveClientId = routeClientId || (user?.client_ids && user.client_ids.length > 0 ? user.client_ids[0] : null);
 
@@ -31,11 +35,31 @@ export const GeneratorPage = () => {
       try {
         const res = await axios.get(`${API}/clients/${effectiveClientId}`, { headers: getAuthHeaders() });
         setClient(res.data);
+        const config = res.data.configuration || {};
+        if (config.seo?.target_keywords) setTargetKeywords(config.seo.target_keywords);
+        if (config.automation) setAutomation(config.automation);
+        if (config.brand_identity) setBranding(config.brand_identity);
       } catch (e) { toast.error('Errore caricamento cliente'); }
       finally { setLoading(false); }
     };
     fetch();
   }, [effectiveClientId]);
+
+  const handleSaveConfig = async () => {
+    setSaving(true);
+    try {
+      await axios.post(`${API}/clients/${effectiveClientId}/config-partial`, {
+        'seo.target_keywords': targetKeywords,
+        'automation': automation,
+        'brand_identity': branding
+      }, { headers: getAuthHeaders() });
+      toast.success('Configurazione salvata con successo!');
+    } catch (e) {
+      toast.error('Errore nel salvataggio della configurazione');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
 
@@ -69,11 +93,37 @@ export const GeneratorPage = () => {
 
       {isAdmin ? (
         <>
-          <AdminGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
+          <AdminGenerator 
+            client={client} 
+            effectiveClientId={effectiveClientId} 
+            getAuthHeaders={getAuthHeaders} 
+            navigate={navigate}
+            targetKeywords={targetKeywords}
+            setTargetKeywords={setTargetKeywords}
+            automation={automation}
+            setAutomation={setAutomation}
+            onSaveConfig={handleSaveConfig}
+            saving={saving}
+            branding={branding}
+            setBranding={setBranding}
+          />
           <ArticleHistory effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
         </>
       ) : (
-        <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
+        <ClientGenerator 
+          client={client} 
+          effectiveClientId={effectiveClientId} 
+          getAuthHeaders={getAuthHeaders} 
+          navigate={navigate} 
+          targetKeywords={targetKeywords}
+          setTargetKeywords={setTargetKeywords}
+          automation={automation}
+          setAutomation={setAutomation}
+          onSaveConfig={handleSaveConfig}
+          saving={saving}
+          branding={branding}
+          setBranding={setBranding}
+        />
       )}
     </div>
   );

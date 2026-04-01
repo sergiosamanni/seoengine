@@ -249,7 +249,22 @@ export const ClientWorkspace = () => {
                                         />
                                     </TabsContent>
                                     <TabsContent value="gsc" className="mt-0">
-                                        <GscConnectionTab clientId={clientId} getAuthHeaders={getAuthHeaders} />
+                                        <GscConnectionTab 
+                                            clientId={clientId} 
+                                            getAuthHeaders={getAuthHeaders} 
+                                            setActiveTab={setActiveTab}
+                                            setSelectedTopic={setSelectedTopic}
+                                            onApplySuggestion={(sug) => {
+                                                setSelectedTopic({
+                                                    titolo: sug.type === 'optimize_content' ? `Ottimizzazione: ${sug.keyword}` : `Pillar: ${sug.keyword}`,
+                                                    keyword: sug.keyword,
+                                                    motivo: sug.explanation,
+                                                    funnel: sug.type === 'optimize_content' ? 'MOFU' : 'TOFU'
+                                                });
+                                                handleTabChange('generator');
+                                                toast.info(`Configurato generatore per: ${sug.keyword}`);
+                                            }}
+                                        />
                                     </TabsContent>
                                     <TabsContent value="knowledge-base" className="mt-0">
                                         <KnowledgeBaseTab knowledge={knowledge} setKnowledge={setKnowledge} isAdmin={isAdmin} effectiveClientId={clientId} getAuthHeaders={getAuthHeaders} />

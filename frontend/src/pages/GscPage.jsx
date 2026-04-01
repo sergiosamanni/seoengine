@@ -16,21 +16,39 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import {
-  BarChart3,
-  Loader2,
   RefreshCw,
-  ExternalLink,
+  Search,
   Save,
-  TrendingUp,
-  MousePointerClick,
-  Eye,
-  Target,
-  Unlink,
   CheckCircle2,
   AlertTriangle,
-  LogIn
-} from 'lucide-react';
+  Loader2,
+  ExternalLink,
+  BarChart3,
+  MousePointerClick,
+  Eye,
+  TrendingUp,
+  Target,
+  Unlink,
+  Sparkles,
+  ChevronRight,
+  Lightbulb
+} from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import { toast } from 'sonner';
+
+// Simple Markdown component to avoid external dependency if not installed
+const Markdown = ({ children }) => {
+  if (!children) return null;
+  // Basic formatting: bold, lists, newlines
+  const formatted = children
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^\d\.\s(.*)$/gm, '<div class="flex gap-2 mb-2"><span>$1</span></div>')
+    .replace(/^-\s(.*)$/gm, '<div class="flex gap-2 mb-2"><span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></span><span>$1</span></div>')
+    .split('\n').map(line => line.trim() ? `<p class="mb-2">${line}</p>` : '<div class="h-2"></div>')
+    .join('');
+    
+  return <div dangerouslySetInnerHTML={{ __html: formatted }} />;
+};
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -42,6 +60,8 @@ export const GscPage = () => {
   const [savingSiteUrl, setSavingSiteUrl] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [data, setData] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const [days, setDays] = useState('28');
   const [siteUrl, setSiteUrl] = useState('');
   const [siteUrlInput, setSiteUrlInput] = useState('');
@@ -49,6 +69,8 @@ export const GscPage = () => {
   const [gscConnected, setGscConnected] = useState(false);
   const [integrationConfigured, setIntegrationConfigured] = useState(true);
   const [redirectUri, setRedirectUri] = useState('');
+
+  const effectiveClientId = clientId; // Use a consistent variable name
 
   useEffect(() => {
     const init = async () => {
@@ -65,7 +87,7 @@ export const GscPage = () => {
       }
     };
     init();
-  }, [clientId]);
+  }, [clientId, searchParams]); // Added searchParams to dependencies
 
   const checkIntegration = async () => {
     try {
@@ -77,7 +99,7 @@ export const GscPage = () => {
 
   const fetchClient = async () => {
     try {
-      const res = await axios.get(`${API}/clients/${clientId}`, { headers: getAuthHeaders() });
+      const res = await axios.get(`${API}/clients/${effectiveClientId}`, { headers: getAuthHeaders() });
       setClient(res.data);
       const gsc = res.data.configuration?.gsc || {};
       if (gsc.site_url) {
@@ -98,7 +120,7 @@ export const GscPage = () => {
     }
     setSavingSiteUrl(true);
     try {
-      await axios.post(`${API}/clients/${clientId}/gsc-config`, {
+      await axios.post(`${API}/clients/${effectiveClientId}/gsc-config`, {
         site_url: siteUrlInput.trim(),
         enabled: true
       }, { headers: getAuthHeaders() });
@@ -119,7 +141,7 @@ export const GscPage = () => {
     setConnecting(true);
     try {
       const currentRedirectUri = `${window.location.origin}/api/gsc/callback`;
-      const res = await axios.get(`${API}/gsc/authorize/${clientId}?redirect_uri=${encodeURIComponent(currentRedirectUri)}`, { headers: getAuthHeaders() });
+      const res = await axios.get(`${API}/gsc/authorize/${effectiveClientId}?redirect_uri=${encodeURIComponent(currentRedirectUri)}`, { headers: getAuthHeaders() });
       window.location.href = res.data.authorization_url;
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Errore avvio connessione Google');
@@ -129,9 +151,10 @@ export const GscPage = () => {
 
   const disconnectGoogle = async () => {
     try {
-      await axios.post(`${API}/clients/${clientId}/gsc-disconnect`, {}, { headers: getAuthHeaders() });
+      await axios.post(`${API}/clients/${effectiveClientId}/gsc-disconnect`, {}, { headers: getAuthHeaders() });
       setGscConnected(false);
       setData(null);
+      setAnalysis(null); // Clear analysis on disconnect
       toast.success('Google Search Console disconnesso');
     } catch (error) {
       toast.error('Errore disconnessione');
@@ -141,10 +164,12 @@ export const GscPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/clients/${clientId}/gsc-data?days=${days}`, {
+      const resp = await axios.get(`${API}/clients/${effectiveClientId}/gsc-data?days=${days}`, {
         headers: getAuthHeaders()
       });
-      setData(res.data);
+      setData(resp.data);
+      // Reset analysis when period changes
+      setAnalysis(null);
     } catch (error) {
       if (error.response?.status === 401) {
         setGscConnected(false);
@@ -154,6 +179,21 @@ export const GscPage = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAnalysis = async () => {
+    setAnalyzing(true);
+    try {
+      const resp = await axios.get(`${API}/clients/${effectiveClientId}/gsc-seo-analysis?days=${days}`, {
+        headers: getAuthHeaders()
+      });
+      setAnalysis(resp.data.analysis);
+      toast.success('Analisi SEO completata con successo');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Errore durante l\'analisi SEO');
+    } finally {
+      setAnalyzing(false);
     }
   };
 
@@ -340,127 +380,208 @@ export const GscPage = () => {
           <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
         </div>
       ) : data ? (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <MousePointerClick className="w-4 h-4 text-blue-600" />
-                  <span className="text-xs text-slate-500">Click totali</span>
-                </div>
-                <p className="text-2xl font-bold text-slate-900 font-['Manrope']" data-testid="gsc-total-clicks">{data.totals?.total_clicks?.toLocaleString()}</p>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Eye className="w-4 h-4 text-purple-600" />
-                  <span className="text-xs text-slate-500">Impressioni</span>
-                </div>
-                <p className="text-2xl font-bold text-slate-900 font-['Manrope']" data-testid="gsc-total-impressions">{data.totals?.total_impressions?.toLocaleString()}</p>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="w-4 h-4 text-emerald-600" />
-                  <span className="text-xs text-slate-500">CTR medio</span>
-                </div>
-                <p className="text-2xl font-bold text-slate-900 font-['Manrope']" data-testid="gsc-avg-ctr">{data.totals?.avg_ctr}%</p>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Target className="w-4 h-4 text-orange-600" />
-                  <span className="text-xs text-slate-500">Posizione media</span>
-                </div>
-                <p className="text-2xl font-bold text-slate-900 font-['Manrope']" data-testid="gsc-avg-position">{data.totals?.avg_position}</p>
-              </CardContent>
-            </Card>
-          </div>
+        <Tabs defaultValue="performance" className="space-y-6">
+          <TabsList className="bg-slate-100 p-1">
+            <TabsTrigger value="performance" className="data-[state=active]:bg-white">
+              <BarChart3 className="w-4 h-4 mr-2" /> Performance
+            </TabsTrigger>
+            <TabsTrigger value="analysis" className="data-[state=active]:bg-white" data-testid="gsc-analysis-tab">
+              <Sparkles className="w-4 h-4 mr-2 text-blue-600" /> Suggerimenti AI
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-slate-200">
-              <CardHeader>
-                <CardTitle>Top Keyword</CardTitle>
-                <CardDescription>{data.keywords?.length} keyword posizionate</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[400px]">
-                  <table className="w-full text-sm">
-                    <thead className="border-b border-slate-200">
-                      <tr className="text-slate-500 text-xs">
-                        <th className="text-left py-2 px-1">Keyword</th>
-                        <th className="text-right py-2 px-1">Click</th>
-                        <th className="text-right py-2 px-1">Impr.</th>
-                        <th className="text-right py-2 px-1">CTR</th>
-                        <th className="text-right py-2 px-1">Pos.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(data.keywords || []).map((kw, i) => (
-                        <tr key={i} className="border-b border-slate-50 hover:bg-slate-50" data-testid={`gsc-kw-row-${i}`}>
-                          <td className="py-2 px-1 font-medium text-slate-900 truncate max-w-[200px]">{kw.keyword}</td>
-                          <td className="py-2 px-1 text-right text-blue-600 font-medium">{kw.clicks}</td>
-                          <td className="py-2 px-1 text-right text-slate-500">{kw.impressions.toLocaleString()}</td>
-                          <td className="py-2 px-1 text-right text-slate-600">{kw.ctr}%</td>
-                          <td className="py-2 px-1 text-right">
-                            <Badge variant={kw.position <= 3 ? 'default' : kw.position <= 10 ? 'secondary' : 'outline'}
-                              className={`text-xs ${kw.position <= 3 ? 'bg-emerald-600' : ''}`}>
-                              {kw.position}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </ScrollArea>
-              </CardContent>
-            </Card>
+          <TabsContent value="performance" className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="border-slate-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <MousePointerClick className="w-4 h-4 text-blue-600" />
+                    <span className="text-xs text-slate-500">Click totali</span>
+                  </div>
+                  <p className="text-2xl font-bold text-slate-900 font-['Manrope']" data-testid="gsc-total-clicks">{data.totals?.total_clicks?.toLocaleString()}</p>
+                </CardContent>
+              </Card>
+              <Card className="border-slate-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Eye className="w-4 h-4 text-purple-600" />
+                    <span className="text-xs text-slate-500">Impressioni</span>
+                  </div>
+                  <p className="text-2xl font-bold text-slate-900 font-['Manrope']" data-testid="gsc-total-impressions">{data.totals?.total_impressions?.toLocaleString()}</p>
+                </CardContent>
+              </Card>
+              <Card className="border-slate-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs text-slate-500">CTR medio</span>
+                  </div>
+                  <p className="text-2xl font-bold text-slate-900 font-['Manrope']" data-testid="gsc-avg-ctr">{data.totals?.avg_ctr}%</p>
+                </CardContent>
+              </Card>
+              <Card className="border-slate-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Target className="w-4 h-4 text-orange-600" />
+                    <span className="text-xs text-slate-500">Posizione media</span>
+                  </div>
+                  <p className="text-2xl font-bold text-slate-900 font-['Manrope']" data-testid="gsc-avg-position">{data.totals?.avg_position}</p>
+                </CardContent>
+              </Card>
+            </div>
 
-            <Card className="border-slate-200">
-              <CardHeader>
-                <CardTitle>Top Pagine</CardTitle>
-                <CardDescription>{data.pages?.length} pagine con traffico</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[400px]">
-                  <table className="w-full text-sm">
-                    <thead className="border-b border-slate-200">
-                      <tr className="text-slate-500 text-xs">
-                        <th className="text-left py-2 px-1">Pagina</th>
-                        <th className="text-right py-2 px-1">Click</th>
-                        <th className="text-right py-2 px-1">CTR</th>
-                        <th className="text-right py-2 px-1">Pos.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(data.pages || []).map((pg, i) => (
-                        <tr key={i} className="border-b border-slate-50 hover:bg-slate-50" data-testid={`gsc-page-row-${i}`}>
-                          <td className="py-2 px-1 truncate max-w-[250px]">
-                            <a href={pg.page} target="_blank" rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline flex items-center gap-1">
-                              {pg.page.replace(/https?:\/\/[^/]+/, '').slice(0, 40) || '/'}
-                              <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                            </a>
-                          </td>
-                          <td className="py-2 px-1 text-right text-blue-600 font-medium">{pg.clicks}</td>
-                          <td className="py-2 px-1 text-right text-slate-600">{pg.ctr}%</td>
-                          <td className="py-2 px-1 text-right">
-                            <Badge variant={pg.position <= 10 ? 'secondary' : 'outline'} className="text-xs">
-                              {pg.position}
-                            </Badge>
-                          </td>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="border-slate-200">
+                <CardHeader>
+                  <CardTitle>Top Keyword</CardTitle>
+                  <CardDescription>{data.keywords?.length} keyword posizionate</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <table className="w-full text-sm">
+                      <thead className="border-b border-slate-200">
+                        <tr className="text-slate-500 text-xs">
+                          <th className="text-left py-2 px-1">Keyword</th>
+                          <th className="text-right py-2 px-1">Click</th>
+                          <th className="text-right py-2 px-1">Impr.</th>
+                          <th className="text-right py-2 px-1">CTR</th>
+                          <th className="text-right py-2 px-1">Pos.</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
-        </>
+                      </thead>
+                      <tbody>
+                        {(data.keywords || []).map((kw, i) => (
+                          <tr key={i} className="border-b border-slate-50 hover:bg-slate-50" data-testid={`gsc-kw-row-${i}`}>
+                            <td className="py-2 px-1 font-medium text-slate-900 truncate max-w-[200px]">{kw.keyword}</td>
+                            <td className="py-2 px-1 text-right text-blue-600 font-medium">{kw.clicks}</td>
+                            <td className="py-2 px-1 text-right text-slate-500">{kw.impressions.toLocaleString()}</td>
+                            <td className="py-2 px-1 text-right text-slate-600">{kw.ctr}%</td>
+                            <td className="py-2 px-1 text-right">
+                              <Badge variant={kw.position <= 3 ? 'default' : kw.position <= 10 ? 'secondary' : 'outline'}
+                                className={`text-xs ${kw.position <= 3 ? 'bg-emerald-600' : ''}`}>
+                                {kw.position}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-200">
+                <CardHeader>
+                  <CardTitle>Top Pagine</CardTitle>
+                  <CardDescription>{data.pages?.length} pagine con traffico</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <table className="w-full text-sm">
+                      <thead className="border-b border-slate-200">
+                        <tr className="text-slate-500 text-xs">
+                          <th className="text-left py-2 px-1">Pagina</th>
+                          <th className="text-right py-2 px-1">Click</th>
+                          <th className="text-right py-2 px-1">CTR</th>
+                          <th className="text-right py-2 px-1">Pos.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(data.pages || []).map((pg, i) => (
+                          <tr key={i} className="border-b border-slate-50 hover:bg-slate-50" data-testid={`gsc-page-row-${i}`}>
+                            <td className="py-2 px-1 truncate max-w-[250px]">
+                              <a href={pg.page} target="_blank" rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline flex items-center gap-1">
+                                {pg.page.replace(/https?:\/\/[^/]+/, '').slice(0, 40) || '/'}
+                                <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                              </a>
+                            </td>
+                            <td className="py-2 px-1 text-right text-blue-600 font-medium">{pg.clicks}</td>
+                            <td className="py-2 px-1 text-right text-slate-600">{pg.ctr}%</td>
+                            <td className="py-2 px-1 text-right">
+                              <Badge variant={pg.position <= 10 ? 'secondary' : 'outline'} className="text-xs">
+                                {pg.position}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="analysis">
+            {!analysis ? (
+              <Card className="border-slate-200 overflow-hidden">
+                <div className="bg-slate-900 p-8 text-center space-y-4">
+                  <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto ring-8 ring-slate-900">
+                    <Sparkles className="w-8 h-8 text-blue-400" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold text-white">Analisi Strategica AI</h3>
+                    <p className="text-slate-400 max-w-md mx-auto">
+                      Lascia che l'intelligenza artificiale analizzi i tuoi dati GSC per trovare keyword inespresse, 
+                      opportunità di posizionamento rapido e consigli per i contenuti.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={fetchAnalysis} 
+                    disabled={analyzing}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 h-12 shadow-xl shadow-blue-500/20"
+                    data-testid="gsc-run-analysis-btn"
+                  >
+                    {analyzing ? (
+                      <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Analizzando i dati...</>
+                    ) : (
+                      <><Lightbulb className="w-5 h-5 mr-2" />Genera Suggerimenti SEO</>
+                    )}
+                  </Button>
+                </div>
+                <CardContent className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6 bg-white">
+                  <div className="space-y-2 text-center p-4">
+                    <Target className="w-6 h-6 text-emerald-500 mx-auto" />
+                    <h4 className="font-semibold text-slate-900">Low Hanging Fruits</h4>
+                    <p className="text-sm text-slate-500">Trova keyword in 2ª pagina semplici da posizionare</p>
+                  </div>
+                  <div className="space-y-2 text-center p-4">
+                    <TrendingUp className="w-6 h-6 text-blue-500 mx-auto" />
+                    <h4 className="font-semibold text-slate-900">Optimization CTR</h4>
+                    <p className="text-sm text-slate-500">Migliora Title e Meta Description strategicamente</p>
+                  </div>
+                  <div className="space-y-2 text-center p-4">
+                    <Search className="w-6 h-6 text-purple-500 mx-auto" />
+                    <h4 className="font-semibold text-slate-900">Content Gaps</h4>
+                    <p className="text-sm text-slate-500">Scopri cosa cercano gli utenti ma tu non hai ancora scritto</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-slate-200">
+                <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <CardTitle>Report Strategico SEO</CardTitle>
+                        <CardDescription>Generato il {new Date().toLocaleDateString()}</CardDescription>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={fetchAnalysis} disabled={analyzing}>
+                      <RefreshCw className={`w-4 h-4 mr-2 ${analyzing ? 'animate-spin' : ''}`} /> Rianalizza
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8 prose prose-slate max-w-none prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-h2:mt-8 prose-h2:mb-4 prose-p:text-slate-600">
+                  <Markdown>{analysis}</Markdown>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
       ) : null}
     </div>
   );

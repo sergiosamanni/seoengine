@@ -57,6 +57,7 @@ export const ClientSimpleGenerator = () => {
   };
 
   const handleGenerate = async () => {
+    if (generating) return;
     if (!keyword.trim()) {
       toast.error('Inserisci una keyword o un titolo');
       return;

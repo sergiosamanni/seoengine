@@ -58,6 +58,9 @@ export const UsersPage = () => {
   const [selectedClientIds, setSelectedClientIds] = useState([]);
   const [assigning, setAssigning] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'client' });
 
   useEffect(() => {
     fetchData();
@@ -135,6 +138,22 @@ export const UsersPage = () => {
     }
   };
 
+  const createUser = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      await axios.post(`${API}/auth/register`, newUser, { headers: getAuthHeaders() });
+      toast.success('Utente creato con successo');
+      setShowCreateDialog(false);
+      setNewUser({ name: '', email: '', password: '', role: 'client' });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Errore creazione utente');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const filteredUsers = users.filter(u => {
     const matchesSearch = !search ||
       u.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -165,6 +184,9 @@ export const UsersPage = () => {
           <p className="text-slate-500 mt-1">Gestisci gli account registrati e associali ai clienti</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={() => setShowCreateDialog(true)} className="bg-slate-900 hover:bg-slate-800" data-testid="new-user-btn">
+            <UserPlus className="w-4 h-4 mr-2" /> Nuovo Utente
+          </Button>
           <Badge variant="outline" className="text-sm py-1 px-3">
             {users.length} utenti totali
           </Badge>
@@ -361,6 +383,66 @@ export const UsersPage = () => {
               <Trash2 className="w-4 h-4 mr-2" />Elimina
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create User Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Nuovo Utente</DialogTitle>
+            <DialogDescription>Crea un nuovo account per un collaboratore o un cliente.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={createUser} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome Completo</Label>
+              <Input
+                placeholder="Mario Rossi"
+                required
+                value={newUser.name}
+                onChange={e => setNewUser({ ...newUser, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                placeholder="mario@esempio.it"
+                required
+                value={newUser.email}
+                onChange={e => setNewUser({ ...newUser, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Password</Label>
+              <Input
+                type="password"
+                placeholder="••••••••"
+                required
+                value={newUser.password}
+                onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Ruolo</Label>
+              <Select value={newUser.role} onValueChange={val => setNewUser({ ...newUser, role: val })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="client">Cliente (Standard)</SelectItem>
+                  <SelectItem value="admin">Amministratore</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>Annulla</Button>
+              <Button type="submit" className="bg-slate-900" disabled={creating}>
+                {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                Crea Utente
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

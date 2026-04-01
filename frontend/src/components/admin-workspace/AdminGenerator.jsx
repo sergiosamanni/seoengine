@@ -14,11 +14,11 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { Progress } from '../ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import {
-    Zap, AlertCircle, Loader2, FileText, Globe, CheckCircle2,
+    AlertCircle, Loader2, FileText, Globe, CheckCircle2,
     XCircle, Clock, Send, ExternalLink, Search, Lock, Target, BarChart3,
     PenTool, ChevronRight, Sparkles, ImagePlus, X, Camera, Image as ImageIcon,
     Calendar, BrainCircuit, RefreshCcw, Info, AlertTriangle, Plus,
-    ChevronUp, ChevronDown, TrendingUp, Trash2, Eye
+    ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, RefreshCw, Filter, Wand2, MousePointer2, Layers
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '../ui/switch';
@@ -51,6 +51,7 @@ const AdminGenerator = ({
     // GSC state
     const [gscData, setGscData] = useState(null);
     const [gscLoading, setGscLoading] = useState(false);
+    const [gscSuggestions, setGscSuggestions] = useState([]);
 
     // Prompt state
     const [advancedPrompt, setAdvancedPrompt] = useState('');
@@ -98,6 +99,7 @@ const AdminGenerator = ({
     const [refineFeedback, setRefineFeedback] = useState('');
     const [refining, setRefining] = useState(false);
     const [recentArticles, setRecentArticles] = useState([]);
+    const [showRecentArticles, setShowRecentArticles] = useState(false);
     const [activePlanImageIndex, setActivePlanImageIndex] = useState(null);
 
     const config = client?.configuration || {};
@@ -196,6 +198,7 @@ const AdminGenerator = ({
         // Restiamo qui nello step 5 (Genera) ma in modalità 'single'.
     };
 
+
     useEffect(() => {
         if (initialData) {
             setStep(4); // Go straight to generation
@@ -240,6 +243,7 @@ const AdminGenerator = ({
         setAdminUploadedImages(prev => { const c = [...prev]; URL.revokeObjectURL(c[idx].preview); c.splice(idx, 1); return c; });
     };
 
+
     const runSerpAnalysis = async () => {
         if (!serpKeyword.trim()) { toast.error('Inserisci una keyword'); return; }
         setSerpLoading(true);
@@ -260,11 +264,16 @@ const AdminGenerator = ({
         try {
             const res = await axios.get(`${API}/clients/${effectiveClientId}/gsc-data?days=28`, { headers: getAuthHeaders() });
             setGscData(res.data);
-            toast.success(`Dati GSC caricati: ${res.data.keywords?.length || 0} keyword`);
+            
+            // Also load suggestions
+            const sugRes = await axios.get(`${API}/clients/${effectiveClientId}/gsc-suggestions`, { headers: getAuthHeaders() });
+            setGscSuggestions(sugRes.data.suggestions || []);
+
+            toast.success(`Dati GSC caricati: ${res.data.keywords?.length || 0} keyword e ${sugRes.data.suggestions?.length || 0} suggerimenti.`);
             if (serpData && !advancedPrompt.trim()) buildDefaultPrompt(serpData, res.data);
         } catch (error) {
             if (error.response?.status === 401) toast.error('Token GSC scaduto. Riconnetti dalla Configurazione.');
-            else toast.error(error.response?.data?.detail || 'Errore caricamento GSC');
+            else toast.error(error.response?.data?.detail || 'Errore caricamento dati GSC o suggerimenti.');
         } finally { setGscLoading(false); }
     };
 
@@ -422,6 +431,7 @@ const AdminGenerator = ({
     };
 
     const handleSingleGenerate = async (typeOverride = null) => {
+        if (singleGenerating) return;
         if (!singleKeywords.trim() && !singleTitle.trim()) { toast.error('Inserisci almeno keywords o titolo'); return; }
         setSingleGenerating(true);
         setSingleResult(null);
@@ -514,6 +524,7 @@ const AdminGenerator = ({
     const selectAll = () => setSelectedCombinations(selectedCombinations.length === combinations.length ? [] : [...combinations]);
 
     const handleProgrammaticGenerate = async () => {
+        if (generating) return;
         if (selectedCombinations.length === 0) { toast.error('Seleziona almeno una combinazione'); return; }
         setGenerating(true); setResults([]); setProgressPercent(0);
         await saveConfig();
@@ -559,6 +570,7 @@ const AdminGenerator = ({
     };
 
     const handleBatchPlanGenerate = async () => {
+        if (generating) return;
         if (selectedPlanTopics.length === 0) { toast.error('Seleziona almeno un articolo'); return; }
         setGenerating(true); setResults([]); setProgressPercent(0);
 
@@ -652,7 +664,7 @@ const AdminGenerator = ({
         { num: 2, label: 'Analisi SERP', icon: Search, done: serpDone },
         { num: 3, label: gscConnected ? 'GSC' : 'GSC (N/C)', icon: BarChart3, done: !!gscData, optional: !gscConnected, connected: gscConnected },
         { num: 4, label: 'Prompt', icon: Lock, done: promptDone },
-        { num: 5, label: 'Genera', icon: Zap, done: false },
+        { num: 5, label: 'Genera', icon: Sparkles, done: false },
     ];
 
     useEffect(() => {
@@ -751,61 +763,124 @@ const AdminGenerator = ({
             )}
 
             {step === 3 && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                     {gscConnected ? (
-                        <Card className="border-sky-200 bg-sky-50/50" data-testid="gsc-step">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <BarChart3 className="w-5 h-5 text-sky-600" />Google Search Console
-                                        </CardTitle>
-                                        <CardDescription>{gscSite}</CardDescription>
+                        <div className="space-y-6">
+                            <Card className="border-sky-200 bg-sky-50/50" data-testid="gsc-step">
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <CardTitle className="flex items-center gap-2">
+                                                <BarChart3 className="w-5 h-5 text-sky-600" />Rendimento Search Console
+                                            </CardTitle>
+                                            <CardDescription>{client?.gsc_site || 'Dominio collegato'}</CardDescription>
+                                        </div>
+                                        {gscData && (
+                                            <Button variant="outline" size="sm" onClick={loadGscData} disabled={gscLoading}>
+                                                <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${gscLoading ? 'animate-spin' : ''}`} /> Aggiorna
+                                            </Button>
+                                        )}
                                     </div>
-                                    {gscData && (
-                                        <Button variant="outline" size="sm" onClick={loadGscData} disabled={gscLoading}>
-                                            Aggiorna
+                                </CardHeader>
+                                <CardContent>
+                                    {gscLoading && !gscData ? (
+                                        <div className="py-8 flex flex-col items-center justify-center text-sky-600 gap-3">
+                                            <Loader2 className="w-8 h-8 animate-spin" />
+                                            <p className="text-sm font-medium">Caricamento dati in corso...</p>
+                                        </div>
+                                    ) : gscData ? (
+                                        <div className="space-y-6">
+                                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                                {[
+                                                    { label: 'Click', value: gscData.totals?.total_clicks || 0, icon: MousePointer2 },
+                                                    { label: 'Impressioni', value: gscData.totals?.total_impressions || 0, icon: Eye },
+                                                    { label: 'CTR medio', value: `${gscData.totals?.avg_ctr || 0}%`, icon: TrendingUp },
+                                                    { label: 'Posiz. media', value: gscData.totals?.avg_position || 0, icon: Target },
+                                                ].map(m => (
+                                                    <div key={m.label} className="p-4 bg-white rounded-xl shadow-sm border border-sky-100 flex flex-col items-center text-center">
+                                                        <m.icon className="w-4 h-4 text-sky-400 mb-2" />
+                                                        <p className="text-2xl font-black text-slate-900 tracking-tight">{m.value}</p>
+                                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{m.label}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest w-full mb-1">Top Query</p>
+                                                {gscData.keywords?.slice(0, 15).map((k, i) => (
+                                                    <Badge key={i} variant="outline" className="text-xs bg-white font-mono py-1 px-3 border-sky-100 text-sky-900">
+                                                        {k.keyword}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <Button onClick={loadGscData} disabled={gscLoading} className="w-full bg-sky-600 hover:bg-sky-700 h-12 shadow-md">
+                                            {gscLoading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <BarChart3 className="w-5 h-5 mr-2" />}
+                                            Carica dati GSC
                                         </Button>
                                     )}
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                {gscLoading && !gscData ? (
-                                    <Loader2 className="w-6 h-6 animate-spin text-sky-600 mx-auto" />
-                                ) : gscData ? (
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-4 gap-3">
-                                            {[
-                                                { label: 'Click', value: gscData.totals?.total_clicks || 0 },
-                                                { label: 'Impressioni', value: gscData.totals?.total_impressions || 0 },
-                                                { label: 'CTR medio', value: `${gscData.totals?.avg_ctr || 0}%` },
-                                                { label: 'Posiz. media', value: gscData.totals?.avg_position || 0 },
-                                            ].map(m => (
-                                                <div key={m.label} className="p-3 bg-white rounded-lg text-center border border-sky-100">
-                                                    <p className="text-xl font-bold text-slate-900">{m.value}</p>
-                                                    <p className="text-xs text-slate-500">{m.label}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {gscData.keywords?.slice(0, 12).map((k, i) => (
-                                                <Badge key={i} variant="outline" className="text-xs bg-white font-mono">
-                                                    {k.keyword}
-                                                </Badge>
-                                            ))}
-                                        </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* SEO Suggestions in Step 3 */}
+                            {gscSuggestions.length > 0 && (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 px-1">
+                                        <Sparkles className="w-5 h-5 text-indigo-600" />
+                                        <h3 className="text-lg font-bold text-slate-900 tracking-tight">Opportunità Rilevate (Low Hanging Fruits)</h3>
                                     </div>
-                                ) : (
-                                    <Button onClick={loadGscData} disabled={gscLoading}>Carica dati GSC</Button>
-                                )}
-                            </CardContent>
-                        </Card>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {gscSuggestions.map((s, i) => (
+                                            <Card key={i} className="border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all">
+                                                <CardContent className="p-5 flex flex-col h-full space-y-4">
+                                                    <div className="flex justify-between items-start">
+                                                        <Badge className={s.type === 'optimize_content' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'}>
+                                                            {s.type === 'optimize_content' ? 'Ottimizza' : 'Pillar'}
+                                                        </Badge>
+                                                        <div className="text-[10px] font-mono font-bold text-slate-400 text-right">
+                                                            Pos: {s.metrics.position}<br/>
+                                                            Impr: {s.metrics.impressions}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-slate-900">"{s.keyword}"</h4>
+                                                        <p className="text-xs text-slate-500 mt-2 line-clamp-3">{s.explanation}</p>
+                                                    </div>
+                                                    <Button 
+                                                        size="sm" 
+                                                        className="w-full bg-slate-900 hover:bg-black font-semibold h-9"
+                                                        onClick={() => {
+                                                            setSerpKeyword(s.keyword);
+                                                            setSingleKeywords(s.keyword);
+                                                            setSingleTitle(s.type === 'optimize_content' ? `Ottimizzazione: ${s.keyword}` : `Guida Pillar: ${s.keyword}`);
+                                                            setStep(2); // Go to SERP analysis for this keyword
+                                                            toast.success(`Keyword suggerita applicata: ${s.keyword}`);
+                                                        }}
+                                                    >
+                                                        <Wand2 className="w-3.5 h-3.5 mr-2" /> Applica Suggerimento
+                                                    </Button>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     ) : (
-                        <Card className="p-6 text-center text-slate-500">GSC non connesso. Puoi saltare questo step.</Card>
+                        <Card className="p-12 text-center border-dashed border-2">
+                            <div className="max-w-xs mx-auto space-y-3">
+                                <AlertCircle className="w-10 h-10 text-slate-300 mx-auto" />
+                                <CardTitle className="text-slate-500">GSC non connesso</CardTitle>
+                                <CardDescription>Collega Google Search Console nelle impostazioni del cliente per ricevere suggerimenti SEO intelligenti.</CardDescription>
+                                <Button variant="outline" onClick={() => setStep(4)}>Salta questo step</Button>
+                            </div>
+                        </Card>
                     )}
-                    <div className="flex justify-between">
+                    <div className="flex justify-between pt-4">
                         <Button variant="outline" onClick={() => setStep(2)}>Indietro</Button>
-                        <Button onClick={() => setStep(4)} className="bg-slate-900 hover:bg-slate-800">Prosegui</Button>
+                        <Button onClick={() => setStep(4)} className="bg-slate-900 hover:bg-slate-800 shadow-md h-11 px-8">
+                            Prosegui <ChevronRight className="w-4 h-4 ml-1" />
+                        </Button>
                     </div>
                 </div>
             )}
@@ -869,16 +944,16 @@ const AdminGenerator = ({
 
                         {/* Sub-tab Articoli */}
                         {(genMode === 'single' || genMode === 'plan') && (
-                            <div className="flex gap-2 p-1 bg-orange-50 border border-orange-100 rounded-xl w-fit">
+                            <div className="flex gap-2 p-1 bg-blue-50 border border-blue-100 rounded-xl w-fit">
                                 <button
                                     onClick={() => setGenMode('single')}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${genMode === 'single' ? 'bg-orange-500 text-white shadow-sm' : 'text-orange-700 hover:bg-orange-100'}`}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${genMode === 'single' ? 'bg-blue-600 text-white shadow-sm' : 'text-blue-700 hover:bg-blue-100'}`}
                                 >
                                     <PenTool className="w-3.5 h-3.5" /> Articolo Singolo
                                 </button>
                                 <button
                                     onClick={() => setGenMode('plan')}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${genMode === 'plan' ? 'bg-orange-500 text-white shadow-sm' : 'text-orange-700 hover:bg-orange-100'}`}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${genMode === 'plan' ? 'bg-blue-600 text-white shadow-sm' : 'text-blue-700 hover:bg-blue-100'}`}
                                 >
                                     <Calendar className="w-3.5 h-3.5" /> Piano Editoriale
                                 </button>
@@ -908,9 +983,9 @@ const AdminGenerator = ({
                         <div className="space-y-4">
                             {/* Contextual header */}
                             {genMode === 'single' && (
-                                <div className="flex items-start gap-3 p-3 bg-orange-50 border border-orange-100 rounded-xl">
-                                    <PenTool className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                                    <p className="text-xs text-orange-800">
+                                <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                                    <PenTool className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                                    <p className="text-xs text-blue-800">
                                         <strong>Articolo Singolo</strong> — Genera un articolo SEO ottimizzato per la keyword indicata.
                                         L'agente usa knowledge base, GSC, analisi SERP e link interni per massimizzare la rilevanza.
                                     </p>
@@ -979,26 +1054,26 @@ const AdminGenerator = ({
                                 <Card className="border-slate-200">
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm flex items-center gap-2">
-                                            <Camera className="w-4 h-4 text-orange-500" /> Immagine Hero / Featured
+                                            <Camera className="w-4 h-4 text-blue-600" /> Immagine Hero / Featured
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         <div className="flex bg-slate-100 p-1 rounded-lg">
                                             <button 
                                                 onClick={() => setImageSource('ai')} 
-                                                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${imageSource === 'ai' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${imageSource === 'ai' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
                                             >
                                                 Generata AI
                                             </button>
                                             <button 
                                                 onClick={() => { setImageSource('upload'); if (singleTitle && !imgSearchQuery) setImgSearchQuery(singleTitle); }} 
-                                                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${imageSource === 'upload' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${imageSource === 'upload' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
                                             >
                                                 Carica Foto
                                             </button>
                                             <button 
                                                 onClick={() => { setImageSource('search'); if (singleTitle && !imgSearchQuery) setImgSearchQuery(singleTitle); }} 
-                                                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${imageSource === 'search' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${imageSource === 'search' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
                                             >
                                                 Cerca Web
                                             </button>
@@ -1086,7 +1161,7 @@ const AdminGenerator = ({
                                 <Button 
                                     onClick={() => handleSingleGenerate(genMode === 'landing' ? 'landing_page' : 'articolo')} 
                                     disabled={singleGenerating} 
-                                    className={`w-full h-12 ${genMode === 'landing' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-orange-500 hover:bg-orange-600'}`}
+                                    className={`w-full h-12 shadow-lg transition-all active:scale-95 ${genMode === 'landing' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-900 hover:bg-slate-800'}`}
                                 >
                                     {singleGenerating ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Zap className="w-5 h-5 mr-2" />}
                                     {genMode === 'landing' ? 'Genera Landing Page' : 'Genera Articolo'}
@@ -1155,10 +1230,7 @@ const AdminGenerator = ({
                                 )}
                             </div>
                         </div>
-                        </div>
-                    )}
-
-
+                    
 
                     {genMode === 'programmatic' && (
                         <div className="space-y-6">
@@ -1223,7 +1295,7 @@ const AdminGenerator = ({
                                         </div>
 
                                         {generating && <Progress value={progressPercent} className="h-2" />}
-                                        <Button className={`w-full h-12 ${genMode === 'programmatic' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-orange-500 hover:bg-orange-600'}`} onClick={handleProgrammaticGenerate} disabled={generating || selectedCombinations.length === 0}>
+                                        <Button className={`w-full h-12 shadow-lg transition-all active:scale-95 ${genMode === 'programmatic' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-900 hover:bg-slate-800'}`} onClick={handleProgrammaticGenerate} disabled={generating || selectedCombinations.length === 0}>
                                             {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
                                             {genMode === 'programmatic' ? 'Genera Landing Pages' : 'Genera Articoli'}
                                         </Button>
@@ -1341,8 +1413,7 @@ const AdminGenerator = ({
                                         </div>
                                         <div className="mt-5 pt-4 border-t border-slate-100 flex justify-end">
                                             <Button onClick={onSaveConfig} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700">
-                                                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-                                                Salva Impostazioni
+                                                                                                Salva Impostazioni
                                             </Button>
                                         </div>
                                     </CardContent>
@@ -1360,7 +1431,7 @@ const AdminGenerator = ({
                                             {selectedPlanTopics.length === plan.topics.length ? "Deseleziona Tutti" : "Seleziona Tutti"}
                                         </Button>
                                     )}
-                                    <Button onClick={generateNewPlan} disabled={planGenerating} className="bg-gradient-to-r from-amber-500 to-orange-600">
+                                    <Button onClick={generateNewPlan} disabled={planGenerating} className="bg-gradient-to-r from-blue-600 to-indigo-800 shadow-md">
                                         {planGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <BrainCircuit className="w-4 h-4 mr-2" />}
                                         {plan?.topics?.length > 0 ? "Aggiorna Piano" : "Genera Piano"}
                                     </Button>
@@ -1368,9 +1439,9 @@ const AdminGenerator = ({
                                         <Button
                                             onClick={handleBatchPlanGenerate}
                                             disabled={generating || selectedPlanTopics.length === 0}
-                                            className="bg-indigo-600 hover:bg-indigo-700"
+                                            className="bg-indigo-600 hover:bg-indigo-700 shadow-md"
                                         >
-                                            {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+                                            {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
                                             Genera Selezionati ({selectedPlanTopics.length})
                                         </Button>
                                     )}
@@ -1490,35 +1561,42 @@ const AdminGenerator = ({
                                         </div>
                                         <div className="space-y-4">
                                             <Card className="border-slate-200">
-                                                <CardHeader className="p-4 pb-2">
-                                                    <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                                        <Clock className="w-4 h-4 text-blue-500" /> Articoli Pubblicati
-                                                    </CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="p-4 pt-0">
-                                                    <ScrollArea className="h-[500px] pr-3">
-                                                        <div className="space-y-3">
-                                                            {recentArticles.length > 0 ? recentArticles.map((art) => (
-                                                                <div key={art.id} className="border-b border-slate-100 pb-2 last:border-0">
-                                                                    <h4 className="text-[11px] font-semibold text-slate-800 line-clamp-1">{art.titolo}</h4>
-                                                                    <div className="flex justify-between items-center mt-1">
-                                                                        <span className="text-[9px] text-slate-400">{art.published_at ? new Date(art.published_at).toLocaleDateString() : 'Non pubblicato'}</span>
-                                                                        <Badge className={`text-[8px] h-3.5 ${art.stato === 'published' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                                                                            {art.stato}
-                                                                        </Badge>
-                                                                    </div>
-                                                                </div>
-                                                            )) : (
-                                                                <div className="text-center py-10 text-[10px] text-slate-400 italic">Nessun articolo trovato.</div>
-                                                            )}
+                                                <button className="w-full" onClick={() => setShowRecentArticles(!showRecentArticles)}>
+                                                    <CardHeader className="p-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer">
+                                                        <div className="flex items-center justify-between">
+                                                            <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                                                <Clock className="w-4 h-4 text-blue-500" /> Articoli Pubblicati
+                                                            </CardTitle>
+                                                            {showRecentArticles ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                                                         </div>
-                                                    </ScrollArea>
-                                                </CardContent>
+                                                    </CardHeader>
+                                                </button>
+                                                {showRecentArticles && (
+                                                    <CardContent className="p-4 pt-0">
+                                                        <ScrollArea className="h-[400px] pr-3">
+                                                            <div className="space-y-3">
+                                                                {recentArticles.length > 0 ? recentArticles.map((art) => (
+                                                                    <div key={art.id} className="border-b border-slate-100 pb-2 last:border-0">
+                                                                        <h4 className="text-[11px] font-semibold text-slate-800 line-clamp-1">{art.titolo}</h4>
+                                                                        <div className="flex justify-between items-center mt-1">
+                                                                            <span className="text-[9px] text-slate-400">{art.published_at ? new Date(art.published_at).toLocaleDateString() : 'Non pubblicato'}</span>
+                                                                            <Badge className={`text-[8px] h-3.5 ${art.stato === 'published' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                                                                                {art.stato}
+                                                                            </Badge>
+                                                                        </div>
+                                                                    </div>
+                                                                )) : (
+                                                                    <div className="text-center py-10 text-[10px] text-slate-400 italic">Nessun articolo trovato.</div>
+                                                                )}
+                                                            </div>
+                                                        </ScrollArea>
+                                                    </CardContent>
+                                                )}
                                             </Card>
 
                                             {activePlanImageIndex !== null && (
-                                                <Card className="border-orange-200 bg-orange-50/30 overflow-hidden sticky top-4">
-                                                    <CardHeader className="p-3 border-b border-orange-100 bg-orange-50">
+                                                <Card className="border-blue-200 bg-blue-50/30 overflow-hidden sticky top-4">
+                                                    <CardHeader className="p-3 border-b border-blue-100 bg-blue-50">
                                                         <div className="flex items-center justify-between">
                                                             <CardTitle className="text-xs font-bold">Immagine per: {plan.topics[activePlanImageIndex].titolo.substring(0, 20)}...</CardTitle>
                                                             <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => setActivePlanImageIndex(null)}><X className="w-3 h-3" /></Button>
@@ -1541,7 +1619,7 @@ const AdminGenerator = ({
                                                                 {imgSearchResults.map((img, i) => (
                                                                     <div key={i} className="cursor-pointer group relative" onClick={() => importExternalImage(img.image)}>
                                                                         <img src={img.thumbnail} className="w-full aspect-square object-cover rounded border border-slate-200" />
-                                                                        <div className="absolute inset-0 bg-orange-500/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                                                        <div className="absolute inset-0 bg-blue-500/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
                                                                             <Plus className="w-6 h-6 text-white drop-shadow-md" />
                                                                         </div>
                                                                     </div>
@@ -1567,7 +1645,7 @@ const AdminGenerator = ({
                     <Card className="w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl overflow-hidden border-none rounded-2xl">
                         <CardHeader className="flex flex-row items-center justify-between bg-slate-900 text-white p-4">
                             <div className="flex items-center gap-3">
-                                <Badge className="bg-orange-500 hover:bg-orange-600">Landing Page Live</Badge>
+                                <Badge className="bg-blue-600 hover:bg-blue-700">Landing Page Live</Badge>
                                 <CardTitle className="text-lg">{landingPreview.titolo}</CardTitle>
                             </div>
                             <Button variant="ghost" className="text-white hover:bg-slate-800" onClick={() => setLandingPreview(null)}>

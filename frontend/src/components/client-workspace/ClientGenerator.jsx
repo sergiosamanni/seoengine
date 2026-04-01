@@ -107,6 +107,7 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
     };
 
     const handleGenerate = async () => {
+        if (generating) return;
         setGenerating(true);
         setResult(null);
         try {
@@ -269,7 +270,12 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
                                         {result?.status === 'completed' && <Badge className="bg-emerald-500 text-white border-0">Pubblicato</Badge>}
                                     </div>
 
-                                    {!result?.status && <Progress value={45} className="h-2 bg-slate-800" indicatorClassName="bg-gradient-to-r from-blue-500 to-indigo-500" />}
+                                    {!result?.status && (
+                                        <div className="space-y-3">
+                                            <Progress value={45} className="h-2 bg-slate-800 animate-pulse" indicatorClassName="bg-gradient-to-r from-blue-500 to-indigo-500" />
+                                            <p className="text-[10px] text-slate-500 text-center italic">L'IA sta scrivendo un contenuto di alta qualità, potrebbe richiedere fino a 2 minuti. Non chiudere questa pagina.</p>
+                                        </div>
+                                    )}
 
                                     {result?.wordpress_link && (
                                         <Button variant="outline" className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl" asChild>
@@ -281,10 +287,11 @@ const ClientGenerator = ({ client, effectiveClientId, getAuthHeaders, navigate }
                                 </div>
                             )}
 
-                            {!generating && !result && (
+                            {!result && (
                                 <div className="space-y-4">
                                     <Button
                                         onClick={handleGenerate}
+                                        disabled={generating}
                                         className="w-full bg-orange-500 hover:bg-orange-600 h-20 text-2xl font-black rounded-3xl shadow-xl shadow-orange-200 transition-all active:scale-95 group"
                                     >
                                         <Sparkles className="w-6 h-6 mr-3 group-hover:animate-spin" />

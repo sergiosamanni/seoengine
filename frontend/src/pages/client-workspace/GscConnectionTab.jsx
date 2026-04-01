@@ -3,7 +3,9 @@ import axios from 'axios';
 import {
     Loader2, Save, CheckCircle2, AlertTriangle,
     Unlink, ExternalLink, ChevronDown, ChevronUp,
-    Copy, Check, BookOpen, Eye, EyeOff, Plug, Key
+    Copy, Check, BookOpen, Eye, EyeOff, Plug, Key,
+    BarChart3, TrendingUp, Target, Sparkles, Wand2,
+    Calendar, MousePointer2, Layers
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -31,7 +33,7 @@ const StepBadge = ({ n, done, active }) => (
     </span>
 );
 
-const GscConnectionTab = ({ clientId, getAuthHeaders }) => {
+const GscConnectionTab = ({ clientId, getAuthHeaders, onApplySuggestion = () => {} }) => {
     const [loading, setLoading] = useState(true);
     const [savingCredentials, setSavingCredentials] = useState(false);
     const [savingSiteUrl, setSavingSiteUrl] = useState(false);
@@ -48,10 +50,41 @@ const GscConnectionTab = ({ clientId, getAuthHeaders }) => {
 
     // UI
     const [showInstructions, setShowInstructions] = useState(true);
+    const [gscData, setGscData] = useState(null);
+    const [suggestions, setSuggestions] = useState([]);
+    const [loadingData, setLoadingData] = useState(false);
 
     useEffect(() => {
         fetchStatus();
     }, [clientId]);
+
+    useEffect(() => {
+        if (status.connected) {
+            fetchGscData();
+            fetchSuggestions();
+        }
+    }, [status.connected]);
+
+    const fetchGscData = async () => {
+        setLoadingData(true);
+        try {
+            const res = await axios.get(`${API}/clients/${clientId}/gsc-data`, { headers: getAuthHeaders() });
+            setGscData(res.data);
+        } catch (e) {
+            console.error('GSC data error', e);
+        } finally {
+            setLoadingData(false);
+        }
+    };
+
+    const fetchSuggestions = async () => {
+        try {
+            const res = await axios.get(`${API}/clients/${clientId}/gsc-suggestions`, { headers: getAuthHeaders() });
+            setSuggestions(res.data.suggestions || []);
+        } catch (e) {
+            console.error('GSC suggestions error', e);
+        }
+    };
 
     const fetchStatus = async () => {
         setLoading(true);
@@ -131,30 +164,138 @@ const GscConnectionTab = ({ clientId, getAuthHeaders }) => {
 
     // ── CONNECTED ────────────────────────────────────────────────────────────
     if (status.connected) return (
-        <div className="space-y-4">
-            <Card className="border-emerald-200 bg-emerald-50/60">
+        <div className="space-y-6">
+            <Card className="border-emerald-200 bg-emerald-50/60 overflow-hidden">
                 <CardContent className="p-5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shadow-sm">
                             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                         </div>
                         <div>
-                            <p className="font-semibold text-emerald-800">Google Search Console connesso</p>
-                            <p className="text-sm text-emerald-600 flex items-center gap-1">
+                            <p className="font-bold text-emerald-900">Google Search Console Connesso</p>
+                            <p className="text-xs text-emerald-700/70 flex items-center gap-1">
                                 {status.site_url}
-                                <ExternalLink className="w-3 h-3 cursor-pointer" onClick={() => window.open(status.site_url, '_blank')} />
+                                <ExternalLink className="w-3 h-3 cursor-pointer hover:text-emerald-900" onClick={() => window.open(status.site_url, '_blank')} />
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Attivo</Badge>
-                        <Button variant="outline" size="sm" onClick={disconnectGoogle} className="text-red-600 border-red-200 hover:bg-red-50">
-                            <Unlink className="w-4 h-4 mr-1" /> Disconnetti
+                    <div className="flex items-center gap-3">
+                        <Button variant="ghost" size="sm" onClick={disconnectGoogle} className="text-slate-400 hover:text-red-600 hover:bg-red-50 text-xs">
+                            <Unlink className="w-3.5 h-3.5 mr-1.5" /> Scollega
                         </Button>
+                        <Badge className="bg-emerald-500 text-white border-none px-3 py-1">Online</Badge>
                     </div>
                 </CardContent>
             </Card>
-            {/* Allow updating credentials even when connected */}
+
+            {/* Performance Overview */}
+            {gscData && (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {[
+                        { label: 'Click Totali', value: gscData.totals?.total_clicks || 0, icon: MousePointer2, color: 'text-blue-600' },
+                        { label: 'Impressioni', value: gscData.totals?.total_impressions || 0, icon: Eye, color: 'text-indigo-600' },
+                        { label: 'CTR Medio', value: `${gscData.totals?.avg_ctr || 0}%`, icon: TrendingUp, color: 'text-emerald-600' },
+                        { label: 'Posiz. Media', value: gscData.totals?.avg_position || 0, icon: Target, color: 'text-amber-600' },
+                    ].map(m => (
+                        <Card key={m.label} className="border-slate-200 shadow-sm overflow-hidden group hover:border-slate-300 transition-all">
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                    <m.icon className={`w-4 h-4 ${m.color} opacity-70`} />
+                                </div>
+                                <p className="text-2xl font-black text-slate-900 tracking-tight">{m.value}</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{m.label}</p>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            )}
+
+            {/* AI SEO Opportunities (Low Hanging Fruits) */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-indigo-600" />
+                        <h3 className="text-lg font-bold text-slate-900">Opportunità SEO (AI Analysis)</h3>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={fetchSuggestions} className="text-xs h-8">
+                        <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Aggiorna Analisi
+                    </Button>
+                </div>
+
+                {suggestions.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-4">
+                        {suggestions.map((s, i) => (
+                            <Card key={i} className="border-slate-200 border-l-4 border-l-indigo-500 hover:shadow-md transition-shadow overflow-hidden">
+                                <CardContent className="p-0">
+                                    <div className="flex flex-col md:flex-row">
+                                        <div className="p-5 flex-1 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Badge className={s.type === 'optimize_content' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'}>
+                                                        {s.type === 'optimize_content' ? 'Ottimizzazione Contenuto' : 'Nuovo Articolo Pillar'}
+                                                    </Badge>
+                                                    <Badge variant="outline" className={s.priority === 'high' ? 'border-red-200 text-red-600' : 'border-slate-200 text-slate-500'}>
+                                                        Priorità {s.priority === 'high' ? 'Alta' : s.priority === 'medium' ? 'Media' : 'Bassa'}
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
+                                                    <span>Pos: <strong>{s.metrics.position}</strong></span>
+                                                    <span>Impr: <strong>{s.metrics.impressions}</strong></span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-lg font-bold text-slate-900">"{s.keyword}"</h4>
+                                                {s.page && <p className="text-[10px] text-blue-600 truncate mt-0.5">{s.page}</p>}
+                                                <p className="text-sm text-slate-600 mt-2 leading-relaxed">{s.explanation}</p>
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-50 p-5 flex flex-col justify-center gap-2 md:w-64 border-t md:border-t-0 md:border-l border-slate-100">
+                                            <Button 
+                                                className="w-full bg-indigo-600 hover:bg-indigo-700 shadow-sm"
+                                                onClick={() => onApplySuggestion(s)}
+                                            >
+                                                <Wand2 className="w-4 h-4 mr-2" /> Applica Suggerimento
+                                            </Button>
+                                            {s.page && (
+                                                <Button variant="outline" className="w-full text-xs" onClick={() => window.open(s.page, '_blank')}>
+                                                    <ExternalLink className="w-3.5 h-3.5 mr-2" /> Vedi Pagina
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                ) : (
+                    <Card className="border-dashed border-2 py-12 text-center">
+                        <div className="max-w-xs mx-auto space-y-3">
+                            <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mx-auto">
+                                <Search className="w-6 h-6 text-slate-300" />
+                            </div>
+                            <p className="text-sm text-slate-500 font-medium">Nessuna opportunità rilevata al momento. Prova ad aggiornare l'analisi tra qualche istante.</p>
+                            <Button variant="ghost" size="sm" onClick={fetchSuggestions} className="text-xs">Aggiorna</Button>
+                        </div>
+                    </Card>
+                )}
+            </div>
+
+            {/* Details Table (Legacy list) */}
+            <Card className="border-slate-200">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Query Recenti GSC</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex flex-wrap gap-1.5">
+                        {gscData?.keywords?.slice(0, 20).map((k, i) => (
+                            <Badge key={i} variant="outline" className="text-[10px] bg-white font-mono py-0 h-6">
+                                {k.keyword} <span className="ml-1 text-slate-400">({k.clicks})</span>
+                            </Badge>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
             <CredentialsCard
                 status={status}
                 oauthClientId={oauthClientId} setOauthClientId={setOauthClientId}

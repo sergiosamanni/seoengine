@@ -21,14 +21,14 @@ import {
     Calendar as CalendarIcon,
     RefreshCcw
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Switch } from "../../components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { toast } from "sonner";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -244,14 +244,14 @@ const EditorialPlanTab = ({ clientId, getAuthHeaders, onGenerateArticle, targetK
             <div className="flex justify-between items-center">
                 <div>
                     <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                        Piano Editoriale AI <Sparkles className="w-5 h-5 text-amber-500 fill-amber-500" />
+                        Piano Editoriale AI <Sparkles className="w-5 h-5 text-blue-500 fill-blue-500" />
                     </h2>
                     <p className="text-sm text-slate-500">Suggerimenti basati su Search Console e Knowledge Base.</p>
                 </div>
                 <Button
                     onClick={generateNewPlan}
                     disabled={generating}
-                    className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-md border-none"
+                    className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 shadow-md border-none"
                 >
                     {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <BrainCircuit className="w-4 h-4 mr-2" />}
                     {plan?.topics?.length > 0 ? "Aggiorna Piano" : "Genera Piano Strategico"}

@@ -2,6 +2,7 @@
 import os
 import uuid
 import logging
+import json
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 
@@ -381,3 +382,130 @@ async def get_client_gsc_status(client_id: str, request: Request, current_user: 
         "redirect_uri": redirect_uri,
         "has_per_client_credentials": has_client_creds
     }
+@router.get("/clients/{client_id}/gsc-seo-analysis")
+async def get_gsc_seo_analysis(client_id: str, days: int = 28, current_user: dict = Depends(get_current_user)):
+    """Analyze GSC data using AI to provide SEO suggestions."""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    # 1. Get GSC Data first (reuse logic)
+    data = await get_gsc_data(client_id, days, current_user)
+    
+    # 2. Get Client Config for LLM
+    client_doc = await db.clients.find_one({"id": client_id})
+    config = client_doc.get("configuration") or {}
+    llm_config = config.get("llm") or config.get("openai") or {}
+    
+    api_key = llm_config.get("api_key")
+    if not api_key:
+        # Fallback to system key if allowed or raise error
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=400, detail="Configurazione LLM (OpenAI API Key) mancante per questo cliente.")
+    
+    provider = llm_config.get("provider", "openai")
+    model = llm_config.get("modello", "gpt-4o-mini") # default to mini for analysis
+    temp = llm_config.get("temperatura", 0.3)
+    
+    # 3. Prepare Prompt
+    keywords_summary = "\n".join([
+        f"- {kw['keyword']}: {kw['clicks']} click, {kw['impressions']} impr, {kw['ctr']}% CTR, pos {kw['position']}"
+        for kw in data["keywords"][:30] # Top 30 keywords
+    ])
+    
+    pages_summary = "\n".join([
+        f"- {pg['page']}: {pg['clicks']} click, {pg['ctr']}% CTR, pos {pg['position']}"
+        for pg in data["pages"][:15] # Top 15 pages
+    ])
+    
+    system_prompt = "Sei un esperto SEO Senior e analista di dati. Il tuo compito è analizzare i dati di Google Search Console e fornire suggerimenti pratici e strategici."
+    user_prompt = f"""Analizza i seguenti dati di Google Search Console per il sito {client_doc.get('sito_web')} negli ultimi {days} giorni e fornisci:
+
+1. **Analisi Opportunità (Low Hanging Fruits)**: Identifica keyword con molte impressioni ma CTR basso (posizione 3-10) o keyword in seconda pagina (11-20) che potrebbero salire con poco sforzo.
+2. **Ottimizzazione Pagine esistenti**: Suggerisci quali pagine hanno bisogno di un miglioramento dei meta tag (Title/Description) per migliorare il CTR.
+3. **Lacune di Contenuto**: Basandoti sulle keyword per cui il sito si posiziona ma non ha pagine specifiche dedicate, suggerisci nuovi argomenti da trattare.
+4. **Strategia di Link Building interna**: Suggerisci come collegare le pagine top tra loro.
+
+DATI KEYWORD (Top 30):
+{keywords_summary}
+
+DATI PAGINE (Top 15):
+{pages_summary}
+
+Rispondi in formato MARKDOWN, con uno stile professionale e orientato ai risultati. Sii specifico, cita keyword e URL reali presenti nei dati.
+"""
+
+    from helpers import generate_with_llm
+    try:
+        analysis = await generate_with_llm(provider, api_key, model, temp, system_prompt, user_prompt)
+        return {"analysis": analysis, "period": data["period"]}
+    except Exception as e:
+        logger.error(f"GSC SEO Analysis failure: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore generazione analisi: {str(e)}")
+
+@router.get("/clients/{client_id}/gsc-suggestions")
+async def get_gsc_suggestions(client_id: str, days: int = 28, current_user: dict = Depends(get_current_user)):
+    """Provide structured SEO suggestions based on GSC data for direct UI actions."""
+    if current_user["role"] != "admin" and current_user.get("client_id") != client_id:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    # 1. Get GSC data
+    data = await get_gsc_data(client_id, days, current_user)
+    
+    # 2. Get LLM config
+    client_doc = await db.clients.find_one({"id": client_id})
+    config = client_doc.get("configuration") or {}
+    llm_config = config.get("llm") or config.get("openai") or {}
+    api_key = llm_config.get("api_key") or os.environ.get("OPENAI_API_KEY")
+    
+    if not api_key:
+        raise HTTPException(status_code=400, detail="Configurazione LLM mancante.")
+        
+    provider = llm_config.get("provider", "openai")
+    model = llm_config.get("modello", "gpt-4o-mini")
+    
+    # 3. Preparation
+    kw_list = data["keywords"][:50]
+    pg_list = data["pages"][:30]
+    
+    system_prompt = """Sei un assistente SEO specialist. Fornisci suggerimenti strutturati in JSON basandoti sui dati GSC.
+    Il formato deve essere strettamente JSON:
+    {
+      "suggestions": [
+        {
+          "type": "optimize_content", 
+          "keyword": "string",
+          "page": "string",
+          "explanation": "string",
+          "priority": "high"|"medium"|"low",
+          "metrics": {"impressions": 123, "position": 12.3, "ctr": 1.2}
+        }
+      ]
+    }
+    Tipi ammessi: 'optimize_content' (se esiste una pagina), 'create_pillar' (se la pagina non è specifica).
+    """
+    
+    user_prompt = f"""Analizza questi dati per {client_doc.get('sito_web')}:
+    KEYWORDS: {json.dumps(kw_list)}
+    PAGES: {json.dumps(pg_list)}
+    
+    Identifica i 'Low Hanging Fruits': keywords in pos 3-20 con alto volume (impr) ma basso CTR o che possono salire.
+    Massimo 5 suggerimenti più qualificati.
+    """
+
+    from helpers import generate_with_llm
+    try:
+        raw_json = await generate_with_llm(provider, api_key, model, 0.1, system_prompt, user_prompt)
+        # Clean potential markdown wrappers
+        clean_json = raw_json.strip()
+        if clean_json.startswith("```json"):
+            clean_json = clean_json.split("```json")[1].split("```")[0].strip()
+        elif clean_json.startswith("```"):
+            clean_json = clean_json.split("```")[1].split("```")[0].strip()
+            
+        suggestions_data = json.loads(clean_json)
+        return suggestions_data
+    except Exception as e:
+        logger.error(f"Structured GSC suggestions error: {e}")
+        # Fallback to heuristic suggestions if LLM fails
+        return {"suggestions": []}

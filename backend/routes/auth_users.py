@@ -19,13 +19,16 @@ async def register(user: UserCreate):
         raise HTTPException(status_code=400, detail="Email gia registrata")
     user_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
+    # Initialize both for compatibility
+    client_ids = user.client_ids if user.client_ids else [user.client_id] if user.client_id else []
     user_doc = {
         "id": user_id, "email": user.email, "password": hash_password(user.password),
-        "name": user.name, "role": user.role, "client_id": user.client_id, "created_at": now
+        "name": user.name, "role": user.role, 
+        "client_id": user.client_id, "client_ids": client_ids, "created_at": now
     }
     await db.users.insert_one(user_doc)
     return UserResponse(id=user_id, email=user.email, name=user.name, role=user.role,
-                        client_id=user.client_id, created_at=now)
+                        client_id=user.client_id, client_ids=client_ids, created_at=now)
 
 
 @router.post("/auth/login")
@@ -35,11 +38,18 @@ async def login(request: dict):
     user = await db.users.find_one({"email": email})
     if not user or not verify_password(password, user["password"]):
         raise HTTPException(status_code=401, detail="Credenziali non valide")
+    
+    # Pass first client_id for legacy token needs, but handle list in payload if possible
     token = create_token(user["id"], user["email"], user["role"], user.get("client_id"))
+    
+    # We can add client_ids to the JWT too if needed, but for now we'll just return it in the user object
     return {
         "token": token,
-        "user": {"id": user["id"], "email": user["email"], "name": user["name"],
-                 "role": user["role"], "client_id": user.get("client_id")}
+        "user": {
+            "id": user["id"], "email": user["email"], "name": user["name"],
+            "role": user["role"], "client_id": user.get("client_id"),
+            "client_ids": user.get("client_ids", [])
+        }
     }
 
 
@@ -57,23 +67,41 @@ async def get_users(current_user: dict = Depends(require_admin)):
     return [UserResponse(**u) for u in users]
 
 
-@router.post("/users/assign-client")
-async def assign_user_to_client(request: AssignClientRequest, current_user: dict = Depends(require_admin)):
-    result = await db.users.update_one({"id": request.user_id}, {"$set": {"client_id": request.client_id}})
-    if result.matched_count == 0:
+@router.post("/users/assign-clients")
+async def assign_user_to_clients(request: dict, current_user: dict = Depends(require_admin)):
+    user_id = request.get("user_id")
+    client_ids = request.get("client_ids", [])
+    
+    # Find user first
+    user = await db.users.find_one({"id": user_id})
+    if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
-    return {"message": "Utente assegnato al cliente", "user_id": request.user_id, "client_id": request.client_id}
+        
+    # Update both for compatibility: client_id becomes the first one in list
+    primary_id = client_ids[0] if client_ids else None
+    
+    result = await db.users.update_one(
+        {"id": user_id}, 
+        {"$set": {"client_ids": client_ids, "client_id": primary_id}}
+    )
+    
+    return {"message": "Associazioni aggiornate", "user_id": user_id, "count": len(client_ids)}
 
 
-@router.post("/users/unassign-client")
-async def unassign_user_from_client(request: dict, current_user: dict = Depends(require_admin)):
+@router.post("/users/unassign-clients")
+async def unassign_all_clients(request: dict, current_user: dict = Depends(require_admin)):
     user_id = request.get("user_id")
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id richiesto")
-    result = await db.users.update_one({"id": user_id}, {"$set": {"client_id": None}})
+        
+    result = await db.users.update_one(
+        {"id": user_id}, 
+        {"$set": {"client_ids": [], "client_id": None}}
+    )
+    
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Utente non trovato")
-    return {"message": "Utente rimosso dal cliente"}
+    return {"message": "Tutte le associazioni rimosse"}
 
 
 @router.delete("/users/{user_id}")

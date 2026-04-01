@@ -359,7 +359,9 @@ async def generate_topic_image(body: dict, current_user: dict = Depends(get_curr
             "crafted_prompt": crafted_prompt
         }
     except Exception as e:
-        logger.error(f"Image generation error details: {str(e)}")
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Image generation error details: {str(e)}\n{error_trace}")
         # If it's an OpenAI error, it might be about the prompt or key
         detail = str(e)
         if "policy" in detail.lower():
@@ -478,10 +480,22 @@ async def simple_generate_article(request: SimpleGenerateRequest, current_user: 
     if extra_context:
         system_prompt += "\n".join(extra_context)
 
+    # Anti-duplication check: look for a job with the same keyword for this client in the last 10 minutes
+    ten_minutes_ago = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
+    duplicate_job = await db.jobs.find_one({
+        "client_id": client_id,
+        "status": {"$in": ["running", "completed"]},
+        "keyword": request.keyword,
+        "created_at": {"$gte": ten_minutes_ago}
+    })
+    if duplicate_job:
+        # Se è completato o in corso, restituiamo il job esistente per prevenire duplicati
+        return {"job_id": duplicate_job["id"], "status": duplicate_job["status"], "keyword": request.keyword, "note": "Richiesta duplicata intercettata"}
+
     job_id = str(uuid.uuid4())
     combo = {"servizio": request.keyword, "citta": kb.get("citta_principale", ""), "tipo": request.objective}
     titolo_suggerito = request.titolo_suggerito or ""
-    await db.jobs.insert_one({"id": job_id, "client_id": client_id, "status": "running",
+    await db.jobs.insert_one({"id": job_id, "client_id": client_id, "status": "running", "keyword": request.keyword,
         "total": 1, "completed": 0, "results": [], "created_at": datetime.now(timezone.utc).isoformat()})
     asyncio.create_task(_run_simple_generate(job_id, client_id, request.keyword, request.topic,
         request.publish_to_wordpress, system_prompt, llm_config, wp_config, kb, combo, titolo_suggerito,
@@ -644,7 +658,7 @@ async def _process_internal_links_post_publish(client_id: str, provider: str, ap
 
 # ============== JOBS ==============
 
-@router.get("/jobs/{job_id}")
+@router.get("/articles/jobs/{job_id}")
 async def get_job_status(job_id: str, current_user: dict = Depends(get_current_user)):
     job = await db.jobs.find_one({"id": job_id}, {"_id": 0})
     if not job:
@@ -765,7 +779,7 @@ async def update_advanced_prompt(client_id: str, request: UpdateAdvancedPromptRe
 
 # ============== SERP ==============
 
-@router.post("/serp/images")
+@router.post("/articles/serp/images")
 async def serp_images(request: dict, current_user: dict = Depends(get_current_user)):
     keyword = request.get("keyword", "").strip()
     if not keyword:

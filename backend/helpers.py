@@ -854,7 +854,7 @@ NOTA: La pillar page deve essere la risorsa piu completa disponibile sul tema. C
 1. <h1> - Titolo principale SEO ottimizzato (UNICO in tutto il testo)
 2. <p> - Paragrafo introduttivo (150-200 parole)
 3. <h2> - Sezioni principali (almeno 3-4)
-4. <h3> - Sottosezioni per approfondimenti
+4. <h3> - Sottosezioni fluide: usa sottotitoli H3 dove opportuno per approfondire i concetti all'interno degli H2. Rendi la lettura scorrevole e naturale, variando la frequenza in base al contesto.
 5. <ul><li> - Elenchi puntati per vantaggi
 6. <strong> - Evidenzia 2-3 concetti chiave per paragrafo
 7. <p> finale con call to action
@@ -920,9 +920,9 @@ REGOLE LINK:
         prompt += """
 REGOLE MANDATORIE PER I LINK INTERNI:
 1. DEVI inserire almeno 3 collegamenti ipertestuali <a> nel corpo dell'articolo.
-2. Usa anchor text rilevanti e brevi (3-5 parole). Esempio: "servizio di <a href='URL'>noleggio auto a lungo termine</a>".
-3. Distribuisci i link in paragrafi diversi, non tutti nello stesso punto.
-4. NON usare mai anchor text generici ("clicca qui", "leggi tutto", ecc).
+2. Usa anchor text descrittive di MINIMO 3 parole e MASSIMO 6 parole (es. "scopri le <a href='URL'>migliori soluzioni di arredamento professionale</a>").
+3. VIETATE anchor text di una sola parola o generiche ("clicca qui", "leggi tutto", ecc).
+4. Distribuisci i link in paragrafi diversi in modo naturale.
 """
 
     prompt += "\n=== ISTRUZIONE FINALE ===\nGenera un contenuto SEO completo, dettagliato e ottimizzato. Applica il modello di copywriting indicato, integra le leve psicologiche e rispetta tutte le regole SEO on-page.\n\n=== META DESCRIPTION ===\nAlla FINE del contenuto HTML, aggiungi un blocco separato:\n<!-- META_DESCRIPTION: [scrivi qui una meta description di 150-160 caratteri, con keyword principale, intento di ricerca e call to action implicita] -->"
@@ -938,8 +938,8 @@ async def generate_internal_link_update(provider: str, api_key: str, model: str,
     system_prompt = """Sei un esperto SEO responsabile dell'internal linking.
 Il tuo compito è scrivere UN SINGOLO PARAGRAFO (2-3 frasi) da aggiungere alla fine di un articolo esistente per linkare un nuovo articolo appena pubblicato sullo stesso sito.
 REGOLE RIGIDE:
-1. Usa "anchor text" SEO-friendly: breve (max 5 parole), rilevante e pertinente (exact-match o varianti naturali di keyword per il nuovo articolo).
-2. Evita anchor text generici ("clicca qui", "leggi di più", "questo articolo").
+1. Usa "anchor text" SEO-friendly: descrittivo, composto da MINIMO 3 parole e MASSIMO 6 parole (es. "soluzioni di <a href='URL'>arredamento professionale per ufficio</a>").
+2. VIETATE anchor text di una sola parola o generiche ("clicca qui", "leggi tutto", ecc).
 3. Assicurati che il paragrafo si leghi in modo naturale ("Se ti è piaciuto questo argomento...", "Per approfondire...", ecc.).
 4. Restituisci SOLO IL PARAGRAFO in formato HTML (<p>...</p>), senza nient'altro, e includi il link: <a href="URL">anchor text</a>.
 """

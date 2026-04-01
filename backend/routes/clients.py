@@ -21,10 +21,13 @@ router = APIRouter()
 @router.get("/clients", response_model=List[ClientResponse])
 async def get_clients(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin":
-        client_id = current_user.get("client_id")
-        if not client_id:
+        client_ids = current_user.get("client_ids", [])
+        if not client_ids and current_user.get("client_id"):
+            client_ids = [current_user.get("client_id")]
+        
+        if not client_ids:
             return []
-        clients = await db.clients.find({"id": client_id}, {"_id": 0}).to_list(1)
+        clients = await db.clients.find({"id": {"$in": client_ids}}, {"_id": 0}).to_list(50)
     else:
         clients = await db.clients.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
     result = []

@@ -159,6 +159,7 @@ class UserCreate(BaseModel):
     name: str
     role: str = "client"
     client_id: Optional[str] = None
+    client_ids: Optional[List[str]] = []
 
 
 class UserResponse(BaseModel):
@@ -167,12 +168,18 @@ class UserResponse(BaseModel):
     name: str
     role: str
     client_id: Optional[str] = None
+    client_ids: Optional[List[str]] = []
     created_at: str
 
 
 class AssignClientRequest(BaseModel):
     user_id: str
     client_id: str
+
+
+class AssignClientsRequest(BaseModel):
+    user_id: str
+    client_ids: List[str]
 
 
 class SerpScrapingRequest(BaseModel):
@@ -225,3 +232,5 @@ class SimpleGenerateRequest(BaseModel):
     serp_context: Optional[Dict] = None
     content_type: str = "articolo"  # articolo, landing_page, pillar_page
     image_ids: Optional[List[str]] = None
+    generate_cover: bool = False
+    scheduled_date: Optional[str] = None
