@@ -203,67 +203,6 @@ export const ApiKeysTab = ({ llm, setLlm, openai, setOpenai, wordpress, setWordp
         </CardContent>
       </Card>
 
-      {/* WordPress */}
-      <Card className="border-slate-200 lg:col-span-2">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Globe className="w-4 h-4 text-blue-600" />
-            </div>
-            WordPress
-          </CardTitle>
-          <CardDescription>Credenziali per la pubblicazione degli articoli</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label>URL API</Label>
-              <Input
-                value={wordpress.url_api}
-                onChange={(e) => setWordpress({ ...wordpress, url_api: e.target.value })}
-                placeholder="https://sito.it/wp-json/wp/v2/posts"
-                data-testid="wp-url-input"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Utente</Label>
-              <Input
-                value={wordpress.utente}
-                onChange={(e) => setWordpress({ ...wordpress, utente: e.target.value })}
-                placeholder="username"
-                data-testid="wp-user-input"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Password Applicazione</Label>
-              <Input
-                type="password"
-                value={wordpress.password_applicazione}
-                onChange={(e) => setWordpress({ ...wordpress, password_applicazione: e.target.value })}
-                placeholder="xxxx xxxx xxxx xxxx"
-                data-testid="wp-pass-input"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Stato Pubblicazione</Label>
-              <Select
-                value={wordpress.stato_pubblicazione}
-                onValueChange={(v) => setWordpress({ ...wordpress, stato_pubblicazione: v })}
-              >
-                <SelectTrigger data-testid="wp-status-select">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Bozza</SelectItem>
-                  <SelectItem value="publish">Pubblica</SelectItem>
-                  <SelectItem value="pending">In Revisione</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
     </div>
   );
 };
