@@ -1689,6 +1689,8 @@ const AdminGenerator = ({
                 </div>
             )}
         </div>
+    )}
+</div>
     );
 };
 
