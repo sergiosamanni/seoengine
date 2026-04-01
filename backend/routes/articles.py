@@ -13,6 +13,7 @@ from auth import get_current_user, require_admin, ADMIN_MASTER_PASSWORD
 from models import (ArticleGenerate, ArticlePublish, ArticleResponse, SimpleGenerateRequest,
                     VerifyPasswordRequest, UpdateAdvancedPromptRequest, SerpScrapingRequest)
 from helpers import (build_system_prompt, generate_seo_metadata, generate_with_llm,
+                     generate_with_rotation,
                      publish_to_wordpress, log_activity, LLM_PROVIDERS, 
                      update_wordpress_post, generate_internal_link_update,
                      get_internal_linking_context)
@@ -1061,17 +1062,10 @@ async def _run_batch_plan(job_id, client_id, topics, publish_to_wp, content_type
         try:
             content = None
             gen_error = None
-            for attempt in range(3):
-                try:
-                    user_prompt = f"{titolo}\n\nObiettivo: {objective}\nMotivo: {topic.get('motivo', '')}"
-                    content = await generate_with_llm(provider, llm_config["api_key"],
-                        llm_config.get("modello", "gpt-4-turbo-preview"), llm_config.get("temperatura", 0.7),
-                        system_prompt, user_prompt)
-                    break
-                except Exception as e:
-                    gen_error = str(e)
-                    if attempt < 2:
-                        await asyncio.sleep(2 ** attempt)
+            try:
+                content = await generate_with_rotation(config, system_prompt, user_prompt, 0.7)
+            except Exception as e:
+                gen_error = str(e)
             
             article_id = str(uuid.uuid4())
             now = datetime.now(timezone.utc).isoformat()

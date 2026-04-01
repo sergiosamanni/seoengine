@@ -83,7 +83,7 @@ const PROVIDER_DESCRIPTIONS = {
 
 const API = process.env.REACT_APP_BACKEND_URL ? `${process.env.REACT_APP_BACKEND_URL}/api` : 'http://localhost:8000/api';
 
-export const ApiKeysTab = ({ llm, setLlm, wordpress, setWordpress, seo, setSeo, onIndexSite, onSave, clientConfig, clientId }) => {
+export const ApiKeysTab = ({ llm, setLlm, llmKeys, setLlmKeys, wordpress, setWordpress, seo, setSeo, onIndexSite, onSave, clientConfig, clientId }) => {
   const { getAuthHeaders } = useAuth();
   const [indexing, setIndexing] = React.useState(false);
 
@@ -94,12 +94,31 @@ export const ApiKeysTab = ({ llm, setLlm, wordpress, setWordpress, seo, setSeo, 
   };
 
   const handleProviderChange = (newProvider) => {
-    const models = getModelsForProvider(newProvider);
     setLlm({
       ...llm,
       provider: newProvider,
-      modello: models.length > 0 ? models[0].id : ''
+      modello: llmKeys[newProvider]?.modello || getModelsForProvider(newProvider)[0].id
     });
+  };
+
+  const handleKeyChange = (providerId, key) => {
+    setLlmKeys({
+      ...llmKeys,
+      [providerId]: { ...llmKeys[providerId], api_key: key }
+    });
+  };
+
+  const handleModelChange = (providerId, modelId) => {
+    const updatedKeys = {
+      ...llmKeys,
+      [providerId]: { ...llmKeys[providerId], modello: modelId }
+    };
+    setLlmKeys(updatedKeys);
+    
+    // If this is the primary provider, sync it to main llm state
+    if (llm.provider === providerId) {
+      setLlm({ ...llm, modello: modelId });
+    }
   };
 
   return (
@@ -165,62 +184,94 @@ export const ApiKeysTab = ({ llm, setLlm, wordpress, setWordpress, seo, setSeo, 
           </CardTitle>
           <CardDescription>Scegli il provider e il modello per generare gli articoli SEO</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label>Provider</Label>
-              <Select value={llm.provider} onValueChange={handleProviderChange}>
-                <SelectTrigger data-testid="llm-provider-select">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LLM_PROVIDERS.map((provider) => (
-                    <SelectItem key={provider.id} value={provider.id}>
-                      <span>{provider.name}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <CardContent className="space-y-6">
+          <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
+                <Activity className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-900">Provider Primario</p>
+                <p className="text-xs text-slate-500">L'articolo verrà scritto con questo provider. In caso di errore, il sistema proverà gli altri configurati.</p>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Modello</Label>
-              <Select value={llm.modello} onValueChange={(v) => setLlm({ ...llm, modello: v })}>
-                <SelectTrigger data-testid="llm-model-select">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {getModelsForProvider(llm.provider).map((model) => (
-                    <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>API Key</Label>
-              <Input
-                type="password"
-                value={llm.api_key}
-                onChange={(e) => setLlm({ ...llm, api_key: e.target.value })}
-                placeholder={llm.provider === 'openai' ? 'sk-...' : 'API Key...'}
-                data-testid="llm-api-key-input"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Temperatura ({llm.temperatura})</Label>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={llm.temperatura}
-                onChange={(e) => setLlm({ ...llm, temperatura: parseFloat(e.target.value) })}
-                className="w-full h-10 accent-slate-900"
-                data-testid="llm-temp-slider"
-              />
-            </div>
+            <Select value={llm.provider} onValueChange={handleProviderChange}>
+              <SelectTrigger className="w-48 bg-white" data-testid="llm-provider-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LLM_PROVIDERS.map((provider) => (
+                  <SelectItem key={provider.id} value={provider.id}>
+                    <span>{provider.name}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="mt-4 p-4 bg-slate-50 rounded-lg">
-            <p className="text-sm text-slate-600">{PROVIDER_DESCRIPTIONS[llm.provider]}</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {LLM_PROVIDERS.map((provider) => (
+              <div key={provider.id} className="p-4 border border-slate-200 rounded-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                       <Key className="w-4 h-4 text-slate-600" />
+                    </div>
+                    <span className="font-bold text-sm">{provider.name}</span>
+                  </div>
+                  {llm.provider === provider.id && (
+                    <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none">Primario</Badge>
+                  )}
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-slate-500">API Key</Label>
+                    <Input
+                      type="password"
+                      value={llmKeys[provider.id]?.api_key || ''}
+                      onChange={(e) => handleKeyChange(provider.id, e.target.value)}
+                      placeholder={`${provider.name} API Key...`}
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-slate-500">Modello</Label>
+                    <Select 
+                      value={llmKeys[provider.id]?.modello || provider.models[0].id} 
+                      onValueChange={(v) => handleModelChange(provider.id, v)}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {provider.models.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-2 pt-4 border-t border-slate-100">
+             <Label>Temperatura Creativa ({llm.temperatura})</Label>
+             <input
+               type="range"
+               min="0"
+               max="1"
+               step="0.1"
+               value={llm.temperatura}
+               onChange={(e) => setLlm({ ...llm, temperatura: parseFloat(e.target.value) })}
+               className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-900"
+               data-testid="llm-temp-slider"
+             />
+             <div className="flex justify-between text-[10px] text-slate-400 font-medium">
+               <span>Più Preciso</span>
+               <span>Più Creativo</span>
+             </div>
           </div>
         </CardContent>
       </Card>

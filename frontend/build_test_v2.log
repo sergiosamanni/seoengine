@@ -1,0 +1,236 @@
+
+> frontend@0.1.0 start
+> craco start
+
+Cannot find ESLint plugin (ESLintWebpackPlugin).
+(node:38810) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:38810) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+Starting the development server...
+
+Failed to compile.
+
+SyntaxError: /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/src/components/admin-workspace/AdminGenerator.jsx: Unexpected token, expected "}" (1691:5)
+  1689 |             )}
+  1690 |         </div>
+> 1691 |     );
+       |      ^
+  1692 | };
+  1693 |
+  1694 | export default AdminGenerator;
+ERROR in ./src/components/admin-workspace/AdminGenerator.jsx
+Module build failed (from ./node_modules/babel-loader/lib/index.js):
+SyntaxError: /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/src/components/admin-workspace/AdminGenerator.jsx: Unexpected token, expected "}" (1691:5)
+
+  1689 |             )}
+  1690 |         </div>
+> 1691 |     );
+       |      ^
+  1692 | };
+  1693 |
+  1694 | export default AdminGenerator;
+    at constructor (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:365:19)
+    at FlowParserMixin.raise (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:6599:19)
+    at FlowParserMixin.unexpected (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:6619:16)
+    at FlowParserMixin.expect (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:6899:12)
+    at FlowParserMixin.jsxParseExpressionContainer (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4637:10)
+    at FlowParserMixin.jsxParseElementAt (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4711:36)
+    at FlowParserMixin.jsxParseElement (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4749:17)
+    at FlowParserMixin.parseExprAtom (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4759:19)
+    at FlowParserMixin.parseExprSubscripts (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11081:23)
+    at FlowParserMixin.parseUpdate (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11066:21)
+    at FlowParserMixin.parseMaybeUnary (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11046:23)
+    at FlowParserMixin.parseMaybeUnaryOrPrivate (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10899:61)
+    at FlowParserMixin.parseExprOps (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10904:23)
+    at FlowParserMixin.parseMaybeConditional (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10881:23)
+    at FlowParserMixin.parseMaybeAssign (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10831:21)
+    at /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3498:39
+    at FlowParserMixin.tryParse (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:6907:20)
+    at FlowParserMixin.parseMaybeAssign (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3498:18)
+    at /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10800:39
+    at FlowParserMixin.allowInAnd (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12426:12)
+    at FlowParserMixin.parseMaybeAssignAllowIn (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10800:17)
+    at FlowParserMixin.parseMaybeAssignAllowInOrVoidPattern (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12493:17)
+    at FlowParserMixin.parseParenAndDistinguishExpression (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11675:28)
+    at FlowParserMixin.parseParenAndDistinguishExpression (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3591:18)
+    at FlowParserMixin.parseExprAtom (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11331:23)
+    at FlowParserMixin.parseExprAtom (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4764:20)
+    at FlowParserMixin.parseExprSubscripts (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11081:23)
+    at FlowParserMixin.parseUpdate (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11066:21)
+    at FlowParserMixin.parseMaybeUnary (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11046:23)
+    at FlowParserMixin.parseMaybeUnaryOrPrivate (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10899:61)
+    at FlowParserMixin.parseExprOps (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10904:23)
+    at FlowParserMixin.parseMaybeConditional (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10881:23)
+    at FlowParserMixin.parseMaybeAssign (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10831:21)
+    at FlowParserMixin.parseMaybeAssign (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3549:18)
+    at FlowParserMixin.parseExpressionBase (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10784:23)
+    at /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10780:39
+    at FlowParserMixin.allowInAnd (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12421:16)
+    at FlowParserMixin.parseExpression (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10780:17)
+    at FlowParserMixin.parseReturnStatement (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:13142:28)
+    at FlowParserMixin.parseStatementContent (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12798:21)
+    at FlowParserMixin.parseStatementLike (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12767:17)
+    at FlowParserMixin.parseStatementLike (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:2918:24)
+    at FlowParserMixin.parseStatementListItem (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12747:17)
+    at FlowParserMixin.parseBlockOrModuleBlockBody (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:13316:61)
+    at FlowParserMixin.parseBlockBody (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:13309:10)
+    at FlowParserMixin.parseBlock (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:13297:10)
+    at FlowParserMixin.parseFunctionBody (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12100:24)
+    at /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:2892:63
+    at FlowParserMixin.forwardNoArrowParamsConversionAt (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3068:16)
+    at FlowParserMixin.parseFunctionBody (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:2892:12)
+
+webpack compiled with 1 error
+Compiling...
+Failed to compile.
+
+SyntaxError: /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/src/components/admin-workspace/AdminGenerator.jsx: Unexpected token, expected "}" (1692:5)
+  1690 |             )}
+  1691 |         </div>
+> 1692 |     );
+       |      ^
+  1693 | };
+  1694 |
+  1695 | export default AdminGenerator;
+ERROR in ./src/components/admin-workspace/AdminGenerator.jsx
+Module build failed (from ./node_modules/babel-loader/lib/index.js):
+SyntaxError: /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/src/components/admin-workspace/AdminGenerator.jsx: Unexpected token, expected "}" (1692:5)
+
+  1690 |             )}
+  1691 |         </div>
+> 1692 |     );
+       |      ^
+  1693 | };
+  1694 |
+  1695 | export default AdminGenerator;
+    at constructor (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:365:19)
+    at FlowParserMixin.raise (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:6599:19)
+    at FlowParserMixin.unexpected (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:6619:16)
+    at FlowParserMixin.expect (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:6899:12)
+    at FlowParserMixin.jsxParseExpressionContainer (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4637:10)
+    at FlowParserMixin.jsxParseElementAt (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4711:36)
+    at FlowParserMixin.jsxParseElement (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4749:17)
+    at FlowParserMixin.parseExprAtom (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4759:19)
+    at FlowParserMixin.parseExprSubscripts (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11081:23)
+    at FlowParserMixin.parseUpdate (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11066:21)
+    at FlowParserMixin.parseMaybeUnary (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11046:23)
+    at FlowParserMixin.parseMaybeUnaryOrPrivate (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10899:61)
+    at FlowParserMixin.parseExprOps (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10904:23)
+    at FlowParserMixin.parseMaybeConditional (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10881:23)
+    at FlowParserMixin.parseMaybeAssign (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10831:21)
+    at /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3498:39
+    at FlowParserMixin.tryParse (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:6907:20)
+    at FlowParserMixin.parseMaybeAssign (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3498:18)
+    at /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10800:39
+    at FlowParserMixin.allowInAnd (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12426:12)
+    at FlowParserMixin.parseMaybeAssignAllowIn (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10800:17)
+    at FlowParserMixin.parseMaybeAssignAllowInOrVoidPattern (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12493:17)
+    at FlowParserMixin.parseParenAndDistinguishExpression (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11675:28)
+    at FlowParserMixin.parseParenAndDistinguishExpression (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3591:18)
+    at FlowParserMixin.parseExprAtom (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11331:23)
+    at FlowParserMixin.parseExprAtom (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4764:20)
+    at FlowParserMixin.parseExprSubscripts (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11081:23)
+    at FlowParserMixin.parseUpdate (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11066:21)
+    at FlowParserMixin.parseMaybeUnary (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11046:23)
+    at FlowParserMixin.parseMaybeUnaryOrPrivate (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10899:61)
+    at FlowParserMixin.parseExprOps (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10904:23)
+    at FlowParserMixin.parseMaybeConditional (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10881:23)
+    at FlowParserMixin.parseMaybeAssign (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10831:21)
+    at FlowParserMixin.parseMaybeAssign (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3549:18)
+    at FlowParserMixin.parseExpressionBase (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10784:23)
+    at /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10780:39
+    at FlowParserMixin.allowInAnd (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12421:16)
+    at FlowParserMixin.parseExpression (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10780:17)
+    at FlowParserMixin.parseReturnStatement (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:13142:28)
+    at FlowParserMixin.parseStatementContent (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12798:21)
+    at FlowParserMixin.parseStatementLike (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12767:17)
+    at FlowParserMixin.parseStatementLike (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:2918:24)
+    at FlowParserMixin.parseStatementListItem (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12747:17)
+    at FlowParserMixin.parseBlockOrModuleBlockBody (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:13316:61)
+    at FlowParserMixin.parseBlockBody (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:13309:10)
+    at FlowParserMixin.parseBlock (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:13297:10)
+    at FlowParserMixin.parseFunctionBody (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12100:24)
+    at /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:2892:63
+    at FlowParserMixin.forwardNoArrowParamsConversionAt (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3068:16)
+    at FlowParserMixin.parseFunctionBody (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:2892:12)
+
+webpack compiled with 1 error
+Compiling...
+Failed to compile.
+
+SyntaxError: /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/src/components/admin-workspace/AdminGenerator.jsx: Unexpected token, expected "}" (1690:5)
+  1688 |             )}
+  1689 |         </div>
+> 1690 |     );
+       |      ^
+  1691 | };
+  1692 |
+  1693 | export default AdminGenerator;
+ERROR in ./src/components/admin-workspace/AdminGenerator.jsx
+Module build failed (from ./node_modules/babel-loader/lib/index.js):
+SyntaxError: /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/src/components/admin-workspace/AdminGenerator.jsx: Unexpected token, expected "}" (1690:5)
+
+  1688 |             )}
+  1689 |         </div>
+> 1690 |     );
+       |      ^
+  1691 | };
+  1692 |
+  1693 | export default AdminGenerator;
+    at constructor (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:365:19)
+    at FlowParserMixin.raise (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:6599:19)
+    at FlowParserMixin.unexpected (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:6619:16)
+    at FlowParserMixin.expect (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:6899:12)
+    at FlowParserMixin.jsxParseExpressionContainer (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4637:10)
+    at FlowParserMixin.jsxParseElementAt (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4711:36)
+    at FlowParserMixin.jsxParseElement (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4749:17)
+    at FlowParserMixin.parseExprAtom (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4759:19)
+    at FlowParserMixin.parseExprSubscripts (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11081:23)
+    at FlowParserMixin.parseUpdate (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11066:21)
+    at FlowParserMixin.parseMaybeUnary (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11046:23)
+    at FlowParserMixin.parseMaybeUnaryOrPrivate (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10899:61)
+    at FlowParserMixin.parseExprOps (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10904:23)
+    at FlowParserMixin.parseMaybeConditional (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10881:23)
+    at FlowParserMixin.parseMaybeAssign (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10831:21)
+    at /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3498:39
+    at FlowParserMixin.tryParse (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:6907:20)
+    at FlowParserMixin.parseMaybeAssign (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3498:18)
+    at /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10800:39
+    at FlowParserMixin.allowInAnd (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12426:12)
+    at FlowParserMixin.parseMaybeAssignAllowIn (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10800:17)
+    at FlowParserMixin.parseMaybeAssignAllowInOrVoidPattern (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12493:17)
+    at FlowParserMixin.parseParenAndDistinguishExpression (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11675:28)
+    at FlowParserMixin.parseParenAndDistinguishExpression (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3591:18)
+    at FlowParserMixin.parseExprAtom (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11331:23)
+    at FlowParserMixin.parseExprAtom (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:4764:20)
+    at FlowParserMixin.parseExprSubscripts (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11081:23)
+    at FlowParserMixin.parseUpdate (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11066:21)
+    at FlowParserMixin.parseMaybeUnary (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:11046:23)
+    at FlowParserMixin.parseMaybeUnaryOrPrivate (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10899:61)
+    at FlowParserMixin.parseExprOps (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10904:23)
+    at FlowParserMixin.parseMaybeConditional (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10881:23)
+    at FlowParserMixin.parseMaybeAssign (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10831:21)
+    at FlowParserMixin.parseMaybeAssign (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3549:18)
+    at FlowParserMixin.parseExpressionBase (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10784:23)
+    at /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10780:39
+    at FlowParserMixin.allowInAnd (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12421:16)
+    at FlowParserMixin.parseExpression (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:10780:17)
+    at FlowParserMixin.parseReturnStatement (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:13142:28)
+    at FlowParserMixin.parseStatementContent (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12798:21)
+    at FlowParserMixin.parseStatementLike (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12767:17)
+    at FlowParserMixin.parseStatementLike (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:2918:24)
+    at FlowParserMixin.parseStatementListItem (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12747:17)
+    at FlowParserMixin.parseBlockOrModuleBlockBody (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:13316:61)
+    at FlowParserMixin.parseBlockBody (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:13309:10)
+    at FlowParserMixin.parseBlock (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:13297:10)
+    at FlowParserMixin.parseFunctionBody (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:12100:24)
+    at /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:2892:63
+    at FlowParserMixin.forwardNoArrowParamsConversionAt (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:3068:16)
+    at FlowParserMixin.parseFunctionBody (/Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/node_modules/@babel/parser/lib/index.js:2892:12)
+
+webpack compiled with 1 error
+
+                    The build failed because the process exited too early.
+                    This probably means the system ran out of memory or someone called
+                    `kill -9` on the process.
+                

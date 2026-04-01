@@ -213,6 +213,72 @@ async def generate_with_openai(api_key: str, model: str, temperature: float, sys
     return await generate_with_llm("openai", api_key, model, temperature, system_prompt, user_prompt)
 
 
+async def generate_with_rotation(config: dict, system_prompt: str, user_prompt: str, temperature: float = 0.7) -> str:
+    """ Generates content with automatic fallback among multiple LLM providers.
+    config should contain 'llm' (primary) and optionally other provider keys.
+    """
+    llm_config = config.get("llm", {})
+    primary_provider = llm_config.get("provider", "openai")
+    primary_key = llm_config.get("api_key")
+    primary_model = llm_config.get("modello") or llm_config.get("model")
+    
+    # Standardize models if missing
+    if primary_provider == "openai" and not primary_model:
+        primary_model = "gpt-4o"
+    elif primary_provider == "deepseek" and not primary_model:
+        primary_model = "deepseek-chat"
+        
+    candidates = []
+    # 1. Primary
+    if primary_key:
+        candidates.append({
+            "provider": primary_provider,
+            "api_key": primary_key,
+            "model": primary_model
+        })
+        
+    # 2. Others from config (to be used as fallback)
+    # Check explicitly defined keys in config
+    providers_list = ["openai", "deepseek", "anthropic", "perplexity"]
+    for p in providers_list:
+        if p == primary_provider: continue
+        p_config = config.get(p, {})
+        key = p_config.get("api_key")
+        if key and len(key) > 5:
+            model = p_config.get("modello") or p_config.get("model")
+            if not model:
+                model = LLM_PROVIDERS[p]["models"][0]
+            candidates.append({
+                "provider": p,
+                "api_key": key,
+                "model": model
+            })
+            
+    if not candidates:
+        raise Exception("Nessun provider LLM configurato con API Key valida.")
+        
+    last_error = None
+    for cand in candidates:
+        try:
+            logger.info(f"LLM Rotation: Trying {cand['provider']} with model {cand['model']}...")
+            result = await generate_with_llm(
+                cand["provider"], cand["api_key"], cand["model"],
+                temperature, system_prompt, user_prompt
+            )
+            if result and len(result.strip()) > 10:
+                logger.info(f"LLM Rotation: Success with {cand['provider']}")
+                return result
+            else:
+                last_error = f"Risposta vuota o troppo corta da {cand['provider']}"
+        except Exception as e:
+            last_error = str(e)
+            logger.warning(f"LLM Rotation: Provider {cand['provider']} failed: {last_error}")
+            # Continue to next candidate
+            continue
+            
+    raise Exception(f"Tutti i provider LLM configurati hanno fallito. Ultimo errore: {last_error}")
+
+
 async def generate_image_pollinations(prompt: str, user_id: str) -> dict:
     """Generate an image using Pollinations.ai (Free, no key required)."""
     import uuid

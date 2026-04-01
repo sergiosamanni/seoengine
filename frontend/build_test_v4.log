@@ -1,0 +1,18 @@
+
+> frontend@0.1.0 build
+> craco build
+
+Cannot find ESLint plugin (ESLintWebpackPlugin).
+Creating an optimized production build...
+Failed to compile.
+
+SyntaxError: /Users/sergiosamanni/.gemini/antigravity/scratch/seoengine/frontend/src/components/admin-workspace/AdminGenerator.jsx: Unexpected token, expected "}" (1690:5)
+  1688 |             )}
+  1689 |         </div>
+> 1690 |     );
+       |      ^
+  1691 | };
+  1692 |
+  1693 | export default AdminGenerator;
+
+

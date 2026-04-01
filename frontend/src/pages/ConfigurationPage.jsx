@@ -26,7 +26,13 @@ export const ConfigurationPage = () => {
     url_api: '', utente: '', password_applicazione: '', stato_pubblicazione: 'draft'
   });
   const [llm, setLlm] = useState({
-    provider: 'openai', api_key: '', modello: 'gpt-4-turbo-preview', temperatura: 0.7
+    provider: 'openai', api_key: '', modello: 'gpt-4o', temperatura: 0.7
+  });
+  const [llmKeys, setLlmKeys] = useState({
+    openai: { api_key: '', modello: 'gpt-4o' },
+    anthropic: { api_key: '', modello: 'claude-3-5-sonnet-20240620' },
+    deepseek: { api_key: '', modello: 'deepseek-chat' },
+    perplexity: { api_key: '', modello: 'sonar' }
   });
   const [seo, setSeo] = useState({
     lingua: 'italiano', lunghezza_minima_parole: 1500, include_faq_in_fondo: false
@@ -55,9 +61,22 @@ export const ConfigurationPage = () => {
         const config = clientData.configuration || {};
         if (config.wordpress) setWordpress(config.wordpress);
         if (config.llm) setLlm(config.llm);
-        else if (config.openai) {
-          setLlm({ provider: 'openai', api_key: config.openai.api_key || '', modello: config.openai.modello || 'gpt-4-turbo-preview', temperatura: config.openai.temperatura || 0.7 });
+        
+        // Sync individual provider keys
+        const newKeys = { ...llmKeys };
+        if (config.openai) newKeys.openai = config.openai;
+        if (config.anthropic) newKeys.anthropic = config.anthropic;
+        if (config.deepseek) newKeys.deepseek = config.deepseek;
+        if (config.perplexity) newKeys.perplexity = config.perplexity;
+        // Also sync from 'llm' if it's the primary
+        if (config.llm?.provider && config.llm?.api_key) {
+           newKeys[config.llm.provider] = { 
+             api_key: config.llm.api_key, 
+             modello: config.llm.modello || config.llm.model 
+           };
         }
+        setLlmKeys(newKeys);
+        
         if (config.seo) setSeo(config.seo);
         if (config.tono_e_stile) setTono(config.tono_e_stile);
         if (config.knowledge_base) setKnowledge(config.knowledge_base);
@@ -75,7 +94,10 @@ export const ConfigurationPage = () => {
     setSaving(true);
     try {
       await axios.put(`${API}/clients/${effectiveClientId}/configuration`, {
-        wordpress, llm, openai: llm, seo,
+        wordpress, 
+        llm: { ...llm, api_key: llmKeys[llm.provider]?.api_key, modello: llmKeys[llm.provider]?.modello }, 
+        ...llmKeys,
+        seo,
         tono_e_stile: tono, knowledge_base: knowledge
       }, { headers: getAuthHeaders() });
       toast.success('Configurazione salvata');
@@ -131,7 +153,12 @@ export const ConfigurationPage = () => {
         </TabsList>
 
         <TabsContent value="api" className="mt-6">
-          <ApiKeysTab llm={llm} setLlm={setLlm} wordpress={wordpress} setWordpress={setWordpress} />
+          <ApiKeysTab 
+            llm={llm} setLlm={setLlm} 
+            llmKeys={llmKeys} setLlmKeys={setLlmKeys}
+            wordpress={wordpress} setWordpress={setWordpress} 
+            clientConfig={client?.configuration}
+          />
         </TabsContent>
         <TabsContent value="knowledge" className="mt-6">
           <KnowledgeBaseTab knowledge={knowledge} setKnowledge={setKnowledge} isAdmin={isAdmin} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
