@@ -30,6 +30,36 @@ class ArticleService:
         return (cut[:last_space].rstrip(',;- ') + ".") if last_space > 80 else (cut.rstrip(',;- ') + ".")
 
     @classmethod
+    async def _refine_with_openai(cls, content: str, openai_config: dict, kb: dict, tone: dict, client_name: str, titolo: str) -> str:
+        """Second step of the pipeline: use OpenAI to refine the DeepSeek output."""
+        if not openai_config or not openai_config.get("api_key"):
+            api_key = (openai_config or {}).get("api_key")
+            if not api_key: return content
+            
+        api_key = openai_config["api_key"]
+        model = openai_config.get("modello") or "gpt-4-turbo-preview"
+        temp = openai_config.get("temperatura", 0.6)
+        
+        from helpers import generate_with_llm, clean_llm_output
+        
+        sys_prompt = f"""Sei un Senior Editor SEO per {client_name}. 
+Raffina questo articolo (Step 2) rendendolo più umano e naturale.
+- Assicurati che i tag H3 siano distribuiti fluidamente.
+- Verifica che gli anchor text dei link siano di ALMENO 3 PAROLE e SEO-oriented.
+- Rinforza i riferimenti alla Knowledge Base (Città: {kb.get('citta_principale')}).
+Restituisci solo l'articolo raffinato in HTML (frammento)."""
+        
+        user_prompt = f"TITOLO ARTICOLO: {titolo}\n\nCONTENUTO:\n{content}"
+        
+        try:
+            logger.info(f"OpenAI Step 2 Refinement for '{titolo}'...")
+            refined = await generate_with_llm("openai", api_key, model, temp, sys_prompt, user_prompt)
+            return clean_llm_output(refined)
+        except Exception as e:
+            logger.error(f"Refinement error: {e}")
+            return content
+
+    @classmethod
     async def create_job(cls, client_id: str, total_count: int) -> str:
         job_id = str(uuid.uuid4())
         job_doc = {
@@ -106,6 +136,13 @@ class ArticleService:
             for attempt in range(3):
                 try:
                     content = await generate_with_rotation(llm_config, system_prompt, user_prompt)
+                    
+                    # --- TWO-STEP PIPELINE: REFINEMENT WITH OPENAI ---
+                    openai_config = config.get("openai")
+                    if content and openai_config and openai_config.get("api_key"):
+                        content = await cls._refine_with_openai(content, openai_config, kb, tone, client_name=client_doc["nome"], titolo=titolo)
+                    # -------------------------------------------------
+                    
                     break
                 except Exception as e:
                     gen_error = str(e)
@@ -248,6 +285,15 @@ class ArticleService:
                 try:
                     user_prompt = f"{titolo}\n\nArgomento specifico: {topic}" if topic else titolo
                     content = await generate_with_rotation(llm_config, safe_system_prompt, user_prompt)
+                    
+                    # --- TWO-STEP PIPELINE: REFINEMENT WITH OPENAI ---
+                    openai_config = (await db.clients.find_one({"id": client_id}) or {}).get("configuration", {}).get("openai")
+                    if content and openai_config and openai_config.get("api_key"):
+                        # Extract KB and tone again or pass from initial fetch
+                        # (In run_simple_article_generation kb/tone are already in scope)
+                        content = await cls._refine_with_openai(content, openai_config, kb, config.get("tono_e_stile", {}), client_name=client_doc["nome"], titolo=titolo)
+                    # -------------------------------------------------
+                    
                     if content and len(content.strip()) > 100:
                         break
                     else:

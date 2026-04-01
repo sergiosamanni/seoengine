@@ -68,7 +68,7 @@ const PROVIDER_DESCRIPTIONS = {
   perplexity: 'Perplexity integra ricerca web real-time, perfetto per contenuti sempre aggiornati.'
 };
 
-export const ApiKeysTab = ({ llm, setLlm, wordpress, setWordpress }) => {
+export const ApiKeysTab = ({ llm, setLlm, openai, setOpenai, wordpress, setWordpress }) => {
   const handleProviderChange = (newProvider) => {
     const models = getModelsForProvider(newProvider);
     setLlm({
@@ -80,46 +80,48 @@ export const ApiKeysTab = ({ llm, setLlm, wordpress, setWordpress }) => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* LLM Configuration */}
-      <Card className="border-slate-200 lg:col-span-2">
+      {/* LLM Configuration (Step 1) */}
+      <Card className="border-slate-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-100 to-blue-100 flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-emerald-600" />
             </div>
-            Modello LLM per Generazione
+            Motore Principale (Step 1)
           </CardTitle>
-          <CardDescription>Scegli il provider e il modello per generare gli articoli SEO</CardDescription>
+          <CardDescription>Modello per la stesura strutturale (es. DeepSeek)</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label>Provider</Label>
-              <Select value={llm.provider} onValueChange={handleProviderChange}>
-                <SelectTrigger data-testid="llm-provider-select">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LLM_PROVIDERS.map((provider) => (
-                    <SelectItem key={provider.id} value={provider.id}>
-                      <span>{provider.name}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Modello</Label>
-              <Select value={llm.modello} onValueChange={(v) => setLlm({ ...llm, modello: v })}>
-                <SelectTrigger data-testid="llm-model-select">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {getModelsForProvider(llm.provider).map((model) => (
-                    <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Provider</Label>
+                <Select value={llm.provider} onValueChange={handleProviderChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LLM_PROVIDERS.map((provider) => (
+                      <SelectItem key={provider.id} value={provider.id}>
+                        <span>{provider.name}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Modello</Label>
+                <Select value={llm.modello} onValueChange={(v) => setLlm({ ...llm, modello: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getModelsForProvider(llm.provider).map((model) => (
+                      <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>API Key</Label>
@@ -127,26 +129,76 @@ export const ApiKeysTab = ({ llm, setLlm, wordpress, setWordpress }) => {
                 type="password"
                 value={llm.api_key}
                 onChange={(e) => setLlm({ ...llm, api_key: e.target.value })}
-                placeholder={llm.provider === 'openai' ? 'sk-...' : 'API Key...'}
-                data-testid="llm-api-key-input"
+                placeholder="Inserisci chiave API..."
               />
             </div>
             <div className="space-y-2">
               <Label>Temperatura ({llm.temperatura})</Label>
               <input
                 type="range"
-                min="0"
-                max="1"
-                step="0.1"
+                min="0" max="1" step="0.1"
                 value={llm.temperatura}
                 onChange={(e) => setLlm({ ...llm, temperatura: parseFloat(e.target.value) })}
                 className="w-full h-10 accent-slate-900"
-                data-testid="llm-temp-slider"
               />
             </div>
           </div>
-          <div className="mt-4 p-4 bg-slate-50 rounded-lg">
-            <p className="text-sm text-slate-600">{PROVIDER_DESCRIPTIONS[llm.provider]}</p>
+        </CardContent>
+      </Card>
+
+      {/* OpenAI Refinement (Step 2) */}
+      <Card className="border-slate-200 bg-slate-50/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+              <Key className="w-4 h-4 text-blue-600" />
+            </div>
+            Raffinamento OpenAI (Step 2)
+          </CardTitle>
+          <CardDescription>Modello per umanizzazione e verifica SEO/GEO finale</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Modello OpenAI</Label>
+                <Select value={openai?.modello || 'gpt-4o'} onValueChange={(v) => setOpenai({ ...openai, modello: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getModelsForProvider('openai').map((model) => (
+                      <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Temperatura ({openai?.temperatura || 0.6})</Label>
+                <input
+                  type="range"
+                  min="0" max="1" step="0.1"
+                  value={openai?.temperatura || 0.6}
+                  onChange={(e) => setOpenai({ ...openai, temperatura: parseFloat(e.target.value) })}
+                  className="w-full h-10 accent-blue-600"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>OpenAI API Key (Opzionale)</Label>
+              <Input
+                type="password"
+                value={openai?.api_key || ''}
+                onChange={(e) => setOpenai({ ...openai, api_key: e.target.value })}
+                placeholder="sk-..."
+              />
+            </div>
+            <div className="mt-2 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+              <p className="text-[11px] text-blue-700 leading-relaxed font-medium">
+                💡 <b>PIPELINE ATTIVA:</b> Se configurata, questa chiave verrà usata per raffinare l'output di DeepSeek (Step 1), 
+                applicando tocco umano e verificando le regole di linking minimo 3 parole.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

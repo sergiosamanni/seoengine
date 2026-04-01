@@ -27,7 +27,10 @@ export const ConfigurationPage = () => {
     url_api: '', utente: '', password_applicazione: '', stato_pubblicazione: 'draft'
   });
   const [llm, setLlm] = useState({
-    provider: 'openai', api_key: '', modello: 'gpt-4-turbo-preview', temperatura: 0.7
+    provider: 'deepseek', api_key: '', modello: 'deepseek-chat', temperatura: 0.7
+  });
+  const [openai, setOpenai] = useState({
+    api_key: '', modello: 'gpt-4o', temperatura: 0.6
   });
   const [seo, setSeo] = useState({
     lingua: 'italiano', lunghezza_minima_parole: 1500, include_faq_in_fondo: false
@@ -55,9 +58,11 @@ export const ConfigurationPage = () => {
         const config = clientData.configuration || {};
         if (config.wordpress) setWordpress(config.wordpress);
         if (config.llm) setLlm(config.llm);
-        else if (config.openai) {
-          setLlm({ provider: 'openai', api_key: config.openai.api_key || '', modello: config.openai.modello || 'gpt-4-turbo-preview', temperatura: config.openai.temperatura || 0.7 });
-        }
+        if (config.openai) setOpenai({
+          api_key: config.openai.api_key || '',
+          modello: config.openai.modello || 'gpt-4o',
+          temperatura: config.openai.temperatura || 0.6
+        });
         if (config.seo) setSeo(config.seo);
         if (config.tono_e_stile) setTono(config.tono_e_stile);
         if (config.knowledge_base) setKnowledge(config.knowledge_base);
@@ -75,7 +80,7 @@ export const ConfigurationPage = () => {
     setSaving(true);
     try {
       await axios.put(`${API}/clients/${effectiveClientId}/configuration`, {
-        wordpress, llm, openai: llm, apify, seo,
+        wordpress, llm, openai, apify, seo,
         tono_e_stile: tono, knowledge_base: knowledge
       }, { headers: getAuthHeaders() });
       toast.success('Configurazione salvata');
@@ -138,7 +143,12 @@ export const ConfigurationPage = () => {
 
         <div className="bg-white rounded-2xl border border-[#f1f3f6] shadow-sm overflow-hidden p-8">
             <TabsContent value="api" className="mt-0">
-                <ApiKeysTab llm={llm} setLlm={setLlm} wordpress={wordpress} setWordpress={setWordpress} apify={apify} setApify={setApify} />
+                <ApiKeysTab 
+                  llm={llm} setLlm={setLlm} 
+                  openai={openai} setOpenai={setOpenai} 
+                  wordpress={wordpress} setWordpress={setWordpress} 
+                  apify={apify} setApify={setApify} 
+                />
             </TabsContent>
             <TabsContent value="knowledge" className="mt-0">
                 <KnowledgeBaseTab knowledge={knowledge} setKnowledge={setKnowledge} isAdmin={isAdmin} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />

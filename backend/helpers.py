@@ -1381,8 +1381,9 @@ NOTA: La pillar page deve essere la risorsa piu completa disponibile sul tema. C
     prompt += f"1. LUNGHEZZA: Minimo {lunghezza_target} parole\n"
     prompt += "2. PARAGRAFI: Max 3-4 righe\n"
     prompt += "3. KEYWORD PRIMARIA: nel titolo H1, nei primi 100 caratteri, in almeno un H2\n"
-    prompt += f"4. LOCALIZZAZIONE: Menziona la citta/zona target almeno 3-4 volte\n"
-    prompt += "5. CTA: una primaria, ripetuta 2-3 volte\n"
+    prompt += "4. TITOLI H3: Inserisci tag H3 in modo naturale ed equilibrato per approfondire i paragrafi H2, seguendo uno sviluppo umano del discorso.\n"
+    prompt += f"5. LOCALIZZAZIONE: Menziona la citta/zona target almeno 3-4 volte\n"
+    prompt += "6. CTA: una primaria, ripetuta 2-3 volte\n"
     
     prompt += "\n=== CALL TO ACTION ===\n"
     prompt += (cta_finale if cta_finale else 'Contattaci per maggiori informazioni') + "\n"
@@ -1437,9 +1438,9 @@ REGOLE DI UMANIZZAZIONE:
         prompt += """
 REGOLE MANDATORIE PER I LINK INTERNI:
 1. DEVI inserire almeno 3 collegamenti ipertestuali <a> nel corpo dell'articolo.
-2. Usa anchor text rilevanti e brevi (3-5 parole). Esempio: "servizio di <a href='URL'>noleggio auto a lungo termine</a>".
-3. Distribuisci i link in paragrafi diversi, non tutti nello stesso punto.
-4. NON usare mai anchor text generici ("clicca qui", "leggi tutto", ecc).
+2. Usa anchor text rilevanti, SEO-oriented e di ALMENO 3 PAROLE (es. 'miglior servizio di <a href=\"URL\">noleggio auto a lungo termine</a>').
+3. NON usare MAI anchor text di una singola parola o generici ('clicca qui', 'leggi tutto', ecc).
+4. Distribuisci i link in paragrafi diversi, non tutti nello stesso punto.
 """
 
     prompt += "\n=== ISTRUZIONE FINALE ===\nGenera un contenuto SEO completo, dettagliato e ottimizzato. Applica il modello di copywriting indicato, integra le leve psicologiche e rispetta tutte le regole SEO on-page.\n\n=== META DESCRIPTION ===\nAlla FINE del contenuto HTML, aggiungi un blocco separato:\n<!-- META_DESCRIPTION: [scrivi qui una meta description di 150-160 caratteri, con keyword principale, intento di ricerca e call to action implicita] -->"
