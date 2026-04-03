@@ -116,15 +116,16 @@ class AutopilotService:
         from helpers import get_wordpress_post, update_wordpress_post, get_wp_id_by_url, generate_with_rotation
         from services.email_service import send_notification_email
         import os, re
-        
         client_name = client.get("nome", "Cliente")
         task_type = task.get("type")
-        wp_user = client.get("wordpress", {}).get("username")
-        wp_pass = client.get("wordpress", {}).get("app_password")
-        wp_url = client.get("wordpress", {}).get("url")
+        config = client.get("configuration", {})
+        wp_config = config.get("wordpress", {})
+        wp_user = wp_config.get("utente")
+        wp_pass = wp_config.get("password_applicazione")
+        wp_url = wp_config.get("url_api")
         if not wp_url:  # Fallback
             wp_url = client.get("url")
-        
+            
         execution_detail = ""
         success = False
         
