@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ClientProvider } from './contexts/ClientContext';
 import { Toaster } from './components/ui/sonner';
 import { DashboardLayout } from './components/DashboardLayout';
+import FloatingSeoChat from './components/FloatingSeoChat';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { GeneratorPage } from './pages/GeneratorPage';
@@ -76,6 +77,7 @@ function App() {
       <AuthProvider>
         <ClientProvider>
           <AppRoutes />
+          <FloatingSeoChat />
         </ClientProvider>
         <Toaster position="top-right" richColors />
       </AuthProvider>

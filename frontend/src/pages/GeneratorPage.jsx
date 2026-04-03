@@ -31,7 +31,6 @@ import { AutopilotTab } from './configuration/AutopilotTab';
 import { GscConnectionTab } from './configuration/GscConnectionTab';
 import { GscDataTab } from './configuration/GscDataTab';
 import FreshnessTab from './client-workspace/FreshnessTab';
-import SeoChatTab from './client-workspace/SeoChatTab';
 
 
 
@@ -58,7 +57,7 @@ export const GeneratorPage = () => {
     } else if (location.pathname.endsWith('/gsc')) {
       setActiveTab('gsc');
     } else if (location.pathname.endsWith('/generate')) {
-      setActiveTab('single');
+      setActiveTab('generate');
     } else {
       setActiveTab('config');
     }
@@ -215,36 +214,16 @@ export const GeneratorPage = () => {
               </TabsTrigger>
             </>
           )}
-          {isAdmin && (
-            <>
-              <TabsTrigger value="single" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5">
-                <PenTool className="w-3.5 h-3.5" />
-                Articolo Singolo
-              </TabsTrigger>
-              <TabsTrigger value="plan" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5">
-                <Target className="w-3.5 h-3.5" />
-                Piano Editoriale
-              </TabsTrigger>
-              <TabsTrigger value="programmatic" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5" />
-                SEO Programmatica
-              </TabsTrigger>
-            </>
-          )}
-          {!isAdmin && (
-            <TabsTrigger value="single" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5">
-              Genera Contenuti
-            </TabsTrigger>
-          )}
+          <TabsTrigger value="generate" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5">
+            <PenTool className="w-3.5 h-3.5" />
+            Genera Contenuti
+          </TabsTrigger>
+
           {isAdmin && (
             <>
               <TabsTrigger value="autopilot" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5 ">
                 <Zap className="w-3 h-3 text-emerald-500 fill-current" />
                 Autopilot
-              </TabsTrigger>
-              <TabsTrigger value="chat" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5 ">
-                <MessageCircle className="w-3 h-3 text-blue-500" />
-                SEO Chat
               </TabsTrigger>
             </>
           )}
@@ -289,23 +268,16 @@ export const GeneratorPage = () => {
             <GscDataTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} addToQueue={addToEditorialQueue} />
         </TabsContent>
 
-        <TabsContent value="single" className="hidden" />
-        <TabsContent value="plan" className="hidden" />
-        <TabsContent value="programmatic" className="hidden" />
-
-        {['single', 'plan', 'programmatic'].includes(activeTab) && (
-            <div className="mt-0 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {isAdmin ? (
-                <AdminGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} externalMode={activeTab} />
-              ) : (
-                <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} externalMode={activeTab} />
-              )}
-              <div className="pt-8 border-t border-[#f1f3f6]">
-                <ArticleHistory effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
-              </div>
-            </div>
-        )}
-
+        <TabsContent value="generate" className="mt-0 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {isAdmin ? (
+            <AdminGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
+          ) : (
+            <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
+          )}
+          <div className="pt-8 border-t border-[#f1f3f6]">
+            <ArticleHistory effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
+          </div>
+        </TabsContent>
 
         <TabsContent value="autopilot" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <AutopilotTab autopilot={autopilot} setAutopilot={setAutopilot} clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
@@ -315,10 +287,6 @@ export const GeneratorPage = () => {
                     Attiva / Salva Configurazione Autopilot
                 </Button>
             </div>
-        </TabsContent>
-
-        <TabsContent value="chat" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <SeoChatTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} />
         </TabsContent>
 
       </Tabs>

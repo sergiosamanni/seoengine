@@ -828,9 +828,23 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
     }, [step]);
 
     return (
+        
         <div className="space-y-8 animate-fade-in">
-            {/* Steps Progress Bar - Minimalist Version (Sticky) */}
-            <div className="sticky top-4 z-40 flex items-center gap-1.5 p-1.5 bg-white/90 backdrop-blur-md rounded-2xl border border-[#f1f3f6] shadow-md overflow-x-auto transition-all" data-testid="step-bar">
+            {/* Modalità (Sub-tabs) */}
+            <div className="flex gap-2 p-1.5 bg-slate-100/80 backdrop-blur-sm rounded-2xl w-fit shadow-sm border border-slate-200">
+                <button onClick={() => setGenMode('single')} className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold transition-all ${genMode === 'single' ? 'bg-white text-orange-600 shadow-md ring-1 ring-orange-100' : 'text-slate-500 hover:text-slate-800'}`}>
+                    <PenTool className="w-4 h-4" /> Articolo Singolo
+                </button>
+                <button onClick={() => setGenMode('plan')} className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold transition-all ${genMode === 'plan' ? 'bg-white text-indigo-600 shadow-md ring-1 ring-indigo-100' : 'text-slate-500 hover:text-slate-800'}`}>
+                    <Calendar className="w-4 h-4" /> Piano Editoriale
+                </button>
+                <button onClick={() => setGenMode('programmatic')} className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold transition-all ${genMode === 'programmatic' ? 'bg-white text-purple-600 shadow-md ring-1 ring-purple-100' : 'text-slate-500 hover:text-slate-800'}`}>
+                    <Sparkles className="w-4 h-4" /> Programmatica
+                </button>
+            </div>
+
+            {genMode !== 'plan' && (
+                <div className="sticky top-4 z-40 flex items-center gap-1.5 p-1.5 bg-white/90 backdrop-blur-md rounded-2xl border border-[#f1f3f6] shadow-md overflow-x-auto transition-all" data-testid="step-bar">
                 {steps.map((s, i) => {
                     const isActive = step === s.num;
                     const isDone = s.done && !isActive;
@@ -859,8 +873,9 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                     );
                 })}
             </div>
+            )}
 
-            {step === 1 && (
+            {genMode !== "plan" && step === 1 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="bg-white border border-[#f1f3f6] rounded-[2rem] p-1 shadow-xl shadow-slate-100/50">
                         <ContentStrategyTab strategy={contentStrategy} setStrategy={setContentStrategy} />
@@ -877,7 +892,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 </div>
             )}
 
-            {step === 2 && (
+            {genMode !== "plan" && step === 2 && (
                 <div className="space-y-4">
                     <Card className="border-slate-200">
                         <CardHeader>
@@ -928,7 +943,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 </div>
             )}
 
-            {step === 3 && (
+            {genMode !== "plan" && step === 3 && (
                 <div className="space-y-4">
                     {gscConnected ? (
                         <Card className="border-sky-200 bg-sky-50/50" data-testid="gsc-step">
@@ -988,7 +1003,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 </div>
             )}
 
-            {step === 4 && (
+            {genMode !== "plan" && step === 4 && (
                 <div className="space-y-4">
                     <Card className="border-slate-200">
                         <CardHeader>
@@ -1010,7 +1025,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 </div>
             )}
 
-            {step === 5 && (
+            {genMode !== "plan" && step === 5 && (
                 <div className="space-y-6">
                     {/* L'immagine viene ora gestita automaticamente dal sistema */}
 
@@ -1355,8 +1370,163 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                         </div>
                     )}
 
-                    {genMode === 'plan' && (
+                    
+                </div>
+            )}
+
+            {/* Full Preview Modal */}
+            {fullPreview && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+                    <Card className="w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl border-none overflow-hidden rounded-3xl">
+                        <CardHeader className="bg-slate-900 text-white flex-shrink-0 py-5 px-8">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-2 bg-orange-500 rounded-xl">
+                                        <Globe className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div>
+                                        <Badge className="bg-orange-500 hover:bg-orange-600 mb-1">Preview Live</Badge>
+                                        <CardTitle className="text-xl font-bold">{fullPreview.titolo}</CardTitle>
+                                    </div>
+                                </div>
+                                <Button variant="ghost" className="text-white hover:bg-slate-800 rounded-full h-10 w-10 p-0" onClick={() => setFullPreview(null)}>
+                                    <X className="w-6 h-6" />
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="flex-1 overflow-y-auto p-0 bg-slate-50">
+                            <div className="article-full-preview bg-white">
+                                <style dangerouslySetInnerHTML={{ __html: `
+                                    .article-full-preview .hero-block {
+                                        background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('${fullPreview.image_url || "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=2070"}');
+                                        background-size: cover;
+                                        background-position: center;
+                                        padding: 120px 40px;
+                                        text-align: center;
+                                        color: white;
+                                    }
+                                    .article-full-preview .hero-block h1 { font-size: 3.5rem; font-weight: 800; margin-bottom: 20px; line-height: 1.1; color: white !important; }
+                                    .article-full-preview .hero-block p { font-size: 1.25rem; opacity: 0.9; max-width: 800px; margin: 0 auto 30px; color: white !important; }
+                                    .article-full-preview .wp-block-buttons { display: flex; gap: 15px; justify-content: center; }
+                                    .article-full-preview .wp-block-button__link {
+                                        padding: 15px 35px; border-radius: 50px; background: #f97316; color: white; font-weight: bold; text-decoration: none;
+                                    }
+                                    .article-full-preview .wp-block-columns {
+                                        display: grid; grid-template-cols: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; padding: 60px 40px;
+                                    }
+                                    .article-full-preview .wp-block-column { padding: 30px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; }
+                                    .article-full-preview .wp-block-column h3 { font-size: 1.5rem; margin-bottom: 15px; }
+                                    .article-full-preview .faq-content { max-width: 800px; margin: 0 auto; padding: 60px 40px; }
+                                    .article-full-preview .faq-content h3 { margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+                                    .article-full-preview .final-cta { background: #f1f5f9; padding: 80px 40px; text-align: center; margin-top: 60px; }
+                                    .article-full-preview img { max-width: 100%; height: auto; border-radius: 8px; }
+                                `}} />
+                                <div className="prose prose-slate max-w-none px-8 py-12" dangerouslySetInnerHTML={{ __html: fullPreview.contenuto }} />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+            {/* Confirmation Modal for Delete Plan */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+                    <Card className="w-full max-w-md shadow-2xl border-none overflow-hidden rounded-3xl animate-in zoom-in-95 duration-200">
+                        <CardHeader className="bg-red-50 text-red-600 py-6 text-center border-b border-red-100">
+                            <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                                <AlertTriangle className="w-8 h-8 text-red-600" />
+                            </div>
+                            <CardTitle className="text-xl font-black uppercase tracking-tight">Zona Pericolo</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-8 text-center bg-white">
+                            <p className="text-slate-600 mb-8 font-medium">
+                                Stai per eliminare definitivamente l'intero **Piano Editoriale** attuale. 
+                                <br/><span className="text-xs text-red-500 font-bold uppercase mt-2 block">Questa azione non è reversibile!</span>
+                            </p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="h-12 rounded-xl font-bold border-slate-200 hover:bg-slate-50"
+                                >
+                                    Annulla
+                                </Button>
+                                <Button 
+                                    disabled={deletingPlan}
+                                    onClick={confirmDeletePlan}
+                                    className="h-12 rounded-xl font-bold bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200"
+                                >
+                                    {deletingPlan ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                                    Sì, Elimina Piano
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+{genMode === 'plan' && (
                         <div className="space-y-6 animate-in fade-in duration-500">
+
+                        {/* INIZIO GSC e Prompt Inclusi in Plan */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* GSC Block */}
+                            {gscConnected ? (
+                                <Card className="border-sky-200 bg-sky-50/50">
+                                    <CardHeader className="pb-3">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-sky-600"/> GSC Dati</CardTitle>
+                                            </div>
+                                            {gscData && (<Button variant="outline" size="xs" className="h-7 text-[10px]" onClick={loadGscData} disabled={gscLoading}>Aggiorna</Button>)}
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {gscLoading && !gscData ? <Loader2 className="w-5 h-5 animate-spin mx-auto"/> : gscData ? (
+                                            <div className="space-y-3">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div className="p-2 bg-white rounded border border-sky-100 text-center"><p className="text-sm font-bold">{gscData.totals?.total_clicks||0}</p><p className="text-[10px]">Click</p></div>
+                                                    <div className="p-2 bg-white rounded border border-sky-100 text-center"><p className="text-sm font-bold">{gscData.totals?.total_impressions||0}</p><p className="text-[10px]">Impr.</p></div>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {gscData.keywords?.slice(0,8).map((k,i)=><Badge key={i} variant="outline" className="text-[9px] bg-white text-slate-600">{k.keyword}</Badge>)}
+                                                </div>
+                                            </div>
+                                        ) : <Button size="sm" onClick={loadGscData}>Carica</Button>}
+                                    </CardContent>
+                                </Card>
+                            ) : null}
+
+                            {/* Prompt Block */}
+                            <Card className="border-slate-200">
+                                <CardHeader className="pb-3">
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="text-sm">Prompt AI</CardTitle>
+                                        <Button size="xs" className="h-7 text-[10px] bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200"
+                                            onClick={async () => {
+                                                if(!advancedPrompt) return;
+                                                setRefining(true);
+                                                try {
+                                                    const res = await axios.post(`${API}/articles/refine-objective`, 
+                                                        { client_id: effectiveClientId, objective: advancedPrompt, title: "Piano Editoriale SEO" }, 
+                                                        { headers: getAuthHeaders() }
+                                                    );
+                                                    setAdvancedPrompt(res.data.refined_objective);
+                                                    toast.success("Ottimizzato!");
+                                                } catch(e) { toast.error("Errore"); }
+                                                setRefining(false);
+                                            }}
+                                            disabled={refining}
+                                        >
+                                            {refining ? <Loader2 className="w-3 h-3 animate-spin mr-1"/> : <Sparkles className="w-3 h-3 mr-1"/>} Ottimizza
+                                        </Button>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <Textarea value={advancedPrompt} onChange={(e)=>setAdvancedPrompt(e.target.value)} className="text-xs h-[140px] font-mono" />
+                                </CardContent>
+                            </Card>
+                        </div>
+                        {/* FINE GSC e Prompt */}
+    
                             <Card className="border-slate-200 overflow-hidden shadow-sm">
                                 <button className="w-full text-left" onClick={() => setShowPlanSettings(!showPlanSettings)}>
                                     <CardHeader className="pb-4 hover:bg-slate-50/70 transition-colors cursor-pointer">
@@ -1810,98 +1980,6 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                             )}
                         </div>
                     )}
-                </div>
-            )}
-
-            {/* Full Preview Modal */}
-            {fullPreview && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-                    <Card className="w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl border-none overflow-hidden rounded-3xl">
-                        <CardHeader className="bg-slate-900 text-white flex-shrink-0 py-5 px-8">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-2 bg-orange-500 rounded-xl">
-                                        <Globe className="w-5 h-5 text-white" />
-                                    </div>
-                                    <div>
-                                        <Badge className="bg-orange-500 hover:bg-orange-600 mb-1">Preview Live</Badge>
-                                        <CardTitle className="text-xl font-bold">{fullPreview.titolo}</CardTitle>
-                                    </div>
-                                </div>
-                                <Button variant="ghost" className="text-white hover:bg-slate-800 rounded-full h-10 w-10 p-0" onClick={() => setFullPreview(null)}>
-                                    <X className="w-6 h-6" />
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="flex-1 overflow-y-auto p-0 bg-slate-50">
-                            <div className="article-full-preview bg-white">
-                                <style dangerouslySetInnerHTML={{ __html: `
-                                    .article-full-preview .hero-block {
-                                        background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('${fullPreview.image_url || "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=2070"}');
-                                        background-size: cover;
-                                        background-position: center;
-                                        padding: 120px 40px;
-                                        text-align: center;
-                                        color: white;
-                                    }
-                                    .article-full-preview .hero-block h1 { font-size: 3.5rem; font-weight: 800; margin-bottom: 20px; line-height: 1.1; color: white !important; }
-                                    .article-full-preview .hero-block p { font-size: 1.25rem; opacity: 0.9; max-width: 800px; margin: 0 auto 30px; color: white !important; }
-                                    .article-full-preview .wp-block-buttons { display: flex; gap: 15px; justify-content: center; }
-                                    .article-full-preview .wp-block-button__link {
-                                        padding: 15px 35px; border-radius: 50px; background: #f97316; color: white; font-weight: bold; text-decoration: none;
-                                    }
-                                    .article-full-preview .wp-block-columns {
-                                        display: grid; grid-template-cols: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; padding: 60px 40px;
-                                    }
-                                    .article-full-preview .wp-block-column { padding: 30px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; }
-                                    .article-full-preview .wp-block-column h3 { font-size: 1.5rem; margin-bottom: 15px; }
-                                    .article-full-preview .faq-content { max-width: 800px; margin: 0 auto; padding: 60px 40px; }
-                                    .article-full-preview .faq-content h3 { margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-                                    .article-full-preview .final-cta { background: #f1f5f9; padding: 80px 40px; text-align: center; margin-top: 60px; }
-                                    .article-full-preview img { max-width: 100%; height: auto; border-radius: 8px; }
-                                `}} />
-                                <div className="prose prose-slate max-w-none px-8 py-12" dangerouslySetInnerHTML={{ __html: fullPreview.contenuto }} />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
-            {/* Confirmation Modal for Delete Plan */}
-            {showDeleteConfirm && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
-                    <Card className="w-full max-w-md shadow-2xl border-none overflow-hidden rounded-3xl animate-in zoom-in-95 duration-200">
-                        <CardHeader className="bg-red-50 text-red-600 py-6 text-center border-b border-red-100">
-                            <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                                <AlertTriangle className="w-8 h-8 text-red-600" />
-                            </div>
-                            <CardTitle className="text-xl font-black uppercase tracking-tight">Zona Pericolo</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-8 text-center bg-white">
-                            <p className="text-slate-600 mb-8 font-medium">
-                                Stai per eliminare definitivamente l'intero **Piano Editoriale** attuale. 
-                                <br/><span className="text-xs text-red-500 font-bold uppercase mt-2 block">Questa azione non è reversibile!</span>
-                            </p>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Button 
-                                    variant="outline" 
-                                    onClick={() => setShowDeleteConfirm(false)}
-                                    className="h-12 rounded-xl font-bold border-slate-200 hover:bg-slate-50"
-                                >
-                                    Annulla
-                                </Button>
-                                <Button 
-                                    disabled={deletingPlan}
-                                    onClick={confirmDeletePlan}
-                                    className="h-12 rounded-xl font-bold bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200"
-                                >
-                                    {deletingPlan ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                                    Sì, Elimina Piano
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
         </div>
     );
 };
