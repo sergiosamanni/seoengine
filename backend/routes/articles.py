@@ -885,15 +885,25 @@ async def generate_editorial_plan(client_id: str, req: PlanRequest = None, curre
     
     # Also fetch titles from Sitemap to avoid duplicates
     sitemap_url = config.get("seo", {}).get("sitemap_url") or config.get("knowledge_base", {}).get("sitemap_url")
+    total_existing_count = len(existing_topics)
     if sitemap_url:
         try:
             from helpers import get_sitemap_links
             sitemap_links = await get_sitemap_links(sitemap_url)
+            total_existing_count += len(sitemap_links)
+            # Limit sitemap titles to avoid context window explosion (max 150 from sitemap)
+            count = 0
             for l in sitemap_links:
                 if l.get("titolo") and l["titolo"] not in existing_topics:
                     existing_topics.append(l["titolo"])
+                    count += 1
+                if count >= 150: break 
         except Exception as e:
             logger.warning(f"Could not fetch sitemap for existing topics check: {e}")
+    
+    # Add a note about the total count to inform the LLM
+    objective_with_context = objective or "Massimizzare il traffico organico in linea con le keywords."
+    objective_with_context += f"\n(Nota: Il sito ha già {total_existing_count} contenuti indicizzati. Proponi argomenti freschi e non trattati.)"
     
     # Fetch Global SEO/GEO Guidelines
     global_settings = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
@@ -906,8 +916,9 @@ async def generate_editorial_plan(client_id: str, req: PlanRequest = None, curre
         existing_topics=existing_topics,
         num_topics=num_topics,
         global_guidelines=global_g,
-        objective=objective
+        objective=objective_with_context
     )
+
     
     # Fetch a stock image preview for each topic using the image_search_query
     from helpers import web_search_images

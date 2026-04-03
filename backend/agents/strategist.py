@@ -95,7 +95,9 @@ Rispondi ESCLUSIVAMENTE con un JSON valido nel seguente formato:
                 await self.log("success", {"topics_generated": len(plan)})
                 return plan
             else:
+                await self.log("failed", {"error": "Could not find JSON in LLM response", "raw": raw_response[:500]})
                 raise ValueError("Could not find JSON in LLM response")
         except Exception as e:
             await self.log("failed", {"error": str(e)})
-            return []
+            raise e
+
