@@ -67,9 +67,16 @@ async def send_notification_email(
         # Send via SMTP
         import aiosmtplib
 
-        from_email = smtp_config.get("from_email", smtp_config["username"])
+        from_email = smtp_config.get("from_email") or smtp_config["username"]
         port = int(smtp_config.get("port", 587))
-        use_tls = smtp_config.get("use_tls", True)
+        
+        # Smart TLS handling based on port
+        if port == 465:
+            use_tls_param = True
+            start_tls_param = False
+        else:
+            use_tls_param = False
+            start_tls_param = smtp_config.get("use_tls", True)
 
         for recipient in recipients:
             try:
@@ -85,8 +92,9 @@ async def send_notification_email(
                     port=port,
                     username=smtp_config["username"],
                     password=smtp_config["password"],
-                    start_tls=use_tls,
-                    timeout=15
+                    use_tls=use_tls_param,
+                    start_tls=start_tls_param,
+                    timeout=20
                 )
                 logger.info(f"✉ Email sent to {recipient}: {subject}")
             except Exception as e:
