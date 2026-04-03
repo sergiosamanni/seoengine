@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Card, CardContent } from '../components/ui/card';
 import {
   AlertCircle, Loader2, ArrowLeft, Settings, PenTool, BarChart3, 
-  Key, FileText, Sparkles, Globe, History, Save, Zap, MessageCircle
+  Key, FileText, Sparkles, Globe, History, Save, Zap, MessageCircle, Target, Layers
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -58,7 +58,7 @@ export const GeneratorPage = () => {
     } else if (location.pathname.endsWith('/gsc')) {
       setActiveTab('gsc');
     } else if (location.pathname.endsWith('/generate')) {
-      setActiveTab('generate');
+      setActiveTab('single');
     } else {
       setActiveTab('config');
     }
@@ -215,9 +215,27 @@ export const GeneratorPage = () => {
               </TabsTrigger>
             </>
           )}
-          <TabsTrigger value="generate" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all">
-            Genera Contenuti
-          </TabsTrigger>
+          {isAdmin && (
+            <>
+              <TabsTrigger value="single" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5">
+                <PenTool className="w-3.5 h-3.5" />
+                Articolo Singolo
+              </TabsTrigger>
+              <TabsTrigger value="plan" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5">
+                <Target className="w-3.5 h-3.5" />
+                Piano Editoriale
+              </TabsTrigger>
+              <TabsTrigger value="programmatic" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5" />
+                SEO Programmatica
+              </TabsTrigger>
+            </>
+          )}
+          {!isAdmin && (
+            <TabsTrigger value="single" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5">
+              Genera Contenuti
+            </TabsTrigger>
+          )}
           {isAdmin && (
             <>
               <TabsTrigger value="autopilot" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5 ">
@@ -271,16 +289,22 @@ export const GeneratorPage = () => {
             <GscDataTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} addToQueue={addToEditorialQueue} />
         </TabsContent>
 
-        <TabsContent value="generate" className="mt-0 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {isAdmin ? (
-            <AdminGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
-          ) : (
-            <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
-          )}
-          <div className="pt-8 border-t border-[#f1f3f6]">
-            <ArticleHistory effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
-          </div>
-        </TabsContent>
+        <TabsContent value="single" className="hidden" />
+        <TabsContent value="plan" className="hidden" />
+        <TabsContent value="programmatic" className="hidden" />
+
+        {['single', 'plan', 'programmatic'].includes(activeTab) && (
+            <div className="mt-0 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {isAdmin ? (
+                <AdminGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} externalMode={activeTab} />
+              ) : (
+                <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} externalMode={activeTab} />
+              )}
+              <div className="pt-8 border-t border-[#f1f3f6]">
+                <ArticleHistory effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
+              </div>
+            </div>
+        )}
 
 
         <TabsContent value="autopilot" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">

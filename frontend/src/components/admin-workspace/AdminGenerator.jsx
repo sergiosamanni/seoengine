@@ -30,7 +30,7 @@ import { KeywordsTab } from '../../pages/configuration/KeywordsTab';
 
 
 const AdminGenerator = ({
-    client, effectiveClientId, getAuthHeaders, navigate, initialData, onDataUsed
+    client, effectiveClientId, getAuthHeaders, navigate, externalMode, initialData, onDataUsed
 }) => {
     const [automation, setAutomation] = useState({ enabled: false, articles_per_week: 1 });
     const [targetKeywords, setTargetKeywords] = useState([]);
@@ -60,7 +60,14 @@ const AdminGenerator = ({
 
     // Generation state
     const [autoGenerateCover, setAutoGenerateCover] = useState(true);
-    const [genMode, setGenMode] = useState('single');
+    const [genMode, setGenMode] = useState(externalMode || 'single');
+    
+    useEffect(() => {
+        if (externalMode && ['single', 'plan', 'programmatic'].includes(externalMode)) {
+            setGenMode(externalMode);
+        }
+    }, [externalMode]);
+
     const [singleTitle, setSingleTitle] = useState('');
     const [singleKeywords, setSingleKeywords] = useState('');
     const [singleObjective, setSingleObjective] = useState('');
@@ -1006,35 +1013,6 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
             {step === 5 && (
                 <div className="space-y-6">
                     {/* L'immagine viene ora gestita automaticamente dal sistema */}
-
-
-                    {/* ===== SEZIONE TAB: Selezione Modalità ===== */}
-                    <div className="flex gap-2 p-1.5 bg-slate-100/80 backdrop-blur-sm rounded-2xl w-fit mb-8 border border-slate-200">
-                        <button
-                            onClick={() => setGenMode('single')}
-                            className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold transition-all ${
-                                genMode === 'single' ? 'bg-white text-orange-600 shadow-md ring-1 ring-orange-100' : 'text-slate-500 hover:text-slate-800'
-                            }`}
-                        >
-                            <PenTool className="w-4 h-4" /> Articolo Singolo
-                        </button>
-                        <button
-                            onClick={() => setGenMode('plan')}
-                            className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold transition-all ${
-                                genMode === 'plan' ? 'bg-white text-indigo-600 shadow-md ring-1 ring-indigo-100' : 'text-slate-500 hover:text-slate-800'
-                            }`}
-                        >
-                            <Calendar className="w-4 h-4" /> Piano Editoriale
-                        </button>
-                        <button
-                            onClick={() => setGenMode('programmatic')}
-                            className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold transition-all ${
-                                genMode === 'programmatic' ? 'bg-white text-purple-600 shadow-md ring-1 ring-purple-100' : 'text-slate-500 hover:text-slate-800'
-                            }`}
-                        >
-                            <Sparkles className="w-4 h-4" /> SEO Programmatica
-                        </button>
-                    </div>
 
                     {genMode === 'single' && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
