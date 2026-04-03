@@ -269,17 +269,19 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                 # Let's use a specialized prompt if possible
                 img_prompt = await generate_image_prompt(llm_config, titolo)
                 await log_activity(client_id, "image_generate", "running", {"titolo": titolo, "prompt": img_prompt})
-                image_res = await generate_image_with_fallback(
-                    img_prompt, client_id, 
-                    openai_key=llm_config.get("api_key") if llm_config.get("provider") == "openai" else None,
-                    article_title=titolo
-                )
-                if image_res and image_res.get("id"):
-                    image_ids = [image_res["id"]]
-                    await log_activity(client_id, "image_generate", "success", {"titolo": titolo, "image_id": image_res["id"]})
+                from helpers import get_web_stock_photo
+                logger.info(f"Using Direct Web Stock Search for article: {titolo}")
+                img_url = await get_web_stock_photo(titolo)
+                
+                if img_url:
+                    from helpers import download_image_and_upload_to_db
+                    img_id = await download_image_and_upload_to_db(img_url, client_id)
+                    if img_id:
+                        image_ids = [img_id]
+                        await log_activity(client_id, "image_search", "success", {"titolo": titolo, "image_url": img_url})
             except Exception as e:
-                logger.error(f"AI Image generation failed during simple-generate: {e}")
-                await log_activity(client_id, "image_generate", "failed", {"titolo": titolo, "error": str(e)})
+                logger.error(f"Web image search failed during simple-generate: {e}")
+                await log_activity(client_id, "image_search", "failed", {"titolo": titolo, "error": str(e)})
 
         try:
             content = None
