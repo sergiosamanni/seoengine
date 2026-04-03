@@ -154,7 +154,7 @@ class AutopilotService:
                 if not source_wp_info: raise ValueError(f"Impossibile trovare WP ID per {source_url}")
                 
                 post_data = await get_wordpress_post(wp_url, wp_user, wp_pass, source_wp_info["id"], wp_type=source_wp_info["type"])
-                old_content = post_data.get("content", {}).get("rendered", "")
+                old_content = post_data.get("content", "")
                 
                 system_prompt = "Sei un SEO copywriter. Scrivi UN SINGOLO paragrafo (2-3 frasi) in italiano (FORMATO HTML: <p>...</p>) che concluda l'articolo e contenga un solo link interno verso la risorsa indicata usando un anchor testuale ed esatto relativo al target."
                 user_prompt = f"Target Link HTML: <a href='{target_url}'>Scopri di più</a>\nStrategia SEO: {task.get('suggestion')}\n\nRispondi unicamente col paragrafo finale da aggiungere a:\n{old_content[:800]}..."
@@ -178,7 +178,7 @@ class AutopilotService:
                 if not target_wp_info: raise ValueError(f"Impossibile trovare WP ID per {target_url}")
                 
                 post_data = await get_wordpress_post(wp_url, wp_user, wp_pass, target_wp_info["id"], wp_type=target_wp_info["type"])
-                old_content = post_data.get("content", {}).get("rendered", "")
+                old_content = post_data.get("content", "")
                 
                 system_prompt = "Sei un SEO Specialist. Genera in formato HTML (usando <h2> per eventuali titoletti, poi tag <p>, <ul> o <table>) i paragrafi di approfondimento richiesti per completare il gap semantico di un articolo. L'output verrà posizionato alla fine dell'ultimo paragrafo. TRALASCIA intestazioni come ```html e produci solo l'HTML grezzo da innestare."
                 user_prompt = f"Strategia e Lacuna Semantica: {task.get('suggestion')} ({task.get('reason')})\n\nTesto originale estratto:\n{old_content[:1500]}..."
