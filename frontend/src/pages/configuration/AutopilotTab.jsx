@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 
 export const AutopilotTab = ({ autopilot, setAutopilot, clientId, getAuthHeaders }) => {
   const [tasks, setTasks] = useState([]);
+  const [activeTab, setActiveTab] = useState('pending');
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [resolvingId, setResolvingId] = useState(null);
@@ -103,6 +104,10 @@ export const AutopilotTab = ({ autopilot, setAutopilot, clientId, getAuthHeaders
         default: return 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
+
+  const pendingTasks = tasks.filter(t => t.status === 'pending');
+  const historyTasks = tasks.filter(t => t.status !== 'pending');
+  const displayedTasks = activeTab === 'pending' ? pendingTasks : historyTasks;
 
   return (
     <div className="space-y-10">
@@ -218,10 +223,25 @@ export const AutopilotTab = ({ autopilot, setAutopilot, clientId, getAuthHeaders
                     Revisione Suggerimenti AI
                 </h3>
                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">
-                    {tasks.length} azioni SEO in attesa di approvazione
+                    {activeTab === 'pending' ? `${pendingTasks.length} azioni SEO in attesa` : `${historyTasks.length} azioni SEO completate/rimosse`}
                 </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
+                <div className="flex bg-slate-100 p-1 rounded-xl">
+                    <button 
+                        onClick={() => setActiveTab('pending')} 
+                        className={`min-w-[100px] px-4 py-2 rounded-lg text-[10px] uppercase font-bold tracking-widest transition-all ${activeTab === 'pending' ? 'bg-white shadow-sm text-slate-900 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                        In Attesa
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('history')} 
+                        className={`min-w-[100px] px-4 py-2 rounded-lg text-[10px] uppercase font-bold tracking-widest transition-all ${activeTab === 'history' ? 'bg-white shadow-sm text-slate-900 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                        Cronologia
+                    </button>
+                </div>
+                <div className="flex items-center gap-2">
                 <Button 
                     variant="outline" 
                     onClick={handleSeed}
@@ -238,23 +258,24 @@ export const AutopilotTab = ({ autopilot, setAutopilot, clientId, getAuthHeaders
                     <RefreshCcw className={`w-4 h-4 ${loadingTasks ? 'animate-spin' : ''}`} />
                 </Button>
             </div>
+            </div>
         </div>
 
-        {tasks.length === 0 && !loadingTasks ? (
+        {displayedTasks.length === 0 && !loadingTasks ? (
             <Card className="border-dashed border-2 border-slate-100 shadow-none bg-slate-50/30 rounded-[2.5rem]">
                 <CardContent className="p-12 text-center space-y-4">
                     <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center mx-auto shadow-sm">
                         <CheckCircle2 className="w-8 h-8 text-slate-200" />
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Coda Vuota</p>
-                        <p className="text-[11px] text-slate-400 font-medium italic">Nessuna proposta SEO generata al momento. Lo scanner agirà secondo il prossimo scheduling.</p>
+                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">{activeTab === 'pending' ? 'Coda Vuota' : 'Nessuno Storico'}</p>
+                        <p className="text-[11px] text-slate-400 font-medium italic">{activeTab === 'pending' ? 'Nessuna proposta SEO generata al momento. Lo scanner agirà secondo il prossimo scheduling.' : 'Non ci sono ancora operazioni SEO eseguite in passato.'}</p>
                     </div>
                 </CardContent>
             </Card>
         ) : (
             <div className="grid grid-cols-1 gap-4">
-                {tasks.map((task) => (
+                {displayedTasks.map((task) => (
                     <Card key={task.id} className="border-slate-100 shadow-sm hover:shadow-md transition-all rounded-[1.5rem] bg-white overflow-hidden group">
                         <CardContent className="p-6">
                             <div className="flex flex-col sm:flex-row gap-6">

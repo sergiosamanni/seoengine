@@ -17,26 +17,36 @@ class SEOScanner:
         client = await db.clients.find_one({"id": client_id})
         if not client:
             return
+            
+        # Prepare context of recent history (max 5)
+        cursor = db.autopilot_tasks.find({"client_id": client_id, "status": "completed"}).sort("executed_at", -1).limit(5)
+        recent_history_msgs = []
+        async for task in cursor:
+            recent_history_msgs.append(f"[{task.get('type')}] {task.get('title')}: {task.get('suggestion')}")
+            
+        history_context = ""
+        if recent_history_msgs:
+            history_context = "\n\nCONTESTO STORICO RECENTE:\nQueste operazioni sono appena state approvate/implementate sul sito. NON PROPORLE DI NUOVO. Sii complementare:\n" + "\n".join(recent_history_msgs) + "\n"
         
         # 1. Evaluate Freshness (Old Content)
-        await cls.evaluate_freshness(client)
+        await cls.evaluate_freshness(client, history_context)
         
         # 2. Evaluate Editorial Plan (New Content)
         await cls.evaluate_editorial_plan(client)
         
         # 3. Evaluate Internal Linking (Spider)
-        await cls.evaluate_internal_linking(client)
+        await cls.evaluate_internal_linking(client, history_context)
         
         # 4. Evaluate Cannibalization (Gardener)
-        await cls.evaluate_cannibalization(client)
+        await cls.evaluate_cannibalization(client, history_context)
         
         # 5. Evaluate Semantic Gap (Analysis)
-        await cls.evaluate_semantic_gap(client)
+        await cls.evaluate_semantic_gap(client, history_context)
         
         logger.info(f"SEO Scan completed for client {client_id}")
 
     @classmethod
-    async def evaluate_freshness(cls, client):
+    async def evaluate_freshness(cls, client, history_context: str = ""):
         client_id = client["id"]
         config = client.get("configuration", {})
         
@@ -64,7 +74,8 @@ class SEOScanner:
         current_year = datetime.now().year
         prompt = (
             "Sei un SEO Strategist. Analizza questi 5 articoli datati e proponi un'azione di REVAMP "
-            "per ognuno. Concentrati su aggiornamento dati, link interni e miglioramento dell'intento.\n\n"
+            "per ognuno. Concentrati su aggiornamento dati, link interni e miglioramento dell'intento.\n"
+            f"{history_context}\n"
             "RISPONDI SOLO IN JSON (lista di oggetti):\n"
             "[\n"
             "  {\n"
@@ -111,7 +122,7 @@ class SEOScanner:
             logger.error(f"Freshness evaluation failed for {client_id}: {e}")
 
     @classmethod
-    async def evaluate_internal_linking(cls, client):
+    async def evaluate_internal_linking(cls, client, history_context: str = ""):
         client_id = client["id"]
         config = client.get("configuration", {})
         from services.gsc_service import GSCService
@@ -140,7 +151,8 @@ class SEOScanner:
 
         prompt = (
             "Sei un esperto SEO Technical. Analizza questi due elenchi (Pagine Donatrici e Pagine Riceventi) "
-            "e proponi UN SOLO suggerimento di LINK INTERNO basato sulla rilevanza semantica degli URL.\n\n"
+            "e proponi UN SOLO suggerimento di LINK INTERNO basato sulla rilevanza semantica degli URL.\n"
+            f"{history_context}\n"
             "DONATRICI (Alta autorità):\n" + "\n".join([f"- {d['url']}" for d in donors]) + "\n\n"
             "RICEVENTI (Hanno bisogno di spinta):\n" + "\n".join([f"- {r['url']}" for r in recipients]) + "\n\n"
             "FORNISCI IL RISULTATO SOLO IN JSON:\n"
@@ -186,7 +198,7 @@ class SEOScanner:
             logger.error(f"Spider evaluation failed for {client_id}: {e}")
 
     @classmethod
-    async def evaluate_cannibalization(cls, client):
+    async def evaluate_cannibalization(cls, client, history_context: str = ""):
         client_id = client["id"]
         config = client.get("configuration", {})
         from services.gsc_service import GSCService
@@ -223,7 +235,7 @@ class SEOScanner:
                 f"Sei un SEO Consultant. Ho rilevato una cannibalizzazione per la keyword '{conflict['query']}'.\n"
                 "Queste pagine competono per lo stesso traffico:\n"
                 + "\n".join([f"- {p['url']} (Clic: {p['clicks']}, Pos: {p['position']})" for p in conflict['pages']]) + 
-                "\n\nProponi una strategia di CONSOLIDAMENTO.\n"
+                f"\n\n{history_context}Proponi una strategia di CONSOLIDAMENTO.\n"
                 "FORNISCI IL RISULTATO SOLO IN JSON:\n"
                 "{\n"
                 "  \"winner_url\": \"url da mantenere\",\n"
@@ -267,7 +279,7 @@ class SEOScanner:
                 logger.error(f"Gardener evaluation failed for {client_id}: {e}")
 
     @classmethod
-    async def evaluate_semantic_gap(cls, client):
+    async def evaluate_semantic_gap(cls, client, history_context: str = ""):
         client_id = client["id"]
         config = client.get("configuration", {})
         from services.gsc_service import GSCService
@@ -299,7 +311,8 @@ class SEOScanner:
                 f"Sei un SEO Consultant. La nostra pagina {kw_info['url']} è in posizione {kw_info['position']} per '{kw}'.\n"
                 "I Top 3 competitor mostrano questi snippet/contenuti:\n"
                 + competitors_context + 
-                "\n\nIndividua un 'Semantic Gap' (cosa hanno loro che noi non abbiamo: tabelle, FAQ, dati, grafici).\n"
+                f"\n\n{history_context}"
+                "Individua un 'Semantic Gap' (cosa hanno loro che noi non abbiamo: tabelle, FAQ, dati, grafici).\n"
                 "FORNISCI IL RISULTATO SOLO IN JSON:\n"
                 "{\n"
                 "  \"gap_identified\": \"cosa manca esatto (max 100 car)\",\n"
