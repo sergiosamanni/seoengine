@@ -55,11 +55,34 @@ class AutopilotService:
         try:
             await log_activity(client_id, "autopilot_scan", "running", {})
             await SEOScanner.scan_client(client_id)
+            
+            # 2. Email notification if new tasks were generated
+            try:
+                pending_tasks = []
+                cursor = db.autopilot_tasks.find({
+                    "client_id": client_id, 
+                    "status": "pending",
+                    "seen_by_admin": {"$ne": True}
+                }).sort("created_at", -1).limit(5)
+                async for t in cursor:
+                    pending_tasks.append({"title": t.get("title", ""), "type": t.get("type", "")})
+                
+                if pending_tasks:
+                    from services.email_service import notify_autopilot_scan_complete
+                    asyncio.create_task(notify_autopilot_scan_complete(
+                        client_name=client.get("nome", "Cliente"),
+                        tasks_count=len(pending_tasks),
+                        task_summaries=pending_tasks
+                    ))
+            except Exception as email_err:
+                logger.debug(f"Autopilot email notification skipped: {email_err}")
+                
         except Exception as e:
             logger.error(f"Autopilot scan failed for {client_id}: {e}")
 
-        # 2. Update Scheduling
+        # 3. Update Scheduling
         await cls.update_next_run(client_id, auto_config)
+
 
     @classmethod
     async def update_next_run(cls, client_id, auto_config):

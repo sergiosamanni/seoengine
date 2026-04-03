@@ -137,3 +137,4 @@ apscheduler
 python-docx
 pypdf
 praw
+aiosmtplib

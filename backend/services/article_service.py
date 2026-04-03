@@ -415,6 +415,20 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
 
                         # Trigger automatic indexing
                         asyncio.create_task(cls._request_gsc_indexing(client_id, wp_res.get("link", "")))
+
+                        # Email notification to admin(s)
+                        try:
+                            from services.email_service import notify_client_article_generated
+                            client_name = client_doc.get("nome", client_doc.get("name", "Cliente"))
+                            asyncio.create_task(notify_client_article_generated(
+                                client_name=client_name,
+                                article_title=titolo,
+                                wordpress_link=wp_res.get("link", ""),
+                                keyword=keyword
+                            ))
+                        except Exception as email_err:
+                            logger.debug(f"Email notification skipped: {email_err}")
+
                     except Exception as e:
                         await db.articles.update_one({"id": article_id}, {"$set": {"stato": "publish_failed", "publish_error": str(e)}})
                         res_item["publish_status"] = "failed"

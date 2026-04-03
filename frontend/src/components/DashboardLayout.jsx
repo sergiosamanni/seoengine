@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import {
-  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X, Globe, MapPin, BookOpen, Zap, MessageSquare
+  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X, Globe, MapPin, BookOpen, Zap, MessageSquare, Mail
 } from 'lucide-react';
 import axios from 'axios';
 import { API_URL as API } from '../config';
@@ -86,6 +86,7 @@ export const DashboardLayout = ({ children }) => {
   ];
   const secondaryNav = [
     { label: 'SEO/GEO Guidelines', icon: BookOpen, path: '/seo-geo-guidelines' },
+    { label: 'Notifiche Email', icon: Mail, path: '/email-notifications' },
     ...(isAdmin ? [{ label: 'Utenti', icon: Users, path: '/users' }] : []),
     { label: 'Activity Log', icon: Activity, path: '/activity-log' },
   ];

@@ -14,6 +14,7 @@ import { CitationsPage } from './pages/CitationsPage';
 import { GmbPage } from './pages/GmbPage';
 import { ReportEditPage } from './pages/reports/ReportEditPage';
 import { SeoGeoGuidelines } from './pages/SeoGeoGuidelines';
+import { EmailNotificationsPage } from './pages/EmailNotificationsPage';
 import RedditPage from './pages/RedditPage';
 import './App.css';
 
@@ -50,6 +51,7 @@ function AppRoutes() {
       <Route path="/gmb" element={<ProtectedRoute adminOnly><GmbPage /></ProtectedRoute>} />
       <Route path="/reddit" element={<ProtectedRoute adminOnly><RedditPage /></ProtectedRoute>} />
       <Route path="/seo-geo-guidelines" element={<ProtectedRoute adminOnly><SeoGeoGuidelines /></ProtectedRoute>} />
+      <Route path="/email-notifications" element={<ProtectedRoute adminOnly><EmailNotificationsPage /></ProtectedRoute>} />
 
       {/* Shared: Activity Log */}
       <Route path="/activity-log" element={<ProtectedRoute><ActivityLogPage /></ProtectedRoute>} />

@@ -102,3 +102,101 @@ async def sync_guideline_links(g_id: str, current_user: dict = Depends(require_a
     )
 
     return {"status": "success", "links_found": len(urls), "data": scraped_data}
+
+
+# ============== EMAIL NOTIFICATIONS CONFIG ==============
+
+@router.get("/notifications")
+async def get_notification_config(current_user: dict = Depends(require_admin)):
+    """Get email notification configuration."""
+    settings = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
+    if not settings:
+        return {"notifications": {"recipients": [], "smtp": {}, "toggles": {"client_articles": True, "autopilot": True}}}
+    
+    notif = settings.get("notifications", {})
+    # Never expose SMTP password in GET responses
+    smtp = notif.get("smtp", {})
+    if smtp.get("password"):
+        smtp = {**smtp, "password": "••••••••"}
+    
+    return {
+        "notifications": {
+            "recipients": notif.get("recipients", []),
+            "smtp": smtp,
+            "toggles": notif.get("toggles", {"client_articles": True, "autopilot": True})
+        }
+    }
+
+
+@router.put("/notifications")
+async def update_notification_config(request: dict, current_user: dict = Depends(require_admin)):
+    """Update email notification configuration (recipients, SMTP, toggles)."""
+    notif_data = request.get("notifications", {})
+    
+    # Validate recipients (max 10)
+    recipients = notif_data.get("recipients", [])
+    if len(recipients) > 10:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Massimo 10 destinatari consentiti")
+    
+    # Clean recipients
+    recipients = [r.strip().lower() for r in recipients if r.strip() and "@" in r]
+    
+    # Handle SMTP config - don't overwrite password if masked
+    smtp = notif_data.get("smtp", {})
+    if smtp.get("password") == "••••••••" or not smtp.get("password"):
+        # Preserve existing password
+        existing = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
+        if existing:
+            existing_password = existing.get("notifications", {}).get("smtp", {}).get("password", "")
+            smtp["password"] = existing_password
+
+    toggles = notif_data.get("toggles", {"client_articles": True, "autopilot": True})
+
+    update_payload = {
+        "notifications": {
+            "recipients": recipients,
+            "smtp": smtp,
+            "toggles": toggles
+        }
+    }
+
+    await db.global_settings.update_one(
+        {"id": "global"},
+        {"$set": update_payload},
+        upsert=True
+    )
+    
+    logger.info(f"Email notification config updated: {len(recipients)} recipients, SMTP host: {smtp.get('host', 'N/A')}")
+    return {"status": "success", "recipients_count": len(recipients)}
+
+
+@router.post("/notifications/test")
+async def send_test_email(current_user: dict = Depends(require_admin)):
+    """Send a test email to verify SMTP configuration."""
+    from services.email_service import send_notification_email
+    
+    body = """
+    <h2 style="color:#1a2332;font-size:18px;margin:0 0 16px;">✅ Test Riuscito!</h2>
+    <p style="color:#4a5568;font-size:14px;line-height:1.6;">
+      Se stai leggendo questa email, la configurazione SMTP di SEOEngine è corretta.<br>
+      D'ora in poi riceverai notifiche automatiche per:
+    </p>
+    <ul style="color:#4a5568;font-size:14px;line-height:1.8;">
+      <li>📝 Articoli generati dai clienti</li>
+      <li>🤖 Task dell'Autopilot SEO</li>
+    </ul>
+    """
+    
+    success = await send_notification_email(
+        subject="✅ SEOEngine: Test Notifica Email",
+        body_html=body,
+        event_type="test",
+        bypass_toggle=True
+    )
+    
+    if success:
+        return {"status": "success", "message": "Email di test inviata con successo!"}
+    else:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail="Invio fallito. Controlla la configurazione SMTP.")
