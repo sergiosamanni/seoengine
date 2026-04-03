@@ -265,20 +265,14 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
         # Determine image_ids - if generate_cover and no ids provided, generate one
         if generate_cover and not image_ids:
             try:
-                from helpers import generate_image_with_fallback, generate_image_prompt
-                # Let's use a specialized prompt if possible
-                img_prompt = await generate_image_prompt(llm_config, titolo)
-                await log_activity(client_id, "image_generate", "running", {"titolo": titolo, "prompt": img_prompt})
-                from helpers import get_web_stock_photo
+                from helpers import generate_image_from_web
                 logger.info(f"Using Direct Web Stock Search for article: {titolo}")
-                img_url = await get_web_stock_photo(titolo)
+                # generate_image_from_web handles search, download, optimization and DB storage
+                image_res = await generate_image_from_web(titolo, client_id, article_title=titolo)
                 
-                if img_url:
-                    from helpers import download_image_and_upload_to_db
-                    img_id = await download_image_and_upload_to_db(img_url, client_id)
-                    if img_id:
-                        image_ids = [img_id]
-                        await log_activity(client_id, "image_search", "success", {"titolo": titolo, "image_url": img_url})
+                if image_res and image_res.get("id"):
+                    image_ids = [image_res["id"]]
+                    await log_activity(client_id, "image_search", "success", {"titolo": titolo, "image_id": image_res["id"]})
             except Exception as e:
                 logger.error(f"Web image search failed during simple-generate: {e}")
                 await log_activity(client_id, "image_search", "failed", {"titolo": titolo, "error": str(e)})
