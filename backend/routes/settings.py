@@ -111,18 +111,17 @@ async def get_notification_config(current_user: dict = Depends(require_admin)):
     """Get email notification configuration."""
     settings = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
     if not settings:
-        return {"notifications": {"recipients": [], "smtp": {}, "toggles": {"client_articles": True, "autopilot": True}}}
+        return {"notifications": {"recipients": [], "resend_config": {}, "toggles": {"client_articles": True, "autopilot": True}}}
     
     notif = settings.get("notifications", {})
-    # Never expose SMTP password in GET responses
-    smtp = notif.get("smtp", {})
-    if smtp.get("password"):
-        smtp = {**smtp, "password": "••••••••"}
+    resend_config = notif.get("resend_config", {})
+    if resend_config.get("api_key"):
+        resend_config = {**resend_config, "api_key": "••••••••"}
     
     return {
         "notifications": {
             "recipients": notif.get("recipients", []),
-            "smtp": smtp,
+            "resend_config": resend_config,
             "toggles": notif.get("toggles", {"client_articles": True, "autopilot": True})
         }
     }
@@ -130,33 +129,29 @@ async def get_notification_config(current_user: dict = Depends(require_admin)):
 
 @router.put("/notifications")
 async def update_notification_config(request: dict, current_user: dict = Depends(require_admin)):
-    """Update email notification configuration (recipients, SMTP, toggles)."""
+    """Update email notification configuration."""
     notif_data = request.get("notifications", {})
     
-    # Validate recipients (max 10)
     recipients = notif_data.get("recipients", [])
     if len(recipients) > 10:
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Massimo 10 destinatari consentiti")
     
-    # Clean recipients
     recipients = [r.strip().lower() for r in recipients if r.strip() and "@" in r]
     
-    # Handle SMTP config - don't overwrite password if masked
-    smtp = notif_data.get("smtp", {})
-    if smtp.get("password") == "••••••••" or not smtp.get("password"):
-        # Preserve existing password
+    resend_config = notif_data.get("resend_config", {})
+    if resend_config.get("api_key") == "••••••••" or not resend_config.get("api_key"):
         existing = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
         if existing:
-            existing_password = existing.get("notifications", {}).get("smtp", {}).get("password", "")
-            smtp["password"] = existing_password
+            existing_key = existing.get("notifications", {}).get("resend_config", {}).get("api_key", "")
+            resend_config["api_key"] = existing_key
 
     toggles = notif_data.get("toggles", {"client_articles": True, "autopilot": True})
 
     update_payload = {
         "notifications": {
             "recipients": recipients,
-            "smtp": smtp,
+            "resend_config": resend_config,
             "toggles": toggles
         }
     }
@@ -167,7 +162,7 @@ async def update_notification_config(request: dict, current_user: dict = Depends
         upsert=True
     )
     
-    logger.info(f"Email notification config updated: {len(recipients)} recipients, SMTP host: {smtp.get('host', 'N/A')}")
+    logger.info(f"Email notification config updated: {len(recipients)} recipients, Using Resend")
     return {"status": "success", "recipients_count": len(recipients)}
 
 

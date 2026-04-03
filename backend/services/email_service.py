@@ -64,47 +64,43 @@ async def send_notification_email(
         # Build full HTML email with template
         full_html = _wrap_in_template(subject, body_html)
 
-        # Send via SMTP
-        import aiosmtplib
+        # Send via Resend API
+        import httpx
 
-        from_email = smtp_config.get("from_email") or smtp_config["username"]
-        port = int(smtp_config.get("port", 587))
+        resend_config = config.get("resend_config", {})
+        resend_key = resend_config.get("api_key")
         
-        # Smart TLS handling based on port
-        if port == 465:
-            use_tls_param = True
-            start_tls_param = False
-        else:
-            use_tls_param = False
-            start_tls_param = smtp_config.get("use_tls", True)
+        if not resend_key:
+            logger.warning("Resend API key missing.")
+            return False
 
-        for recipient in recipients:
-            try:
-                msg = MIMEMultipart("alternative")
-                msg["From"] = f"SEOEngine <{from_email}>"
-                msg["To"] = recipient
-                msg["Subject"] = subject
-                msg.attach(MIMEText(full_html, "html", "utf-8"))
+        from_email = resend_config.get("sender_email") or "onboarding@resend.dev"
 
-                await aiosmtplib.send(
-                    msg,
-                    hostname=smtp_config["host"],
-                    port=port,
-                    username=smtp_config["username"],
-                    password=smtp_config["password"],
-                    use_tls=use_tls_param,
-                    start_tls=start_tls_param,
-                    timeout=20
-                )
-                logger.info(f"✉ Email sent to {recipient}: {subject}")
-            except Exception as e:
-                logger.error(f"Failed to send email to {recipient}: {e}")
+        headers = {
+            "Authorization": f"Bearer {resend_key}",
+            "Content-Type": "application/json"
+        }
+
+        async with httpx.AsyncClient(timeout=20) as client:
+            for recipient in recipients:
+                payload = {
+                    "from": f"SEOEngine <{from_email}>",
+                    "to": [recipient],
+                    "subject": subject,
+                    "html": full_html
+                }
+                
+                try:
+                    resp = await client.post("https://api.resend.com/emails", json=payload, headers=headers)
+                    if resp.status_code in [200, 201]:
+                        logger.info(f"✉ Email sent via Resend to {recipient}: {subject}")
+                    else:
+                        logger.error(f"Resend API error: {resp.status_code} - {resp.text}")
+                except Exception as e:
+                    logger.error(f"Failed to send email via Resend to {recipient}: {e}")
 
         return True
 
-    except ImportError:
-        logger.warning("aiosmtplib not installed. Email notifications disabled.")
-        return False
     except Exception as e:
         logger.error(f"Email notification error: {e}")
         return False

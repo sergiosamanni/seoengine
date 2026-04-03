@@ -17,7 +17,7 @@ export const EmailNotificationsPage = () => {
   // State
   const [recipients, setRecipients] = useState([]);
   const [newEmail, setNewEmail] = useState('');
-  const [smtp, setSmtp] = useState({ host: '', port: '587', username: '', password: '', from_email: '', use_tls: true });
+  const [resendConfig, setResendConfig] = useState({ api_key: '', sender_email: '' });
   const [toggles, setToggles] = useState({ client_articles: true, autopilot: true });
 
   const fetchConfig = useCallback(async () => {
@@ -25,7 +25,7 @@ export const EmailNotificationsPage = () => {
       const res = await axios.get(`${API}/settings/notifications`, { headers: getAuthHeaders() });
       const n = res.data.notifications || {};
       setRecipients(n.recipients || []);
-      if (n.smtp && Object.keys(n.smtp).length > 0) setSmtp({ ...smtp, ...n.smtp });
+      if (n.resend_config && Object.keys(n.resend_config).length > 0) setResendConfig(n.resend_config);
       if (n.toggles) setToggles(n.toggles);
     } catch (err) {
       console.error('Config fetch error:', err);
@@ -64,7 +64,7 @@ export const EmailNotificationsPage = () => {
     setSaving(true);
     try {
       await axios.put(`${API}/settings/notifications`, {
-        notifications: { recipients, smtp, toggles }
+        notifications: { recipients, resend_config: resendConfig, toggles }
       }, { headers: getAuthHeaders() });
       toast.success('Configurazione notifiche salvata!');
     } catch (err) {
@@ -79,15 +79,15 @@ export const EmailNotificationsPage = () => {
       toast.error('Aggiungi almeno un destinatario prima di testare');
       return;
     }
-    if (!smtp.host || !smtp.username) {
-      toast.error('Configura il server SMTP prima di testare');
+    if (!resendConfig.api_key) {
+      toast.error('Configura la API Key di Resend prima di testare');
       return;
     }
     // Save first, then test
     setSaving(true);
     try {
       await axios.put(`${API}/settings/notifications`, {
-        notifications: { recipients, smtp, toggles }
+        notifications: { recipients, resend_config: resendConfig, toggles }
       }, { headers: getAuthHeaders() });
     } catch (e) {
       toast.error('Errore nel salvataggio config');
@@ -178,54 +178,27 @@ export const EmailNotificationsPage = () => {
         )}
       </div>
 
-      {/* SMTP Config */}
+      {/* Resend Config */}
       <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
         <div className="flex items-center gap-3 mb-5">
           <div className="w-8 h-8 bg-purple-50 rounded-xl flex items-center justify-center">
             <Server className="w-4 h-4 text-purple-500" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-slate-900">Server SMTP</h2>
-            <p className="text-xs text-slate-400">Configura le credenziali del server per l'invio email</p>
+            <h2 className="text-sm font-bold text-slate-900">Provider: Resend</h2>
+            <p className="text-xs text-slate-400">Configura la connessione sicura via API</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 block">Host SMTP</label>
-            <Input
-              placeholder="smtp.gmail.com"
-              value={smtp.host}
-              onChange={(e) => setSmtp({...smtp, host: e.target.value})}
-              className="h-11 rounded-xl border-slate-200 text-sm"
-            />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 block">Porta</label>
-            <Input
-              placeholder="587"
-              value={smtp.port}
-              onChange={(e) => setSmtp({...smtp, port: e.target.value})}
-              className="h-11 rounded-xl border-slate-200 text-sm"
-            />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 block">Username</label>
-            <Input
-              placeholder="tuo@gmail.com"
-              value={smtp.username}
-              onChange={(e) => setSmtp({...smtp, username: e.target.value})}
-              className="h-11 rounded-xl border-slate-200 text-sm"
-            />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 block">Password / App Password</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 block">API Key (Resend)</label>
             <div className="relative">
               <Input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={smtp.password}
-                onChange={(e) => setSmtp({...smtp, password: e.target.value})}
+                placeholder="re_••••••••"
+                value={resendConfig.api_key}
+                onChange={(e) => setResendConfig({...resendConfig, api_key: e.target.value})}
                 className="h-11 rounded-xl border-slate-200 text-sm pr-10"
               />
               <button 
@@ -237,22 +210,21 @@ export const EmailNotificationsPage = () => {
               </button>
             </div>
           </div>
-          <div className="md:col-span-2">
+          <div>
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 block">Email Mittente (opzionale)</label>
             <Input
-              placeholder="noreply@tuodominio.com (default: stessa di username)"
-              value={smtp.from_email}
-              onChange={(e) => setSmtp({...smtp, from_email: e.target.value})}
+              placeholder="onboarding@resend.dev (default)"
+              value={resendConfig.sender_email}
+              onChange={(e) => setResendConfig({...resendConfig, sender_email: e.target.value})}
               className="h-11 rounded-xl border-slate-200 text-sm"
             />
           </div>
         </div>
 
-        <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-xl">
-          <p className="text-[11px] text-amber-700 font-medium">
+        <div className="mt-4 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+          <p className="text-[11px] text-indigo-700 font-medium">
             <Shield className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
-            <strong>Gmail:</strong> Usa una <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="underline">App Password</a> (non la password del tuo account).
-            Host: <code className="bg-amber-100 px-1 rounded">smtp.gmail.com</code>, Porta: <code className="bg-amber-100 px-1 rounded">587</code>
+            Crea gratuitamente la tua chiave API su <a href="https://resend.com" target="_blank" rel="noopener noreferrer" className="font-bold underline">resend.com</a>. Le comunicazioni via API (porta 443) bypassano tutti i blocchi SMTP dei server di hosting cloud.
           </p>
         </div>
       </div>
