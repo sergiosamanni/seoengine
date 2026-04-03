@@ -102,6 +102,7 @@ const AdminGenerator = ({
     const [planLoading, setPlanLoading] = useState(false);
     const [planGenerating, setPlanGenerating] = useState(false);
     const [newPlanKeyword, setNewPlanKeyword] = useState("");
+    const [numArticles, setNumArticles] = useState(10);
     const [selectedPlanTopics, setSelectedPlanTopics] = useState([]);
     const [showPlanSettings, setShowPlanSettings] = useState(false);
     const [fullPreview, setFullPreview] = useState(null);
@@ -206,7 +207,10 @@ const AdminGenerator = ({
         setPlanGenerating(true);
         setResults([]); // Reset results when generating new strategy
         try {
-            const res = await axios.post(`${API}/generate-plan/${effectiveClientId}`, {}, {
+            const res = await axios.post(`${API}/generate-plan/${effectiveClientId}`, {
+                objective: advancedPrompt,
+                num_topics: numArticles
+            }, {
                 headers: getAuthHeaders()
             });
             setPlan(res.data);
@@ -236,6 +240,19 @@ const AdminGenerator = ({
             console.error(e);
         } finally {
             setDeletingPlan(false);
+        }
+    };
+
+    const handleSavePlan = async () => {
+        if (!effectiveClientId || !plan) return;
+        setSaving(true);
+        try {
+            await axios.post(`${API}/save-plan/${effectiveClientId}`, plan, { headers: getAuthHeaders() });
+            toast.success("Piano editoriale aggiornato");
+        } catch (e) {
+            toast.error("Errore salvataggio piano");
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -1466,40 +1483,13 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
 {genMode === 'plan' && (
                         <div className="space-y-6 animate-in fade-in duration-500">
 
-                        {/* INIZIO GSC e Prompt Inclusi in Plan */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {/* GSC Block */}
-                            {gscConnected ? (
-                                <Card className="border-sky-200 bg-sky-50/50">
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-sky-600"/> GSC Dati</CardTitle>
-                                            </div>
-                                            {gscData && (<Button variant="outline" size="xs" className="h-7 text-[10px]" onClick={loadGscData} disabled={gscLoading}>Aggiorna</Button>)}
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        {gscLoading && !gscData ? <Loader2 className="w-5 h-5 animate-spin mx-auto"/> : gscData ? (
-                                            <div className="space-y-3">
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    <div className="p-2 bg-white rounded border border-sky-100 text-center"><p className="text-sm font-bold">{gscData.totals?.total_clicks||0}</p><p className="text-[10px]">Click</p></div>
-                                                    <div className="p-2 bg-white rounded border border-sky-100 text-center"><p className="text-sm font-bold">{gscData.totals?.total_impressions||0}</p><p className="text-[10px]">Impr.</p></div>
-                                                </div>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {gscData.keywords?.slice(0,8).map((k,i)=><Badge key={i} variant="outline" className="text-[9px] bg-white text-slate-600">{k.keyword}</Badge>)}
-                                                </div>
-                                            </div>
-                                        ) : <Button size="sm" onClick={loadGscData}>Carica</Button>}
-                                    </CardContent>
-                                </Card>
-                            ) : null}
-
+                        {/* Prompt e Strategia Inclusi in Plan */}
+                        <div className="grid grid-cols-1 gap-6">
                             {/* Prompt Block */}
                             <Card className="border-slate-200">
-                                <CardHeader className="pb-3">
+                                <CardHeader className="pb-3 border-b border-slate-100">
                                     <div className="flex items-center justify-between">
-                                        <CardTitle className="text-sm">Prompt AI</CardTitle>
+                                        <CardTitle className="text-sm">Strategia & Obiettivo del Piano</CardTitle>
                                         <Button size="xs" className="h-7 text-[10px] bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200"
                                             onClick={async () => {
                                                 if(!advancedPrompt) return;
@@ -1519,13 +1509,30 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                             {refining ? <Loader2 className="w-3 h-3 animate-spin mr-1"/> : <Sparkles className="w-3 h-3 mr-1"/>} Ottimizza
                                         </Button>
                                     </div>
+                                    <CardDescription className="text-xs">Usa L'AI per ottimizzare il tuo prompt. I dati GSC vengono integrati automaticamente.</CardDescription>
                                 </CardHeader>
-                                <CardContent>
-                                    <Textarea value={advancedPrompt} onChange={(e)=>setAdvancedPrompt(e.target.value)} className="text-xs h-[140px] font-mono" />
+                                <CardContent className="pt-4 space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-semibold text-slate-700">Numero di Articoli da Generare</Label>
+                                        <div className="flex items-center gap-4">
+                                            <input 
+                                                type="range" 
+                                                min="1" max="50" step="1" 
+                                                value={numArticles} 
+                                                onChange={(e) => setNumArticles(parseInt(e.target.value))}
+                                                className="w-full max-w-[300px] accent-indigo-600"
+                                            />
+                                            <span className="text-sm font-bold w-12 text-center text-indigo-600 bg-indigo-50 py-1 rounded">{numArticles}</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-semibold text-slate-700">Linee Guida Editoriali (Opzionale)</Label>
+                                        <Textarea value={advancedPrompt} onChange={(e)=>setAdvancedPrompt(e.target.value)} placeholder="Scrivi di cosa deve parlare questo piano editoriale..." className="text-xs h-[100px] font-mono" />
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>
-                        {/* FINE GSC e Prompt */}
+                        {/* FINE Prompt */}
     
                             <Card className="border-slate-200 overflow-hidden shadow-sm">
                                 <button className="w-full text-left" onClick={() => setShowPlanSettings(!showPlanSettings)}>
@@ -1618,7 +1625,24 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                         {(plan?.topics?.length > 0 || allPlanTopics.length > 0) ? "Aggiorna Strategia" : "Genera Piano Editoriale"}
                                     </Button>
                                     {allPlanTopics.length > 0 && (
-                                        <>
+                                        <div className="flex items-center gap-2">
+                                            <Button 
+                                                variant="outline"
+                                                disabled={saving || !plan}
+                                                onClick={handleSavePlan}
+                                                className="h-10 px-5 rounded-xl font-bold border-slate-200 hover:bg-slate-50 transition-all text-sm"
+                                            >
+                                                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                                                Salva Piano
+                                            </Button>
+                                            <Button 
+                                                disabled={generating || selectedPlanTopics.length === 0}
+                                                onClick={handleBatchPlanGenerate}
+                                                className="h-10 px-6 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all text-sm"
+                                            >
+                                                {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+                                                Pubblica Selezionati ({selectedPlanTopics.length})
+                                            </Button>
                                             {plan?.topics?.length > 0 && (
                                                 <Button 
                                                     variant="outline"
@@ -1626,19 +1650,10 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                                     disabled={deletingPlan} 
                                                     className="h-10 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                                                 >
-                                                    {deletingPlan ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                                                    Elimina Piano
+                                                    <Trash2 className="w-4 h-4" />
                                                 </Button>
                                             )}
-                                            <Button
-                                                onClick={handleBatchPlanGenerate}
-                                                disabled={generating || selectedPlanTopics.length === 0}
-                                                className="h-10 bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-100"
-                                            >
-                                                {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
-                                                Pubblica Selezionati ({selectedPlanTopics.length})
-                                            </Button>
-                                        </>
+                                        </div>
                                     )}
                                 </div>
                             </div>

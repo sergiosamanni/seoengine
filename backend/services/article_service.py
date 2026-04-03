@@ -79,7 +79,8 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
     async def generate_and_publish_batch(
         cls, job_id: str, client_id: str, items: list, 
         publish_to_wp: bool, content_type: str, brief: dict, 
-        config: dict, client_doc: dict, is_topic_based: bool = False
+        config: dict, client_doc: dict, is_topic_based: bool = False,
+        generate_cover: bool = False
     ):
         """
         Unified batch processor for both combinations (Programmatic SEO) 
@@ -177,15 +178,28 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                 # Image handling for topics
                 image_ids = []
                 if is_topic_based:
-                    # Logic to handle topic image (stock or auto-gen)
-                    # Simplified for now: assume image_ids could be in item
                     image_ids = item.get("image_ids", [])
+                    if generate_cover and not image_ids:
+                        try:
+                            from helpers import generate_image_from_web
+                            search_query = item.get("image_search_query") or titolo
+                            logger.info(f"Using Direct Web Stock Search for batch article: {search_query}")
+                            image_res = await generate_image_from_web(search_query, client_id, article_title=titolo)
+                            
+                            if image_res and image_res.get("id"):
+                                image_ids = [image_res["id"]]
+                                await log_activity(client_id, "image_search", "success", {"titolo": titolo, "image_id": image_res["id"]})
+                        except Exception as e:
+                            logger.error(f"Web image search failed during batch-generate: {e}")
+                            await log_activity(client_id, "image_search", "failed", {"titolo": titolo, "error": str(e)})
 
+                scheduled_date = item.get("scheduled_date")
+                
                 await db.articles.insert_one({
                     "id": article_id, "client_id": client_id, "titolo": titolo,
                     "contenuto": content, "stato": "generated", "created_at": now,
                     "published_at": None, "combination": combo, "seo_metadata": seo_metadata,
-                    "image_ids": image_ids
+                    "image_ids": image_ids, "scheduled_date": scheduled_date
                 })
                 res_item["generation_status"] = "success"
                 await log_activity(client_id, "article_generate", "success", {"titolo": titolo, "article_id": article_id})
@@ -198,7 +212,7 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                             password=wp_config["password_applicazione"], title=titolo,
                             content=content, wp_status=wp_config.get("stato_pubblicazione", "draft"),
                             seo_metadata=seo_metadata, tags=seo_metadata.get("tags", []), 
-                            wp_type=wp_type, image_ids=image_ids
+                            wp_type=wp_type, image_ids=image_ids, schedule_date=scheduled_date
                         )
                         await db.articles.update_one({"id": article_id}, {"$set": {
                             "stato": "published", "wordpress_post_id": str(wp_res["post_id"]),

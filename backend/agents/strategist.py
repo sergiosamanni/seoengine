@@ -12,7 +12,7 @@ class StrategistAgent(BaseAgent):
         
     async def generate_plan(self, gsc_data: dict, kb_data: dict, target_keywords: list = None,
                             existing_topics: list = None, num_topics: int = 10,
-                            global_guidelines: list = None) -> list:
+                            global_guidelines: list = None, objective: str = "") -> list:
         """
         Generates a list of suggested topics/titles based on GSC, KB, and Target Keywords.
         Each topic includes an SEO-optimized outline and an image search query for the cover.
@@ -68,10 +68,13 @@ Rispondi ESCLUSIVAMENTE con un JSON valido nel seguente formato:
             
         user_prompt = f"""ANALIZZA I SEGUENTI DATI:
 
-### KEYWORD TARGET (PRIORITÀ):
+### OBIETTIVO DEL PIANO (DIRETTIVA DELL'UTENTE DA RISPETTARE):
+{objective if objective else "Massimizzare traffico organico in linea con le keywords."}
+
+### KEYWORD TARGET E MACRO-AREE (PRIORITÀ AI SERVIZI SPECIFICATI):
 {json.dumps(target_keywords or [], indent=2)}
 
-### ARGOMENTI GIÀ TRATTATI (DA NON RIPETERE):
+### ARGOMENTI GIÀ TRATTATI SU WORDPRESS O IN CODA (DA NON RIPETERE):
 {json.dumps(existing_topics or [], indent=2)}
 
 ### KNOWLEDGE BASE:

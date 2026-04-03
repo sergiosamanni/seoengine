@@ -838,9 +838,26 @@ async def delete_editorial_plan(client_id: str, current_user: dict = Depends(get
     await db.editorial_plans.delete_one({"client_id": client_id})
     return {"message": "Piano editoriale eliminato"}
 
+@router.post("/save-plan/{client_id}")
+async def save_editorial_plan(client_id: str, plan: dict, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    plan["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.editorial_plans.update_one(
+        {"client_id": client_id},
+        {"$set": plan},
+        upsert=True
+    )
+    return {"message": "Piano salvato"}
+
+from pydantic import BaseModel
+class PlanRequest(BaseModel):
+    objective: str = ""
+    num_topics: int = 10
 
 @router.post("/generate-plan/{client_id}")
-async def generate_editorial_plan(client_id: str, current_user: dict = Depends(get_current_user)):
+async def generate_editorial_plan(client_id: str, req: PlanRequest = None, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
         
@@ -855,8 +872,13 @@ async def generate_editorial_plan(client_id: str, current_user: dict = Depends(g
     strategist = StrategistAgent(client_id=client_id, llm_config=llm_config)
     
     kb_data = config.get("knowledge_base", {})
-    gsc_data = {} 
+    # Load recent GSC data from DB
+    gsc_cache = await db.gsc_cache.find_one({"client_id": client_id}, sort=[("created_at", -1)])
+    gsc_data = gsc_cache.get("data", {}) if gsc_cache else {}
     target_keywords = config.get("keyword_combinations", {}).get("servizi", [])
+    
+    objective = req.objective if req else ""
+    num_topics = req.num_topics if req else 10
     
     existing_articles = await db.articles.find({"client_id": client_id}, {"titolo": 1, "_id": 0}).to_list(200)
     existing_topics = [a.get("titolo") for a in existing_articles if a.get("titolo")]
@@ -882,8 +904,9 @@ async def generate_editorial_plan(client_id: str, current_user: dict = Depends(g
         kb_data=kb_data, 
         target_keywords=target_keywords, 
         existing_topics=existing_topics,
-        num_topics=10,
-        global_guidelines=global_g
+        num_topics=num_topics,
+        global_guidelines=global_g,
+        objective=objective
     )
     
     # Fetch a stock image preview for each topic using the image_search_query
