@@ -40,7 +40,7 @@ async def send_notification_email(
             logger.debug("Email notifications not configured, skipping.")
             return False
 
-        smtp_config = config.get("smtp", {})
+        resend_config = config.get("resend_config", {})
         recipients = config.get("recipients", [])
         toggles = config.get("toggles", {})
 
@@ -48,8 +48,8 @@ async def send_notification_email(
         if not recipients:
             logger.debug("No email recipients configured, skipping.")
             return False
-        if not smtp_config.get("host") or not smtp_config.get("username"):
-            logger.debug("SMTP not configured, skipping email.")
+        if not resend_config.get("api_key"):
+            logger.debug("Resend API key not configured, skipping email.")
             return False
 
         # Check toggle for this event type (unless bypassed for test)
