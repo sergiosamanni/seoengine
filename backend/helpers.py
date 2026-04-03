@@ -884,7 +884,8 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                                 categories: List[int] = None, tags: List[str] = None,
                                 wp_type: str = "post", image_ids: List[str] = None, schedule_date: str = None) -> dict:
     from storage import get_object
-    async with httpx.AsyncClient() as http_client:
+    # Disable SSL verification for WordPress calls to handle clients with misconfigured certificates (hostname mismatch, etc.)
+    async with httpx.AsyncClient(verify=False) as http_client:
         base_url = url.replace("/posts", "")
         endpoint = f"{base_url}/pages" if wp_type == "page" else url
 
@@ -1077,7 +1078,7 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
 
 async def search_wordpress_post(url: str, username: str, password: str, query: str, wp_type: str = "post") -> list:
     """Search for a post/page by title or slug."""
-    async with httpx.AsyncClient() as http_client:
+    async with httpx.AsyncClient(verify=False) as http_client:
         base_url = url.replace("/posts", "")
         endpoint = f"{base_url}/pages" if wp_type == "page" else url
         try:
@@ -1138,7 +1139,7 @@ async def fetch_sitemap(sitemap_url: str) -> List[str]:
 
 async def get_wp_id_by_url(url: str, username: str, password: str, target_url: str) -> Optional[Dict[str, Any]]:
     """Try to find the WordPress ID and type (post/page) given its public URL."""
-    async with httpx.AsyncClient() as http_client:
+    async with httpx.AsyncClient(verify=False) as http_client:
         base_url = url.replace("/posts", "")
         # Extract slug from URL
         parsed = urlparse(target_url)
@@ -1171,7 +1172,7 @@ async def get_wp_id_by_url(url: str, username: str, password: str, target_url: s
 
 async def update_wordpress_post(url: str, username: str, password: str, post_id: str, content: str, wp_type: str = "post", title: str = None) -> bool:
     """Update an existing WordPress post/page."""
-    async with httpx.AsyncClient() as http_client:
+    async with httpx.AsyncClient(verify=False) as http_client:
         base_url = url.replace("/posts", "")
         endpoint = f"{base_url}/pages/{post_id}" if wp_type == "page" else f"{url}/{post_id}"
         
