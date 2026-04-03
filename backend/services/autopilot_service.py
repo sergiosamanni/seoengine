@@ -109,6 +109,7 @@ class AutopilotService:
             "configuration.autopilot.last_run": now.isoformat(),
             "configuration.autopilot.next_run": next_run.isoformat()
         }})
+        logger.info(f"Updated scheduling for {client_id}: Next run at {next_run}")
 
     @classmethod
     async def execute_autopilot_task_on_cms(cls, task: dict, client: dict):
@@ -234,4 +235,3 @@ class AutopilotService:
             body_html=html_body,
             event_type="autopilot_exec"
         ))
-        logger.info(f"Updated scheduling for {client_id}: Next run at {next_run}")
