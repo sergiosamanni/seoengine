@@ -178,6 +178,15 @@ async def scan_autopilot_tasks(client_id: str, current_user: dict = Depends(get_
     """Simulates a pro-active SEO scan if it didn't run recently."""
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
+        
+    client = await db.clients.find_one({"id": client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    from services.autopilot_service import AutopilotService
+    import asyncio
+    asyncio.create_task(AutopilotService.process_client(client))
+    
     return {"status": "success", "message": "Analisi strategica avviata. I nuovi suggerimenti appariranno tra pochi minuti."}
 
 @router.post("/autopilot-tasks/{client_id}/seed")
