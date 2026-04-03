@@ -368,6 +368,28 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                 
                 if publish_to_wp and wp_config.get("url_api") and wp_config.get("utente"):
                     try:
+                        # --- ANTI-DUPLICATION SAFETY ---
+                        from datetime import timedelta
+                        three_mins_ago = (datetime.now(timezone.utc) - timedelta(minutes=3)).isoformat()
+                        recent_check = await db.articles.find_one({
+                            "client_id": client_id,
+                            "titolo": titolo,
+                            "stato": "published",
+                            "published_at": {"$gte": three_mins_ago}
+                        })
+                        if recent_check:
+                            logger.warning(f"ABORT: Article '{titolo}' was already published {three_mins_ago} - {recent_check.get('wordpress_link')}")
+                            # Update current placeholder to reflect it's a skipped duplicate
+                            await db.articles.update_one({"id": article_id}, {"$set": {
+                                "stato": "skipped_duplicate", 
+                                "wordpress_link": recent_check.get("wordpress_link"),
+                                "published_at": recent_check.get("published_at")
+                            }})
+                            res_item["publish_status"] = "skipped_duplicate"
+                            # End job successfully since it already exists
+                            await db.jobs.update_one({"id": job_id}, {"$set": {"status": "completed", "results": [res_item], "finished_at": datetime.now(timezone.utc).isoformat()}})
+                            return
+
                         wp_type = "page" if content_type in ("landing_page", "pillar_page") else "post"
                         wp_res = await publish_to_wordpress(
                             url=wp_config["url_api"], username=wp_config["utente"],
@@ -426,9 +448,14 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
     ):
         """Update 1-2 old articles to link to the new one."""
         try:
+            # Find published articles for the same client, excluding the new one by ID AND title
+            # This prevents linking to a "ghost" or previous version with the same title
             cursor = db.articles.find({
-                "client_id": client_id, "stato": "published", 
-                "id": {"$ne": new_id}, "wordpress_post_id": {"$ne": None}
+                "client_id": client_id, 
+                "stato": "published", 
+                "id": {"$ne": new_id},
+                "titolo": {"$ne": new_title}, # Robust exclusion
+                "wordpress_post_id": {"$ne": None}
             }).sort("published_at", -1).limit(2)
             
             async for old in cursor:
