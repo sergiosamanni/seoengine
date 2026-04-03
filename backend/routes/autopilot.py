@@ -69,22 +69,74 @@ async def approve_autopilot_task(task_id: str, current_user: dict = Depends(get_
     if not task:
         raise HTTPException(status_code=404, detail="Task non trovato")
 
-    # Mark as completed
-    await db.autopilot_tasks.update_one({"id": task_id}, {"$set": {"status": "completed", "executed_at": datetime.now(timezone.utc).isoformat()}})
+    # Build specific detail response based on task type
+    task_type = task.get("type", "UNKNOWN")
+    client_id = task["client_id"]
+    client = await db.clients.find_one({"id": client_id})
+    client_name = client.get("nome", "Cliente") if client else "Cliente Sconosciuto"
+    
+    execution_detail = ""
 
-    # Optional: logic to actually launch the generation (ArticleService, etc.)
-    # For NEW_CONTENT, we might want to push it to the editorial queue
-    if task["type"] == "NEW_CONTENT" and "payload" in task:
-        client_id = task["client_id"]
-        client = await db.clients.find_one({"id": client_id})
+    if task_type == "NEW_CONTENT" and "payload" in task:
         current_queue = client.get("configuration", {}).get("editorial_queue", [])
-        
-        # Add to queue: [NEW] Title : Prompt/Outline
         new_item = f"[AUTOPILOT] {task['title']} : {task['suggestion']}"
         if new_item not in current_queue:
             await db.clients.update_one({"id": client_id}, {"$push": {"configuration.editorial_queue": new_item}})
+        execution_detail = "Iniezione Avvenuta: L'argomento e la sua direttiva AI sono stati inseriti in Cima al Piano Editoriale del cliente e verranno generati automaticamente alla prima pubblicazione disponibile."
+    elif task_type == "INTERNAL_LINKING":
+        execution_detail = "Log Esecutivo: SEOEngine non altera il codice base degli articoli su WordPress per inserire anchor tag HTML, onde evitare rotture nei page builder. Il task è marcato come 'Risolto', dovrai fisicamente inserire il link interno nel CMS."
+    elif task_type == "CANNIBALIZATION":
+        execution_detail = "Log Esecutivo: L'impostazione di Redirect 301 o la fusione di interi articoli richiede l'intervento umano sul CMS (es: plugin Redirection). Archiviato dallo scanner per non riproporti il problema."
+    elif task_type in ["SEMANTIC_GAP", "REVAMP"]:
+        execution_detail = "Log Esecutivo: L'alterazione distruttiva di paragrafi esistenti da parte dell'AI è bloccata. Lo storico dell'analisi è preservato, procedi aggiungendo manualmente le variazioni o le intestazioni (H2/tabelle) al testo WP."
+    else:
+        execution_detail = "Task eseguito, aggiornato o archiviato con successo nel sistema SEOEngine."
 
-    return {"status": "success", "message": "Task approvato"}
+    await db.autopilot_tasks.update_one(
+        {"id": task_id}, 
+        {"$set": {
+            "status": "completed", 
+            "executed_at": datetime.now(timezone.utc).isoformat(),
+            "execution_detail": execution_detail
+        }}
+    )
+
+    from helpers import log_activity
+    await log_activity(client_id, "autopilot_approve", f"Approvato task: {task['title']}", {"task_id": task_id, "type": task_type})
+
+    # Fire email background task
+    from services.email_service import send_notification_email
+    import asyncio
+    
+    html_body = f"""
+    <div style="font-family:sans-serif;color:#333;">
+        <h2 style="color:#059669;margin-bottom:10px;">✅ Azione Autopilot Eseguita</h2>
+        <p>Hai appena approvato ed elaborato un'operazione strategica AI per il cliente <b>{client_name}</b>.</p>
+        
+        <div style="background:#f8fafc;padding:15px;border-left:4px solid #3b82f6;margin:15px 0;">
+            <p style="margin:0 0 5px 0;"><b>Sezione Analizzata:</b> {task_type}</p>
+            <p style="margin:0 0 5px 0;"><b>Titolo Ticket:</b> {task.get('title', 'N/D')}</p>
+            <p style="margin:0;"><b>Prompt AI:</b> {task.get('suggestion', 'N/D')}</p>
+        </div>
+
+        <h3 style="color:#1e293b;font-size:16px;">Esito ed Esecuzione Macchina:</h3>
+        <p style="background:#ecfdf5;padding:15px;border:1px solid #d1fae5;color:#065f46;border-radius:8px;font-size:14px;line-height:1.6;">
+            {execution_detail}
+        </p>
+        
+        <p style="font-size:12px;color:#64748b;margin-top:30px;">
+            Notifica istantanea inviata dal radar Autopilot di SEOEngine.
+        </p>
+    </div>
+    """
+    
+    asyncio.create_task(send_notification_email(
+        subject=f"✅ Esecuzione Autopilot [{client_name}]",
+        body_html=html_body,
+        event_type="autopilot"
+    ))
+
+    return {"status": "success", "message": "Task approvato", "execution_detail": execution_detail}
 
 @router.delete("/autopilot-tasks/{task_id}")
 async def refuse_autopilot_task(task_id: str, current_user: dict = Depends(get_current_user)):

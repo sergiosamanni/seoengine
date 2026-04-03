@@ -358,6 +358,19 @@ export const AutopilotTab = ({ autopilot, setAutopilot, clientId, getAuthHeaders
                                                 )}
                                             </div>
                                         </div>
+                                        
+                                        {task.status === 'completed' && task.execution_detail && (
+                                            <>
+                                                <div className="h-[1px] bg-slate-200/50" />
+                                                <div className="flex items-start gap-3 mt-3 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/50">
+                                                    <Zap className="w-4 h-4 text-emerald-500 mt-0.5" />
+                                                    <div className="space-y-1">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-emerald-700 leading-tight">Log Esecutivo Sistema</p>
+                                                        <p className="text-xs text-emerald-900 font-medium leading-relaxed">{task.execution_detail}</p>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
