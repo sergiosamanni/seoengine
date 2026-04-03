@@ -299,14 +299,23 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                     
                     content = await generate_with_rotation(llm_config, safe_system_prompt, user_prompt)
                     
+                    # -------------------------------------------------
+                    # TWO-STEP PIPELINE: REFINEMENT WITH OPENAI (NON-BLOCKING)
                     openai_config = config.get("openai")
                     if content and openai_config and openai_config.get("api_key"):
-                        content = await cls._refine_with_openai(
-                            content, openai_config, kb, 
-                            config.get("tono_e_stile", {}), 
-                            client_name=client_doc["nome"], 
-                            titolo=titolo
-                        )
+                        try:
+                            logger.info(f"Starting Step 2 Refinement with OpenAI for article: {titolo}")
+                            refined_content = await cls._refine_with_openai(
+                                content, openai_config, kb, 
+                                config.get("tono_e_stile", {}), 
+                                client_name=client_doc.get("nome", client_doc.get("name", "Cliente")), 
+                                titolo=titolo
+                            )
+                            if refined_content and len(refined_content.strip()) > 100:
+                                content = refined_content
+                                logger.info("Step 2 Refinement completed successfully.")
+                        except Exception as ref_err:
+                            logger.warning(f"Step 2 Refinement failed, proceeding with original content: {ref_err}")
                     # -------------------------------------------------
                     
                     if content and len(content.strip()) > 100:
