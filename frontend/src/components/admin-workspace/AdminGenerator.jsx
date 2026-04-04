@@ -186,9 +186,10 @@ const AdminGenerator = ({
             const res = await axios.get(`${API}/editorial-plan/${effectiveClientId}`, {
                 headers: getAuthHeaders()
             });
-            setPlan(res.data);
+            setPlan(res.data || null); // Ensure null if empty to clear previous client data
         } catch (error) {
             console.error("Error fetching editorial plan:", error);
+            setPlan(null);
         } finally {
             setPlanLoading(false);
         }
@@ -588,7 +589,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 titolo_suggerito: singleTitle || undefined,
                 topic: singleObjective || undefined,
                 publish_to_wordpress: publishToWp,
-                content_type: 'articolo',
+                content_type: genMode === 'pillar' ? 'pillar_page' : 'articolo',
                 objective: 'informazionale',
                 image_ids: (imageSource !== 'ai' && singleSelectedImage) ? [singleSelectedImage.id] : (adminUploadedImages.length > 0 ? adminUploadedImages.map(img => img.id) : undefined),
                 scheduled_date: (singleScheduledDate && singleScheduledDate !== '') ? new Date(singleScheduledDate).toISOString() : undefined,
@@ -852,9 +853,13 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 <button onClick={() => setGenMode('single')} className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold transition-all ${genMode === 'single' ? 'bg-white text-orange-600 shadow-md ring-1 ring-orange-100' : 'text-slate-500 hover:text-slate-800'}`}>
                     <PenTool className="w-4 h-4" /> Articolo Singolo
                 </button>
+                <button onClick={() => setGenMode('pillar')} className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold transition-all ${genMode === 'pillar' ? 'bg-white text-emerald-600 shadow-md ring-1 ring-emerald-100' : 'text-slate-500 hover:text-slate-800'}`}>
+                    <FileText className="w-4 h-4" /> Pillar Page
+                </button>
                 <button onClick={() => setGenMode('plan')} className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold transition-all ${genMode === 'plan' ? 'bg-white text-indigo-600 shadow-md ring-1 ring-indigo-100' : 'text-slate-500 hover:text-slate-800'}`}>
                     <Calendar className="w-4 h-4" /> Piano Editoriale
                 </button>
+
                 <button onClick={() => setGenMode('programmatic')} className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold transition-all ${genMode === 'programmatic' ? 'bg-white text-purple-600 shadow-md ring-1 ring-purple-100' : 'text-slate-500 hover:text-slate-800'}`}>
                     <Sparkles className="w-4 h-4" /> Programmatica
                 </button>
@@ -1046,41 +1051,44 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 <div className="space-y-6">
                     {/* L'immagine viene ora gestita automaticamente dal sistema */}
 
-                    {genMode === 'single' && (
+                    {(genMode === 'single' || genMode === 'pillar') && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                                {/* Colonna Sinistra: Configurazione Articolo */}
+                                {/* Colonna Sinistra: Configurazione */}
                                 <div className="lg:col-span-7 space-y-6">
                                     <Card className="border-slate-200 shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
                                         <CardHeader className="pb-2">
                                             <CardTitle className="text-lg font-black text-slate-800 flex items-center gap-2 uppercase tracking-tight">
-                                                <PenTool className="w-5 h-5 text-orange-500" /> Dati Articolo
+                                                {genMode === 'pillar' ? <FileText className="w-5 h-5 text-emerald-500" /> : <PenTool className="w-5 h-5 text-orange-500" />} 
+                                                {genMode === 'pillar' ? 'Dati Pillar Page' : 'Dati Articolo'}
                                             </CardTitle>
-                                            <CardDescription className="text-xs">Inserisci i dettagli per l'analisi e la scrittura AI</CardDescription>
+                                            <CardDescription className="text-xs">
+                                                {genMode === 'pillar' ? 'Crea una pagina pilastro esaustiva (2500+ parole) con indice e anchor links' : 'Inserisci i dettagli per l\'analisi e la scrittura AI'}
+                                            </CardDescription>
                                         </CardHeader>
                                         <CardContent className="space-y-6 pt-4">
                                             <div className="space-y-2">
                                                 <Label className="text-sm font-bold text-slate-700">Titolo Suggerito (Opzionale)</Label>
                                                 <Input 
-                                                    className="h-12 rounded-xl text-sm bg-slate-50/50 border-slate-200 focus-visible:ring-orange-500 transition-all font-medium" 
+                                                    className={`h-12 rounded-xl text-sm bg-slate-50/50 border-slate-200 transition-all font-medium focus-visible:ring-${genMode === 'pillar' ? 'emerald' : 'orange'}-500`}
                                                     value={singleTitle} 
                                                     onChange={(e) => setSingleTitle(e.target.value)} 
-                                                    placeholder="Es: Come noleggiare un'auto senza carta di credito a Salerno" 
+                                                    placeholder={genMode === 'pillar' ? "Es: La Guida Definitiva al Noleggio Auto a Salerno" : "Es: Come noleggiare un'auto senza carta di credito a Salerno"} 
                                                 />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-sm font-bold text-slate-700">Focus Keyword *</Label>
                                                 <Input 
-                                                    className="h-12 rounded-xl text-sm bg-slate-50/50 border-slate-200 focus-visible:ring-orange-500 transition-all font-bold" 
+                                                    className={`h-12 rounded-xl text-sm bg-slate-50/50 border-slate-200 transition-all font-bold focus-visible:ring-${genMode === 'pillar' ? 'emerald' : 'orange'}-500`}
                                                     value={singleKeywords} 
                                                     onChange={(e) => setSingleKeywords(e.target.value)} 
-                                                    placeholder="Es: noleggio auto senza carta di credito" 
+                                                    placeholder="Es: noleggio auto salerno" 
                                                 />
                                                 <p className="text-[10px] text-slate-400">Inserisci la parola chiave principale per l'ottimizzazione SEO</p>
                                             </div>
                                             <div className="space-y-4">
                                                 <div className="flex items-center justify-between">
-                                                    <Label className="text-sm font-bold text-slate-700">Obiettivo Strategico</Label>
+                                                    <Label className="text-sm font-bold text-slate-700">Obiettivo / Note Speciali</Label>
                                                     <Button 
                                                         variant="ghost" 
                                                         size="sm" 
@@ -1093,13 +1101,12 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                                     </Button>
                                                 </div>
                                                 <Textarea 
-                                                    className="min-h-[140px] rounded-xl text-sm bg-slate-50/50 border-slate-200 focus-visible:ring-orange-500 transition-all leading-relaxed" 
+                                                    className={`min-h-[140px] rounded-xl text-sm bg-slate-50/50 border-slate-200 transition-all leading-relaxed focus-visible:ring-${genMode === 'pillar' ? 'emerald' : 'orange'}-500`}
                                                     value={singleObjective} 
                                                     onChange={(e) => setSingleObjective(e.target.value)} 
-                                                    placeholder="Descrivi il target, il tono di voce o specifiche SEO (es: linkare pagina servizi)..." 
+                                                    placeholder={genMode === 'pillar' ? "Indica punti chiave, opinioni forti da includere o previsioni di settore..." : "Descrivi il target, il tono di voce o specifiche SEO..."} 
                                                 />
                                             </div>
-
                                             <div className="flex flex-col sm:flex-row gap-4 pt-4">
                                                 <div className="flex-1 p-4 bg-indigo-50/80 rounded-2xl border border-indigo-100 flex items-center justify-between shadow-sm transition-all hover:bg-indigo-100/50">
                                                     <div className="flex items-center gap-3">
@@ -1113,6 +1120,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                                     </div>
                                                     <Switch checked={publishToWp} onCheckedChange={setPublishToWp} />
                                                 </div>
+
 
                                                 <div className="flex-1 p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col justify-center">
                                                     <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Calendarizza (Opzionale)</Label>
@@ -1414,6 +1422,8 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                         <CardContent className="flex-1 overflow-y-auto p-0 bg-slate-50">
                             <div className="article-full-preview bg-white">
                                 <style dangerouslySetInnerHTML={{ __html: `
+                                    .article-full-preview .tldr-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 24px; border-radius: 16px; margin-bottom: 40px; }
+                                    .article-full-preview .tldr-box h4 { margin-top: 0; color: #0f172a; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
                                     .article-full-preview .hero-block {
                                         background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('${fullPreview.image_url || "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=2070"}');
                                         background-size: cover;
@@ -1437,6 +1447,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                     .article-full-preview .faq-content h3 { margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
                                     .article-full-preview .final-cta { background: #f1f5f9; padding: 80px 40px; text-align: center; margin-top: 60px; }
                                     .article-full-preview img { max-width: 100%; height: auto; border-radius: 8px; }
+                                    .article-full-preview a { color: #2563eb; text-decoration: underline; }
                                 `}} />
                                 <div className="prose prose-slate max-w-none px-8 py-12" dangerouslySetInnerHTML={{ __html: fullPreview.contenuto }} />
                             </div>
@@ -1482,57 +1493,60 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
             )}
 {genMode === 'plan' && (
                         <div className="space-y-6 animate-in fade-in duration-500">
-
-                        {/* Prompt e Strategia Inclusi in Plan */}
                         <div className="grid grid-cols-1 gap-6">
-                            {/* Prompt Block */}
                             <Card className="border-slate-200">
-                                <CardHeader className="pb-3 border-b border-slate-100">
-                                    <div className="flex items-center justify-between">
-                                        <CardTitle className="text-sm">Strategia & Obiettivo del Piano</CardTitle>
-                                        <Button size="xs" className="h-7 text-[10px] bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200"
-                                            onClick={async () => {
-                                                if(!advancedPrompt) return;
-                                                setRefining(true);
-                                                try {
-                                                    const res = await axios.post(`${API}/articles/refine-objective`, 
-                                                        { client_id: effectiveClientId, objective: advancedPrompt, title: "Piano Editoriale SEO" }, 
-                                                        { headers: getAuthHeaders() }
-                                                    );
-                                                    setAdvancedPrompt(res.data.refined_objective);
-                                                    toast.success("Ottimizzato!");
-                                                } catch(e) { toast.error("Errore"); }
-                                                setRefining(false);
-                                            }}
-                                            disabled={refining}
-                                        >
-                                            {refining ? <Loader2 className="w-3 h-3 animate-spin mr-1"/> : <Sparkles className="w-3 h-3 mr-1"/>} Ottimizza
-                                        </Button>
+                                <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle className="text-sm">Obiettivo del Piano Editoriale</CardTitle>
+                                        <CardDescription className="text-xs">I dati GSC vengono integrati automaticamente in background.</CardDescription>
                                     </div>
-                                    <CardDescription className="text-xs">Usa L'AI per ottimizzare il tuo prompt. I dati GSC vengono integrati automaticamente.</CardDescription>
+                                    <Button size="xs" className="h-7 text-[10px] bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200"
+                                        onClick={async () => {
+                                            if(!advancedPrompt) return;
+                                            setRefining(true);
+                                            try {
+                                                const res = await axios.post(`${API}/articles/refine-objective`, 
+                                                    { client_id: effectiveClientId, objective: advancedPrompt, title: "Piano Editoriale SEO" }, 
+                                                    { headers: getAuthHeaders() }
+                                                );
+                                                setAdvancedPrompt(res.data.refined_objective);
+                                                toast.success("Ottimizzato!");
+                                            } catch(e) { toast.error("Errore"); }
+                                            setRefining(false);
+                                        }}
+                                        disabled={refining}
+                                    >
+                                        {refining ? <Loader2 className="w-3 h-3 animate-spin mr-1"/> : <Sparkles className="w-3 h-3 mr-1"/>} AI Optimize
+                                    </Button>
                                 </CardHeader>
                                 <CardContent className="pt-4 space-y-4">
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-semibold text-slate-700">Numero di Articoli da Generare</Label>
-                                        <div className="flex items-center gap-4">
-                                            <input 
-                                                type="range" 
-                                                min="1" max="50" step="1" 
-                                                value={numArticles} 
-                                                onChange={(e) => setNumArticles(parseInt(e.target.value))}
-                                                className="w-full max-w-[300px] accent-indigo-600"
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                        <div className="md:col-span-3 space-y-2">
+                                            <Label className="text-xs font-semibold text-slate-700">Prompt / Indicazioni Strategiche</Label>
+                                            <Textarea 
+                                                value={advancedPrompt} 
+                                                onChange={(e)=>setAdvancedPrompt(e.target.value)} 
+                                                placeholder="Scrivi l'obiettivo di questo piano (es. Focus su nuovi prodotti 2024)..." 
+                                                className="text-xs h-[80px]" 
                                             />
-                                            <span className="text-sm font-bold w-12 text-center text-indigo-600 bg-indigo-50 py-1 rounded">{numArticles}</span>
                                         </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-semibold text-slate-700">Linee Guida Editoriali (Opzionale)</Label>
-                                        <Textarea value={advancedPrompt} onChange={(e)=>setAdvancedPrompt(e.target.value)} placeholder="Scrivi di cosa deve parlare questo piano editoriale..." className="text-xs h-[100px] font-mono" />
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-semibold text-slate-700">Articoli (1-50)</Label>
+                                            <div className="flex items-center gap-2">
+                                                <Input 
+                                                    type="number" 
+                                                    min="1" max="50" 
+                                                    value={numArticles} 
+                                                    onChange={(e) => setNumArticles(parseInt(e.target.value))}
+                                                    className="h-9 text-xs"
+                                                />
+                                                <span className="text-[10px] text-slate-400 font-bold">QTY</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
                         </div>
-                        {/* FINE Prompt */}
     
                             <Card className="border-slate-200 overflow-hidden shadow-sm">
                                 <button className="w-full text-left" onClick={() => setShowPlanSettings(!showPlanSettings)}>
@@ -1828,18 +1842,34 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                                                                      </Badge>
                                                                                 ) : (
                                                                                     <div className="flex items-center gap-2">
-                                                                                        {!item.isQueueItem && (
-                                                                                            <Input
+                                                                                        <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100">
+                                                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Data:</span>
+                                                                                            <input
                                                                                                 type="date"
-                                                                                                className="h-7 text-[10px] w-28 bg-white border-slate-200"
+                                                                                                className="h-6 text-[10px] w-28 bg-transparent border-none focus:ring-0 p-0 text-indigo-600 font-bold"
                                                                                                 value={item.scheduled_date ? item.scheduled_date.split('T')[0] : ''}
                                                                                                 onChange={(e) => {
-                                                                                                    const newTopics = [...plan.topics];
-                                                                                                    newTopics[planIndex] = { ...newTopics[planIndex], scheduled_date: e.target.value ? new Date(e.target.value).toISOString() : null };
-                                                                                                    setPlan({ ...plan, topics: newTopics });
+                                                                                                    const newDate = e.target.value ? new Date(e.target.value).toISOString() : null;
+                                                                                                    
+                                                                                                    // Update source
+                                                                                                    if (!item.isQueueItem) {
+                                                                                                        const newTopics = [...plan.topics];
+                                                                                                        newTopics[planIndex] = { ...newTopics[planIndex], scheduled_date: newDate };
+                                                                                                        setPlan({ ...plan, topics: newTopics });
+                                                                                                    } else {
+                                                                                                        // For queue items, we just update it in the local derived view if possible, 
+                                                                                                        // but it's better to update the selected list directly
+                                                                                                    }
+
+                                                                                                    // Update selected list if item is selected
+                                                                                                    if (isSelected) {
+                                                                                                        setSelectedPlanTopics(prev => prev.map(t => 
+                                                                                                            t.titolo === item.titolo ? { ...t, scheduled_date: newDate } : t
+                                                                                                        ));
+                                                                                                    }
                                                                                                 }}
                                                                                             />
-                                                                                        )}
+                                                                                        </div>
                                                                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-indigo-600 rounded-lg hover:bg-slate-50" onClick={() => handleUseTopicInGenerator(item)}>
                                                                                             <PenTool className="w-3.5 h-3.5" />
                                                                                         </Button>

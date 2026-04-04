@@ -263,7 +263,8 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
         publish_to_wp: bool, system_prompt: str, llm_config: dict, 
         wp_config: dict, kb: dict, combo: dict, titolo_suggerito: str = "", 
         content_type: str = "articolo", image_ids: list = None, 
-        existing_published: list = None, generate_cover: bool = False
+        existing_published: list = None, generate_cover: bool = False,
+        scheduled_date: str = None
     ):
         """Standardized single article generation and task finalization."""
         provider = llm_config.get("provider", "openai")
@@ -410,7 +411,8 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                             password=wp_config["password_applicazione"], title=titolo,
                             content=content, wp_status=target_status,
                             seo_metadata=seo_metadata, tags=seo_metadata.get("tags", []), 
-                            wp_type=wp_type, image_ids=image_ids or []
+                            wp_type=wp_type, image_ids=image_ids or [],
+                            schedule_date=scheduled_date
                         )
                         await db.articles.update_one({"id": article_id}, {"$set": {
                             "stato": "published", "wordpress_post_id": str(wp_res["post_id"]),

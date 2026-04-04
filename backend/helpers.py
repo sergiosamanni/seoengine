@@ -1368,18 +1368,21 @@ REGOLE CRITICHE:
 NOTA: Una landing page ha una sola CTA ripetuta 2-3 volte. Niente navigazione, niente distrazioni.
 """
     elif content_type == "pillar_page":
-        prompt += f"""Struttura PILLAR PAGE (contenuto esaustivo 2500-4000 parole):
-1. <h1> - Guida completa sulla keyword principale (UNICO)
-2. <p> - Introduzione ampia al tema (200-300 parole)
-3. <h2> - Indice dei contenuti (con link interni se possibile)
-4. <h2> - Almeno 6-8 sezioni principali che coprono ogni aspetto
-5. <h3> - Sottosezioni dettagliate per ogni H2
-6. <ul><li> - Elenchi per confronti, vantaggi, checklist
-7. <strong> - Evidenzia concetti chiave
-{'8. <h2>Domande Frequenti</h2> con 5-8 FAQ dettagliate' if include_faq else ''}
-9. <p> - Conclusione con riepilogo e CTA
-NOTA: La pillar page deve essere la risorsa piu completa disponibile sul tema. Copri ogni angolo.
+        prompt += f"""Struttura PILLAR PAGE (Contenuto Strategico d'Autorità 3000-5000 parole):
+1. <h1> - Titolo Magnetico ed Esaustivo (es. "La Guida Definitiva a...")
+2. [ABSTRACT TL;DR] - Inserisci IMMEDIATAMENTE dopo l'H1 un riquadro (usa <div class="tldr-box" style="background:#f8fafc; border:1px solid #e2e8f0; padding:20px; border-radius:12px; margin-bottom:30px;">) con un titolo "TL;DR: In breve" e 3-4 bullet point che riassumono i punti chiave (Pasto pronto per l'AI).
+3. [INDICE NAVIGABILE] - Inserisci un indice testuale con Anchor Links (es. <a href="#sezione1">) per ogni H2 della pagina.
+4. <h2> - Definizione immediata: Sotto il primo H2, fornisci una definizione chiara e concisa dell'argomento in formato Domanda-Risposta (es. <h2 id="definizione">Cos'è la [Parola Chiave]?</h2> <p>La [Parola Chiave] è...</p>).
+5. [VOCE ESPERTA] - Osa con opinioni forti, previsioni basate su dati/esperienza e un punto di vista unico. NON essere neutrale o piatto; la tua "voce" deve emergere chiaramente per differenziarsi dai testi AI generici.
+6. Almeno 8-12 sezioni macro (H2 con id="sezione-n") con approfondimenti verticali (H3).
+7. [RICCHEZZA SEMANTICA] - Espandi ogni concetto al massimo, includendo curiosità, dati statistici (se pertinenti) e casi studio ipotetici.
+8. <ul><li> - Elenchi per confronti, vantaggi, checklist.
+9. <strong> - Evidenzia concetti chiave frequentemente.
+{'10. <h2>Domande Frequenti</h2> con almeno 8 FAQ strutturate' if include_faq else ''}
+11. <p> - Conclusione con riepilogo strategico e CTA finale.
+NOTA: La pillar page deve essere la risorsa definitiva sul web per questa keyword. Non lasciare zone d'ombra.
 """
+
     else:
         if include_faq:
             prompt += "\n8. <h2>Domande Frequenti</h2> con 3-5 FAQ\n"

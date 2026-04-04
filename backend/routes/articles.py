@@ -920,18 +920,11 @@ async def generate_editorial_plan(client_id: str, req: PlanRequest = None, curre
     )
 
     
-    # Fetch a stock image preview for each topic using the image_search_query
-    from helpers import web_search_images
+    # Optimized: Skip sequential stock image fetching during plan generation to prevent timeouts.
+    # Images will be fetched during actual article generation/publication.
     for topic in topics:
-        query = topic.get("image_search_query") or topic.get("titolo", "")
-        if query:
-            try:
-                imgs = await web_search_images(query, max_results=3)
-                if imgs:
-                    topic["stock_image_url"] = imgs[0].get("image") or imgs[0].get("url") or ""
-                    topic["stock_image_thumb"] = imgs[0].get("thumbnail") or topic["stock_image_url"]
-            except Exception as img_e:
-                logger.warning(f"Could not fetch stock image for topic '{query}': {img_e}")
+        topic["stock_image_url"] = ""
+        topic["stock_image_thumb"] = ""
     
     plan_doc = {
         "client_id": client_id,
