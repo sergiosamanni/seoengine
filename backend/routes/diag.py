@@ -32,25 +32,3 @@ async def db_check():
             res["repair_log_error"] = str(e)
             
     return res
-
-@router.get("/test-email")
-async def test_email(current_user: dict = Depends(require_admin)):
-    """Sends a mockup autopilot article notification for testing."""
-    from services.email_service import notify_autopilot_articles_generated
-    mock_articles = [
-        {
-            "title": "Guida al Noleggio Sollevatori Telescopici Rotativi",
-            "url": "https://unrent.it/sollevatori-telescopici-rotativi-quando-sceglierli-e-come-noleggiarli/",
-            "keyword": "noleggio sollevatori telescopici"
-        },
-        {
-            "title": "Manutenzione Gru Elettriche: Cosa Sapere",
-            "url": "https://unrent.it/manutenzione-gru-elettriche/",
-            "keyword": "manutenzione gru"
-        }
-    ]
-    try:
-        await notify_autopilot_articles_generated("Unrent (Test)", mock_articles)
-        return {"status": "success", "message": "Test email sent to recipients."}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
