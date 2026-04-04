@@ -240,3 +240,43 @@ async def notify_autopilot_scan_complete(
         body_html=body,
         event_type="autopilot"
     )
+
+
+async def notify_autopilot_articles_generated(
+    client_name: str,
+    articles: list # list of dicts: {"title": str, "url": str, "keyword": str}
+):
+    """Notify admins about articles automatically generated and published by Autopilot."""
+    if not articles:
+        return
+        
+    articles_html = ""
+    for art in articles:
+        link_html = f'<a href="{art["url"]}" style="color:#3d9970;text-decoration:none;">🔗 Link</a>' if art.get("url") else "N/D"
+        articles_html += f"""
+        <tr style="border-bottom:1px solid #e8ecf0;">
+          <td style="padding:12px 0;">
+            <div style="color:#1a2332;font-size:14px;font-weight:600;margin-bottom:4px;">{art['title']}</div>
+            <div style="color:#8a94a6;font-size:12px;">Keyword: {art.get('keyword', 'N/D')} | {link_html}</div>
+          </td>
+        </tr>"""
+
+    body = f"""
+    <h2 style="color:#1a2332;font-size:18px;margin:0 0 16px;">🤖 Autopilot: Articoli Pubblicati</h2>
+    <p style="color:#4a5568;font-size:14px;line-height:1.6;margin:0 0 20px;">
+      L'Autopilot di SEOEngine ha generato e pubblicato automaticamente i seguenti contenuti per il cliente <strong style="color:#1a2332;">{client_name}</strong>.
+    </p>
+    <table style="width:100%;border-collapse:collapse;">
+      {articles_html}
+    </table>
+    <p style="color:#8a94a6;font-size:13px;margin:24px 0 0;">
+      Gli articoli sono stati inviati in bozza o pubblicati direttamente secondo le impostazioni del cliente.
+    </p>
+    """
+    
+    # Use 'autopilot' event type to respect its toggle
+    await send_notification_email(
+        subject=f"🤖 Autopilot: {len(articles)} Nuovi Articoli per {client_name}",
+        body_html=body,
+        event_type="autopilot"
+    )

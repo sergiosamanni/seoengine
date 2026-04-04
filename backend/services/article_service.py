@@ -275,6 +275,29 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
             success_titles = [r["titolo"] for r in results if r["generation_status"] == "success"]
             await db.editorial_plans.update_one({"client_id": client_id}, {"$pull": {"topics": {"titolo": {"$in": success_titles}}}})
 
+        # --- EMAIL NOTIFICATION FOR AUTOPILOT/BATCH ---
+        try:
+            successful_articles = []
+            for res in results:
+                if res.get("generation_status") == "success":
+                    # Try to find keyword from original items if needed, or just use titolo
+                    # For simplicity, we just use results which have titles and links
+                    successful_articles.append({
+                        "title": res["titolo"],
+                        "url": res.get("wordpress_link", ""),
+                        "keyword": res.get("keyword", "") # May need logic to map back but titles are fine
+                    })
+            
+            if successful_articles:
+                from services.email_service import notify_autopilot_articles_generated
+                # We use create_task for non-blocking
+                asyncio.create_task(notify_autopilot_articles_generated(
+                    client_name=client_doc.get("nome", "Cliente"),
+                    articles=successful_articles
+                ))
+        except Exception as email_err:
+            logger.debug(f"Batch email notification skipped: {email_err}")
+
     @classmethod
     async def run_simple_article_generation(
         cls, job_id: str, client_id: str, keyword: str, topic: str, 
@@ -462,6 +485,9 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                             ))
                         except Exception as email_err:
                             logger.debug(f"Email notification skipped: {email_err}")
+
+                        # --- ADDITIONAL AUTOPILOT-STYLE NOTIFICATION (if needed) ---
+                        # In the future, we could consolidate run_simple into the same template as batch
 
                     except Exception as e:
                         await db.articles.update_one({"id": article_id}, {"$set": {"stato": "publish_failed", "publish_error": str(e)}})
