@@ -1972,7 +1972,6 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                                 </Card>
                                             )}
                                         </div>
-                                    )}
 
                                     {!recentSidebarOpen && activePlanImageIndex !== null && (
                                         <div className="lg:col-span-3 space-y-6 animate-in slide-in-from-right-4 duration-500">
