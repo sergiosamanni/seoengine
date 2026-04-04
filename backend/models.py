@@ -98,6 +98,10 @@ class AutopilotConfig(BaseModel):
     frequency: str = "weekly" # daily, weekly, biweekly, monthly
     day_of_week: int = 1 # 0-6 (Mon-Sun)
     time_of_day: str = "09:00"
+
+class SiloSuggestRequest(BaseModel):
+    client_id: str
+    pillar_topic: str
     auto_publish: bool = True
     max_articles_per_run: int = 1
     last_run: Optional[str] = None

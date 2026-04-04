@@ -80,7 +80,7 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
         cls, job_id: str, client_id: str, items: list, 
         publish_to_wp: bool, content_type: str, brief: dict, 
         config: dict, client_doc: dict, is_topic_based: bool = False,
-        generate_cover: bool = False
+        generate_cover: bool = False, is_silo: bool = False
     ):
         """
         Unified batch processor for both combinations (Programmatic SEO) 
@@ -109,6 +109,10 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
         results = []
         gen_ok = 0
         pub_ok = 0
+        
+        # Silo Logic: Collect all titles to pass as context for inter-linking
+        all_titles = [item.get("titolo") for item in items if item.get("titolo")]
+        pillar_title = next((item.get("titolo") for item in items if item.get("is_pillar")), all_titles[0] if all_titles else None)
 
         for idx, item in enumerate(items):
             if is_topic_based:
@@ -129,9 +133,18 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
 
             await log_activity(client_id, "article_generate", "running", {"titolo": titolo, "step": f"{idx+1}/{len(items)}"})
             
-            # Re-build system prompt for each article to pick up potentially new links if we were doing live updates
-            # For now, we use the initial context to keep it fast
-            system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, content_type_prompt, brief, existing_published, global_g)
+            # Silo context: exclude self from partners
+            silo_context = None
+            if is_silo:
+                is_pillar = item.get("is_pillar", False)
+                partners = [t for t in all_titles if t != titolo]
+                silo_context = {
+                    "is_pillar": is_pillar,
+                    "pillar_title": pillar_title,
+                    "partners": partners
+                }
+            
+            system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, content_type_prompt, brief, existing_published, global_g, silo_context=silo_context)
 
             content = None
             gen_error = None
@@ -248,8 +261,13 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
         await db.jobs.update_one({"id": job_id}, {"$set": {
             "status": "completed", 
             "summary": {"total": len(items), "generated_ok": gen_ok, "published_ok": pub_ok},
-            "finished_at": datetime.now(timezone.utc).isoformat()
+            "completed_at": datetime.now(timezone.utc).isoformat()
         }})
+        
+        # Post-Publish Silo Linking Pass
+        if is_silo and pub_ok > 1:
+            await cls._perform_silo_linking_pass(client_id, results, wp_config)
+        
         await log_activity(client_id, "batch_complete", "success", {"total": len(items), "generated": gen_ok, "published": pub_ok})
         
         # Cleanup editorial plan if needed
@@ -545,3 +563,61 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
             logger.info(f"Auto-GSC indexing requested for {url}")
         except Exception as e:
             logger.warning(f"Auto-GSC indexing failed for {url}: {e}")
+
+    @classmethod
+    async def _perform_silo_linking_pass(cls, client_id: str, results: list, wp_config: dict):
+        """
+        After the entire silo is published, replace [[LINK:Title]] placeholders 
+        with actual published WordPress URLs in the articles.
+        """
+        logger.info(f"Starting Silo Linking Pass for client {client_id}...")
+        
+        # Map titles to URLs
+        title_to_url = {res["titolo"]: res["wordpress_link"] for res in results if res.get("wordpress_link")}
+        
+        if not title_to_url:
+            return
+
+        for res in results:
+            if res.get("publish_status") != "success":
+                continue
+            
+            article_id = res["id"]
+            article = await db.articles.find_one({"id": article_id})
+            if not article or not article.get("contenuto"):
+                continue
+            
+            content = article["contenuto"]
+            updated = False
+            
+            # Find all [[LINK:Title]] using regex
+            matches = re.findall(r'\[\[LINK:(.+?)\]\]', content)
+            for target_title in matches:
+                if target_title in title_to_url:
+                    real_url = title_to_url[target_title]
+                    # We use the title as anchor text
+                    link_html = f'<a href="{real_url}">{target_title}</a>'
+                    content = content.replace(f"[[LINK:{target_title}]]", link_html)
+                    updated = True
+            
+            if updated:
+                logger.info(f"Updating inter-links for article: {res['titolo']}")
+                # Update both fields for safety
+                await db.articles.update_one({"id": article_id}, {"$set": {"contenuto": content, "contenuto_html": content}})
+                
+                # Update WordPress if possible
+                if article.get("wordpress_post_id"):
+                    try:
+                        from helpers import update_wordpress_post
+                        # Determine wp_type
+                        wp_type = "page" if article.get("combination", {}).get("tipo") == "pillar_page" else "post"
+                        await update_wordpress_post(
+                            url=wp_config["url_api"], 
+                            username=wp_config["utente"],
+                            password=wp_config["password_applicazione"],
+                            post_id=article["wordpress_post_id"],
+                            content=content,
+                            wp_type=wp_type
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to sync inter-links to WordPress for {article_id}: {e}")

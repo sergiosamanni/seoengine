@@ -19,7 +19,8 @@ import {
     XCircle, Clock, Send, ExternalLink, Search, Lock, Target, BarChart3,
     PenTool, ChevronRight, Sparkles, ImagePlus, X, Camera, Image as ImageIcon,
     Calendar, BrainCircuit, RefreshCcw, Info, AlertTriangle, Plus,
-    ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, Save, History, ListPlus, MousePointerClick
+    ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, Save, History, ListPlus, MousePointerClick,
+    Library, Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '../ui/switch';
@@ -78,10 +79,15 @@ const AdminGenerator = ({
 
     // Image Source State for Single Generate
     const [imageSource, setImageSource] = useState('ai'); // 'ai', 'upload', 'search'
-    const [imgSearchQuery, setImgSearchQuery] = useState('');
+    const [imgSearchQuery, setImgSearchQuery] = useState("");
     const [imgSearchResults, setImgSearchResults] = useState([]);
     const [searchingImages, setSearchingImages] = useState(false);
     const [singleSelectedImage, setSingleSelectedImage] = useState(null); // { id, url }
+    
+    // Silo State
+    const [siloClusters, setSiloClusters] = useState([]);
+    const [suggestingSilo, setSuggestingSilo] = useState(false);
+    const [selectedSiloClusters, setSelectedSiloClusters] = useState([]);
 
     // Programmatic state
     const [keywords, setKeywords] = useState({ servizi: [], citta_e_zone: [], tipi_o_qualificatori: [] });
@@ -168,6 +174,71 @@ const AdminGenerator = ({
             handleImageSearch();
         }
     }, [imageSource, imgSearchQuery]);
+
+    const handleSuggestSilo = async () => {
+        if (!singleObjective) {
+            toast.error("Inserisci prima l'obiettivo della Pillar Page");
+            return;
+        }
+        setSuggestingSilo(true);
+        try {
+            const { data } = await axios.post(`${API}/articles/suggest-silo`, { 
+                objective: singleObjective,
+                clientId: effectiveClientId 
+            }, { headers: getAuthHeaders() });
+            setSiloClusters(data.clusters || []);
+            setSelectedSiloClusters(data.clusters || []); // All selected by default
+            toast.success("Strategia Silo generata con successo!");
+        } catch (err) {
+            console.error("Silo suggestion error:", err);
+            toast.error("Errore generazione strategia silo");
+        } finally {
+            setSuggestingSilo(false);
+        }
+    };
+
+    const toggleSiloCluster = (cluster) => {
+        setSelectedSiloClusters(prev => 
+            prev.find(c => c.titolo === cluster.titolo)
+            ? prev.filter(c => c.titolo !== cluster.titolo)
+            : [...prev, cluster]
+        );
+    };
+
+    const handleGenerateSilo = async () => {
+        if (!singleObjective) return;
+        if (selectedSiloClusters.length === 0) {
+            toast.error("Seleziona almeno un cluster di supporto");
+            return;
+        }
+        
+        setGenerating(true);
+        try {
+            const { data } = await axios.post(`${API}/articles/batch-generate`, {
+                client_id: effectiveClientId,
+                is_silo: true,
+                pillar_topic: {
+                    titolo: singleTitle || singleObjective,
+                    objective: singleObjective,
+                    type: 'page',
+                    scheduled_date: new Date().toISOString()
+                },
+                clusters: selectedSiloClusters.map(c => ({
+                    ...c,
+                    type: 'post',
+                    scheduled_date: new Date().toISOString()
+                }))
+            }, { headers: getAuthHeaders() });
+            
+            toast.success(`Batch Silo avviato! ${selectedSiloClusters.length + 1} articoli in coda.`);
+            setStep(1); // Return to list/dashboard
+        } catch (err) {
+            console.error("Silo batch error:", err);
+            toast.error("Errore avvio generazione Silo");
+        } finally {
+            setGenerating(false);
+        }
+    };
 
     const fetchRecentArticles = async () => {
         if (!effectiveClientId) return;
@@ -1107,6 +1178,19 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                                     placeholder={genMode === 'pillar' ? "Indica punti chiave, opinioni forti da includere o previsioni di settore..." : "Descrivi il target, il tono di voce o specifiche SEO..."} 
                                                 />
                                             </div>
+
+                                            {genMode === 'pillar' && (
+                                                <div className="pt-2">
+                                                    <Button 
+                                                        onClick={handleSuggestSilo}
+                                                        disabled={isSuggestingSilo || (!singleTitle && !singleKeywords)}
+                                                        className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 font-bold transition-all"
+                                                    >
+                                                        {isSuggestingSilo ? <Loader2 className="w-5 h-5 animate-spin" /> : <Layers className="w-5 h-5" />}
+                                                        Strategia Silo: Suggerisci 5 Cluster di Sostegno
+                                                    </Button>
+                                                </div>
+                                            )}
                                             <div className="flex flex-col sm:flex-row gap-4 pt-4">
                                                 <div className="flex-1 p-4 bg-indigo-50/80 rounded-2xl border border-indigo-100 flex items-center justify-between shadow-sm transition-all hover:bg-indigo-100/50">
                                                     <div className="flex items-center gap-3">
@@ -1222,10 +1306,70 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                         </CardContent>
                                     </Card>
 
+                                    {genMode === 'pillar' && (
+                                        <div className="space-y-4 mb-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex flex-col">
+                                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Strategia Pillar & Cluster</h3>
+                                                    <p className="text-[10px] text-slate-500 font-medium">Genera 5 articoli satellite per creare un Silo SEO</p>
+                                                </div>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    onClick={handleSuggestSilo}
+                                                    disabled={suggestingSilo || !singleObjective}
+                                                    className="h-9 border-indigo-100 bg-indigo-50/50 text-indigo-700 hover:bg-indigo-100 font-bold rounded-xl"
+                                                >
+                                                    {suggestingSilo ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Library className="w-3.5 h-3.5 mr-2" />}
+                                                    Suggerisci Clusters
+                                                </Button>
+                                            </div>
+
+                                            {siloClusters.length > 0 && (
+                                                <div className="bg-white border border-indigo-100 rounded-2xl overflow-hidden shadow-sm animate-in slide-in-from-bottom-2 duration-500">
+                                                    <div className="p-3 bg-indigo-50/50 border-b border-indigo-100 flex items-center justify-between">
+                                                        <span className="text-[10px] font-black text-indigo-700 uppercase">Cluster Suggeriti</span>
+                                                        <Badge className="bg-indigo-600 text-white font-bold">{selectedSiloClusters.length} Selezionati</Badge>
+                                                    </div>
+                                                    <div className="p-2 space-y-1">
+                                                        {siloClusters.map((cluster, idx) => {
+                                                            const isSelected = !!selectedSiloClusters.find(c => c.titolo === cluster.titolo);
+                                                            return (
+                                                                <div 
+                                                                    key={idx} 
+                                                                    onClick={() => toggleSiloCluster(cluster)}
+                                                                    className={`group flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer ${isSelected ? 'bg-indigo-50/50 border-indigo-200' : 'bg-transparent border-slate-100 hover:border-indigo-100'}`}
+                                                                >
+                                                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white group-hover:border-indigo-400'}`}>
+                                                                        {isSelected && <Check className="w-3.5 h-3.5" />}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className={`text-[11px] font-bold truncate ${isSelected ? 'text-indigo-900' : 'text-slate-600'}`}>{cluster.titolo}</p>
+                                                                        <p className="text-[9px] text-slate-400 line-clamp-1 italic">{cluster.objective}</p>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    <div className="p-4 bg-slate-50 border-t border-indigo-100">
+                                                        <Button 
+                                                            onClick={handleGenerateSilo} 
+                                                            disabled={generating || selectedSiloClusters.length === 0}
+                                                            className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-lg shadow-indigo-100"
+                                                        >
+                                                            {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+                                                            LANCIA SILO (Pillar + {selectedSiloClusters.length} Cluster)
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <Button 
                                         onClick={() => handleSingleGenerate('articolo')} 
                                         disabled={singleGenerating} 
-                                        className="w-full h-12 bg-gradient-to-r from-slate-900 to-slate-800 hover:to-orange-600 shadow-xl border-0 text-white rounded-2xl group transition-all duration-500"
+                                        className={`w-full h-12 bg-gradient-to-r from-slate-900 to-slate-800 hover:to-orange-600 shadow-xl border-0 text-white rounded-2xl group transition-all duration-500 ${genMode === 'pillar' && siloClusters.length > 0 ? 'hidden' : ''}`}
                                     >
                                         <div className="flex items-center justify-center w-full relative">
                                             {singleGenerating ? (
@@ -1234,7 +1378,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                                 <Zap className="w-6 h-6 mr-3 text-amber-400 group-hover:scale-125 transition-transform" />
                                             )}
                                             <span className="text-sm font-black tracking-tight uppercase">
-                                                {singleGenerating ? 'Generazione in corso...' : 'Avvia Generazione'}
+                                                {singleGenerating ? 'Generazione in corso...' : (genMode === 'pillar' ? 'Genera Solo Pillar' : 'Avvia Generazione')}
                                             </span>
                                         </div>
                                     </Button>
@@ -1972,6 +2116,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                                 </Card>
                                             )}
                                         </div>
+                                    )}
 
                                     {!recentSidebarOpen && activePlanImageIndex !== null && (
                                         <div className="lg:col-span-3 space-y-6 animate-in slide-in-from-right-4 duration-500">

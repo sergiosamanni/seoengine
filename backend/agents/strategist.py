@@ -101,3 +101,55 @@ Rispondi ESCLUSIVAMENTE con un JSON valido nel seguente formato:
             await self.log("failed", {"error": str(e)})
             raise e
 
+    async def suggest_silo_clusters(self, pillar_topic: str, client_kb: dict, gsc_top_queries: list = None) -> list:
+        """
+        Suggests 5 strategic cluster topics to support a main Pillar Page.
+        """
+        await self.log("running", {"pillar_topic": pillar_topic})
+        
+        system_prompt = """Sei un SEO Architect Senior esperto in Topic Clusters. 
+Il tuo compito è analizzare un Topic Principale (Pillar) e proporre 5 e SOLO 5 argomenti "Cluster" di supporto.
+
+REGOLE STRATEGICHE:
+1. Ogni cluster deve coprire un'intenzione di ricerca (Search Intent) SPECIFICA e diversa dal Pillar.
+2. I cluster devono supportare il Pillar in modo semantico e logico.
+3. Evita sovrapposizioni tra i cluster.
+4. Ogni cluster deve avere: Titolo, Keyword Principale, Obiettivo (Informazionale/Transazionale) e Funnel (TOFU/MOFU/BOFU).
+
+Rispondi ESCLUSIVAMENTE con un JSON valido:
+{
+  "clusters": [
+    {
+      "titolo": "Titolo del Cluster",
+      "keyword": "La keyword principale del cluster",
+      "obiettivo": "informativo o guida pratica",
+      "funnel": "TOFU/MOFU/BOFU",
+      "perche": "Spiegazione strategica del legame con la Pillar Page"
+    }
+  ]
+}
+"""
+        user_prompt = f"""TOPIC PILLAR: {pillar_topic}
+
+KNOWLEDGE BASE CLIENTE:
+{json.dumps(client_kb, indent=2)}
+
+GSC TOP QUERIES (Context):
+{json.dumps(gsc_top_queries or [], indent=2)}
+"""
+        try:
+            raw_response = await self.chat(system_prompt, user_prompt)
+            import re
+            json_match = re.search(r'\{.*\}', raw_response, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+                data = json.loads(json_str)
+                clusters = data.get("clusters", [])[:5]
+                await self.log("success", {"clusters_generated": len(clusters)})
+                return clusters
+            else:
+                raise ValueError("Could not find JSON in LLM response")
+        except Exception as e:
+            await self.log("failed", {"error": str(e)})
+            return []
+

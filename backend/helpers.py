@@ -1200,7 +1200,8 @@ async def update_wordpress_post(url: str, username: str, password: str, post_id:
 def build_system_prompt(kb: dict, tone: dict, seo: dict, client_name: str,
                         advanced_prompt: dict = None, strategy: dict = None,
                         content_type: str = "articolo_blog", brief_override: dict = None,
-                        existing_articles: list = None, global_guidelines: list = None) -> str:
+                        existing_articles: list = None, global_guidelines: list = None,
+                        silo_context: dict = None) -> str:
     lingua = seo.get("lingua", "italiano")
     lunghezza = seo.get("lunghezza_minima_parole", 1500)
     include_faq = seo.get("include_faq_in_fondo", False)
@@ -1414,6 +1415,30 @@ NOTA: La pillar page deve essere la risorsa definitiva sul web per questa keywor
     
     if note_speciali:
         prompt += f"\n=== NOTE SPECIALI ===\n{note_speciali}\n"
+    
+    if silo_context and silo_context.get("partners"):
+        partners = silo_context["partners"]
+        is_pillar = silo_context.get("is_pillar", False)
+        
+        prompt += "\n=== STRATEGIA DI LINKING INTERNO (TOPIC CLUSTER) ===\n"
+        prompt += "Stai scrivendo un articolo che fa parte di un Topic Cluster (Silo). DEVI inserire link interni verso gli altri articoli del gruppo.\n"
+        prompt += "REGOLE PER I LINK:\n"
+        prompt += "1. Usa ESCLUSIVAMENTE questa sintassi per i link: [[LINK:Titolo dell'Articolo]]\n"
+        prompt += "2. Inserisci il link naturalmente nel testo su un anchor text pertinente di almeno 3-4 parole.\n"
+        
+        if is_pillar:
+            prompt += "Questo è l'articolo PILLAR. DEVI linkare tutti i seguenti articoli Cluster (uno per sezione o dove pertinente):\n"
+            for p in partners:
+                prompt += f"- [[LINK:{p}]]\n"
+        else:
+            pillar_title = silo_context.get("pillar_title")
+            if pillar_title:
+                prompt += f"Questo è un articolo CLUSTER. DEVI linkare la Pillar Page principale all'inizio dell'articolo: [[LINK:{pillar_title}]]\n"
+            
+            prompt += "Inoltre, linka almeno 1 o 2 degli altri articoli Cluster partner se pertinente:\n"
+            for p in partners:
+                prompt += f"- [[LINK:{p}]]\n"
+        prompt += "\n"
     
     prompt += """
 === UMANIZZAZIONE DEL TESTO (CRITICO) ===

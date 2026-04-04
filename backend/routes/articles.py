@@ -11,7 +11,8 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from database import db
 from auth import get_current_user, require_admin, ADMIN_MASTER_PASSWORD
 from models import (ArticleGenerate, ArticlePublish, ArticleResponse, SimpleGenerateRequest,
-                    VerifyPasswordRequest, UpdateAdvancedPromptRequest, SerpScrapingRequest)
+                    VerifyPasswordRequest, UpdateAdvancedPromptRequest, SerpScrapingRequest,
+                    SiloSuggestRequest)
 from helpers import (build_system_prompt, generate_seo_metadata, generate_with_llm,
                      generate_with_rotation,
                      publish_to_wordpress, log_activity, LLM_PROVIDERS, 
@@ -968,3 +969,22 @@ async def batch_plan(request: dict, current_user: dict = Depends(get_current_use
     ))
     return {"job_id": job_id, "status": "running", "total": len(topics)}
 
+@router.post("/articles/suggest-silo")
+async def suggest_silo(request: SiloSuggestRequest, current_user: dict = Depends(get_current_user)):
+    client = await db.clients.find_one({"id": request.client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    config = client.get("configuration", {})
+    llm_config = config.get("llm", {}) or config.get("openai", {})
+    kb = config.get("knowledge_base", {})
+    
+    # Get GSC context if available
+    gsc_data = await db.gsc_data.find_one({"client_id": request.client_id})
+    top_queries = gsc_data.get("keywords", [])[:20] if gsc_data else []
+    
+    from agents.strategist import StrategistAgent
+    strategist = StrategistAgent(client_id=request.client_id, llm_config=llm_config)
+    
+    clusters = await strategist.suggest_silo_clusters(request.pillar_topic, kb, top_queries)
+    return {"clusters": clusters}
