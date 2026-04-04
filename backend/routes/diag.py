@@ -32,3 +32,38 @@ async def db_check():
             res["repair_log_error"] = str(e)
             
     return res
+
+@router.get("/unrent-cleanup")
+async def unrent_cleanup(drafts_only: bool = False, current_user: dict = Depends(require_admin)):
+    """
+    Cleans up Unrent articles. 
+    If drafts_only=True, deletes all drafts.
+    Otherwise, deletes all articles published before April 2026.
+    """
+    unrent = await db.clients.find_one({"nome": {"$regex": "UNRENT", "$options": "i"}}, {"id": 1, "nome": 1})
+    if not unrent:
+        return {"error": "Client Unrent not found"}
+    
+    cid = unrent["id"]
+    
+    if drafts_only:
+        # Delete ALL drafts for Unrent
+        res = await db.articles.delete_many({
+            "client_id": cid,
+            "stato": "draft"
+        })
+        msg = f"Successfully deleted {res.deleted_count} draft articles for Unrent."
+    else:
+        # Delete published before April 2026
+        cutoff = "2026-04-01T00:00:00"
+        res = await db.articles.delete_many({
+            "client_id": cid,
+            "published_at": {"$lt": cutoff}
+        })
+        msg = f"Successfully deleted {res.deleted_count} articles published before April 2026."
+    
+    return {
+        "status": "success",
+        "message": msg,
+        "deleted_count": res.deleted_count
+    }
