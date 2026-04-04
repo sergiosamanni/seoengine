@@ -20,7 +20,7 @@ import {
     PenTool, ChevronRight, Sparkles, ImagePlus, X, Camera, Image as ImageIcon,
     Calendar, BrainCircuit, RefreshCcw, Info, AlertTriangle, Plus,
     ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, Save, History, ListPlus, MousePointerClick,
-    Library, Check
+    Library, Check, Layers
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '../ui/switch';
@@ -1183,10 +1183,10 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                                 <div className="pt-2">
                                                     <Button 
                                                         onClick={handleSuggestSilo}
-                                                        disabled={isSuggestingSilo || (!singleTitle && !singleKeywords)}
+                                                        disabled={suggestingSilo || (!singleTitle && !singleKeywords)}
                                                         className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 font-bold transition-all"
                                                     >
-                                                        {isSuggestingSilo ? <Loader2 className="w-5 h-5 animate-spin" /> : <Layers className="w-5 h-5" />}
+                                                        {suggestingSilo ? <Loader2 className="w-5 h-5 animate-spin" /> : <Layers className="w-5 h-5" />}
                                                         Strategia Silo: Suggerisci 5 Cluster di Sostegno
                                                     </Button>
                                                 </div>
