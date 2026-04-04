@@ -36,34 +36,44 @@ async def db_check():
 @router.get("/unrent-cleanup")
 async def unrent_cleanup(drafts_only: bool = False, current_user: dict = Depends(require_admin)):
     """
-    Cleans up Unrent articles. 
-    If drafts_only=True, deletes all drafts.
-    Otherwise, deletes all articles published before April 2026.
+    Cleans up Unrent data. 
+    Target collections: 'articles' and 'autopilot_tasks'
     """
     unrent = await db.clients.find_one({"nome": {"$regex": "UNRENT", "$options": "i"}}, {"id": 1, "nome": 1})
     if not unrent:
         return {"error": "Client Unrent not found"}
     
     cid = unrent["id"]
+    summary = {"client_name": unrent["nome"], "client_id": cid}
     
     if drafts_only:
-        # Delete ALL drafts for Unrent
-        res = await db.articles.delete_many({
+        # 1. Articles Collection (stato: draft)
+        art_del = await db.articles.delete_many({
             "client_id": cid,
             "stato": "draft"
         })
-        msg = f"Successfully deleted {res.deleted_count} draft articles for Unrent."
+        # 2. Autopilot Tasks Collection (status: failed or draft)
+        task_del = await db.autopilot_tasks.delete_many({
+            "client_id": cid,
+            "$or": [
+                {"status": "failed"},
+                {"status": "draft"},
+                {"publish_status": "failed"}
+            ]
+        })
+        
+        summary["deleted_articles"] = art_del.deleted_count
+        summary["deleted_tasks"] = task_del.deleted_count
+        summary["message"] = f"Deleted {art_del.deleted_count} articles and {task_del.deleted_count} tasks."
     else:
-        # Delete published before April 2026
+        # Wave 1 logic: Published before April 2026
         cutoff = "2026-04-01T00:00:00"
         res = await db.articles.delete_many({
             "client_id": cid,
             "published_at": {"$lt": cutoff}
         })
-        msg = f"Successfully deleted {res.deleted_count} articles published before April 2026."
+        summary["deleted_articles"] = res.deleted_count
+        summary["message"] = f"Deleted {res.deleted_count} old articles."
     
-    return {
-        "status": "success",
-        "message": msg,
-        "deleted_count": res.deleted_count
-    }
+    summary["status"] = "success"
+    return summary
