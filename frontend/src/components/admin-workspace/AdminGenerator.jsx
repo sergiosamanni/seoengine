@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import config, { API_URL as API, BASE_URL } from '../../config';
 import {
@@ -202,7 +202,7 @@ const AdminGenerator = ({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const clientConfig = client?.configuration || {};
-    const allPlanTopics = React.useMemo(() => {
+    const allPlanTopics = useMemo(() => {
         const planItems = plan?.topics || [];
         const queueItems = (client?.configuration?.editorial_queue || [])
             .filter(item => typeof item === 'string') // Safety check

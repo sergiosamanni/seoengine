@@ -16,46 +16,7 @@ import {
 import { toast } from 'sonner';
 
 // ErrorBoundary to catch and display rendering errors in the generator
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error, errorInfo) {
-    console.error("Generator Runtime Error:", error, errorInfo);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="p-12 bg-red-50 border border-red-200 rounded-[2rem] text-center space-y-6 animate-in fade-in zoom-in duration-500">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto shadow-inner">
-            <AlertCircle className="w-10 h-10 text-red-600" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-black text-red-900 tracking-tight">Ops! Errore di Rendering</h2>
-            <p className="text-red-600/80 text-sm max-w-md mx-auto font-medium">Si è verificato un errore critico durante il caricamento del generatore. I dati potrebbero essere malformati.</p>
-          </div>
-          <div className="p-6 bg-white/80 backdrop-blur rounded-2xl text-left border border-red-100 overflow-auto max-h-60 shadow-inner">
-            <p className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-2">Dettagli Errore:</p>
-            <code className="text-[11px] text-red-800 font-mono whitespace-pre-wrap break-all">{this.state.error?.toString()}</code>
-          </div>
-          <div className="flex justify-center gap-4 pt-4">
-            <Button onClick={() => window.location.reload()} variant="outline" className="rounded-xl px-8 border-red-200 text-red-700 hover:bg-red-100">
-              Ricarica Pagina
-            </Button>
-            <Button onClick={() => this.setState({ hasError: false, error: null })} variant="ghost" className="rounded-xl px-8 text-red-400 hover:text-red-600">
-              Riprova
-            </Button>
-          </div>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
+import ErrorBoundary from '../components/ui/error-boundary';
 
 // Components
 import AdminGenerator from '../components/admin-workspace/AdminGenerator';
