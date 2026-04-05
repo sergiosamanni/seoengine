@@ -14,6 +14,12 @@ Applicazione web full-stack per la SEO programmatica. Genera articoli SEO ottimi
 - **Object Storage**: Local system storage by default, configurable remote API
 - **Branding**: Logo-less, brand-first, focused on result aesthetics
 
+## Deployment & Infrastructure
+- **Frontend**: Vercel (Deployed)
+- **Backend**: Railway (Active)
+- **Database**: MongoDB (Atlas/Online)
+- **Version Control**: GitHub (All synchronized)
+
 ## Core Features (Implemented)
 1. Multi-Tenant: Ruoli Admin e Cliente
 2. Generator Hub: Articolo Singolo, Piano Editoriale e SEO Programmatica (batch)

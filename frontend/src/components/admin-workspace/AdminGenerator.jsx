@@ -58,6 +58,7 @@ const AdminGenerator = ({
 
     // Prompt state
     const [advancedPrompt, setAdvancedPrompt] = useState('');
+    const [gscSite, setGscSite] = useState('');
 
     // Generation state
     const [autoGenerateCover, setAutoGenerateCover] = useState(true);
@@ -197,7 +198,7 @@ const AdminGenerator = ({
     const [deletingPlan, setDeletingPlan] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    const config = client?.configuration || {};
+    const clientConfig = client?.configuration || {};
     const allPlanTopics = React.useMemo(() => {
         const planItems = plan?.topics || [];
         const queueItems = (client?.configuration?.editorial_queue || []).map(itemText => {
@@ -228,33 +229,43 @@ const AdminGenerator = ({
         });
         return [...planItems, ...queueItems];
     }, [plan, client?.configuration?.editorial_queue]);
-    const llmConfig = config.llm || config.openai || {};
-    const wpConfig = config.wordpress || {};
-    const hasApiKey = !!llmConfig.api_key;
+    const llmConfig = clientConfig.llm || clientConfig.openai || {};
+    const hasApiKey = !!(llmConfig.api_key || llmConfig.apiKey);
+    const wpConfig = clientConfig.wordpress || {};
     const hasWpConfig = wpConfig.url_api && wpConfig.utente && wpConfig.password_applicazione;
-    const gscConnected = config.gsc?.connected;
-    const gscSite = config.gsc?.site_url || '';
+    const gscConnected = client?.configuration?.gsc?.connected || false;
 
     useEffect(() => {
-        if (config.content_strategy) setContentStrategy(prev => ({ ...prev, ...config.content_strategy }));
-        if (config.keyword_combinations) setKeywords(config.keyword_combinations);
-        if (config.advanced_prompt?.secondo_livello_prompt) setAdvancedPrompt(config.advanced_prompt.secondo_livello_prompt);
-        if (config.programmatic) {
-            setUseSpintax(config.programmatic.use_spintax ?? true);
-            setProgrammaticTemplate(config.programmatic.template || "");
-            setSidebarTemplate(config.programmatic.sidebar_template || "");
-            if (config.programmatic.cta) setCtaConfig(prev => ({ ...prev, ...config.programmatic.cta }));
+        if (!effectiveClientId) {
+            navigate('/dashboard');
+        }
+    }, [effectiveClientId, navigate]);
+
+    useEffect(() => {
+        if (clientConfig.content_strategy) setContentStrategy(prev => ({ ...prev, ...clientConfig.content_strategy }));
+        if (clientConfig.advanced_prompt) setAdvancedPrompt(clientConfig.advanced_prompt);
+        if (clientConfig.keywords) setKeywords(clientConfig.keywords);
+        if (clientConfig.automation) setAutomation(clientConfig.automation);
+        if (clientConfig.gsc?.site_url) setGscSite(clientConfig.gsc.site_url);
+        
+        if (clientConfig.programmatic) {
+            setUseSpintax(clientConfig.programmatic.use_spintax ?? true);
+            setProgrammaticTemplate(clientConfig.programmatic.template || "");
+            setSidebarTemplate(clientConfig.programmatic.sidebar_template || "");
+            if (clientConfig.programmatic.cta) setCtaConfig(prev => ({ ...prev, ...clientConfig.programmatic.cta }));
         }
 
+        if (!effectiveClientId) return;
         fetchPlan();
         fetchRecentArticles();
-    }, [client]);
+    }, [client, effectiveClientId]);
 
     useEffect(() => {
         if (imageSource === 'search' && imgSearchQuery && imgSearchResults.length === 0 && !searchingImages) {
             handleImageSearch();
         }
     }, [imageSource, imgSearchQuery]);
+
 
     const handleSuggestSilo = async () => {
         if (!singleObjective) {
@@ -708,14 +719,16 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
 
     const saveConfig = async () => {
         try {
-            await axios.put(`${API}/clients/${effectiveClientId}/configuration`, {
-                ...config,
+            const currentConfig = client?.configuration || {};
+            const payload = {
+                ...currentConfig,
                 content_strategy: contentStrategy,
-                keyword_combinations: keywords,
-                editorial_queue: targetKeywords,
-                advanced_prompt: { ...config.advanced_prompt, secondo_livello_prompt: advancedPrompt },
+                advanced_prompt: advancedPrompt,
+                keywords: keywords,
+                automation: automation,
                 programmatic: {
-                    use_spintax: true,
+                    ...currentConfig.programmatic,
+                    use_spintax: useSpintax,
                     template: programmaticTemplate,
                     sidebar_template: sidebarTemplate,
                     cta: ctaConfig,
@@ -724,8 +737,9 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 },
                 publish_to_wordpress: publishToWp,
                 content_type: contentType
-            }, { headers: getAuthHeaders() });
-        } catch (e) { /* silent */ }
+            };
+            await axios.put(`${API}/clients/${effectiveClientId}/configuration`, payload, { headers: getAuthHeaders() });
+        } catch (e) { console.error("Error saving config", e); throw e; }
     };
 
     const onSaveConfig = async () => {
@@ -1022,9 +1036,10 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
             // Se abbiamo generato elementi della coda manuale, rimuoviamoli dal config
             const queueItemsInBatch = selectedPlanTopics.filter(t => t.isQueueItem).map(t => t.titolo);
             if (queueItemsInBatch.length > 0) {
-                const currentQueue = config.editorial_queue || [];
+                const currentConfig = client?.configuration || {};
+                const currentQueue = currentConfig.editorial_queue || [];
                 const newQueue = currentQueue.filter(k => !queueItemsInBatch.includes(k));
-                axios.put(`${API}/clients/${effectiveClientId}/configuration`, { ...config, editorial_queue: newQueue }, { headers: getAuthHeaders() })
+                axios.put(`${API}/clients/${effectiveClientId}/configuration`, { ...currentConfig, editorial_queue: newQueue }, { headers: getAuthHeaders() })
                      .catch(e => console.error("Could not cleanup queue", e));
             }
 
@@ -1084,9 +1099,10 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
 
     const handleRemoveFromQueue = async (item) => {
         const textToRemove = item.originalText || item.titolo;
-        const currentQueue = config.editorial_queue || [];
+        const currentConfig = client?.configuration || {};
+        const currentQueue = currentConfig.editorial_queue || [];
         const newQueue = currentQueue.filter(k => k !== textToRemove);
-        const newConfig = { ...config, editorial_queue: newQueue };
+        const newConfig = { ...currentConfig, editorial_queue: newQueue };
         
         try {
             await axios.put(`${API}/clients/${effectiveClientId}/configuration`, newConfig, { headers: getAuthHeaders() });
@@ -1135,6 +1151,8 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
             loadGscData();
         }
     }, [step]);
+
+    if (!effectiveClientId) return null;
 
     return (
         
@@ -2264,7 +2282,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
                                             {[
                                                 { label: 'Piano AI', val: plan?.topics?.length || 0, icon: Sparkles, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-                                                { label: 'Da Freshness/GSC', val: config.editorial_queue?.length || 0, icon: ListPlus, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                                                { label: 'Da Freshness/GSC', val: client?.configuration?.editorial_queue?.length || 0, icon: ListPlus, color: 'text-emerald-600', bg: 'bg-emerald-50' },
                                                 { label: 'Selezionati', val: selectedPlanTopics.length, icon: MousePointerClick, color: 'text-orange-600', bg: 'bg-orange-50' },
                                                 { label: 'Pubblicati', val: recentArticles.length, icon: CheckCircle2, color: 'text-slate-400', bg: 'bg-white' },
                                             ].map((stat, i) => (

@@ -77,9 +77,9 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
-  const getAuthHeaders = () => ({
+  const getAuthHeaders = useCallback(() => ({
     Authorization: `Bearer ${token}`
-  });
+  }), [token]);
 
   const switchClient = (clientId) => {
     if (user && user.client_ids.includes(clientId)) {

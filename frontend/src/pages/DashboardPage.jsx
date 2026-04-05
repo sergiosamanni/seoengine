@@ -21,7 +21,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import {
-  Plus, Search, MoreHorizontal, Edit, Trash2, ExternalLink, Settings, PenTool,
+  Plus, Search, MoreHorizontal, Edit, Trash2, ExternalLink, Settings,
   BarChart3, Globe, X, FileText, Users, TrendingUp, Loader2, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';

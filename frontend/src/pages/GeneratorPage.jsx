@@ -152,17 +152,28 @@ export const GeneratorPage = () => {
     setSearchParams({ tab: value });
   };
 
-  if (loading && !client) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
+  if (!client && loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
 
   if (!effectiveClientId) {
     return (
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          {isAdmin ? 'Seleziona un cliente dalla lista Clienti.' : 'Nessun cliente associato. Contatta l\'amministratore.'}
-        </AlertDescription>
-      </Alert>
+      <div className="max-w-2xl mx-auto mt-20">
+        <Alert className="bg-amber-50 border-amber-200">
+          <AlertCircle className="h-5 w-5 text-amber-600" />
+          <AlertDescription className="text-amber-800 font-medium ml-2">
+            {isAdmin ? 'Seleziona un cliente dalla lista per iniziare a configurare il workspace.' : 'Nessun cliente associato al tuo account. Contatta l\'amministratore.'}
+          </AlertDescription>
+        </Alert>
+      </div>
     );
+  }
+
+  if (!client && !loading) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+            <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+            <p className="text-sm text-slate-500">Inizializzazione workspace...</p>
+        </div>
+      );
   }
 
   return (

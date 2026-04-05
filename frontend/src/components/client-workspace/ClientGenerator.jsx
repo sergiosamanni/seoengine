@@ -48,6 +48,12 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
     fetchClients();
   }, [getAuthHeaders, initialClient]);
 
+  React.useEffect(() => {
+    if (initialClient && !selectedClient) {
+        setSelectedClient(initialClient);
+    }
+  }, [initialClient, selectedClient]);
+
   const config = selectedClient?.configuration || {};
   const gscConnected = config.gsc?.connected;
 

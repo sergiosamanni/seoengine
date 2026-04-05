@@ -46,7 +46,6 @@ import {
   Trash2,
   ExternalLink,
   Settings,
-  PenTool,
   BarChart3,
   Globe,
   X,
@@ -514,12 +513,8 @@ export const ClientsPage = () => {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="rounded-xl border border-[#f1f3f6] shadow-xl p-1.5 min-w-[180px]">
                                     <DropdownMenuItem className="rounded-lg text-xs font-semibold p-2" onClick={() => navigate(`/clients/${client.id}`)}>
-                                      <PenTool className="w-3.5 h-3.5 mr-2 text-slate-400" />
-                                      Genera Contenuti
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="rounded-lg text-xs font-semibold p-2" onClick={() => navigate(`/clients/${client.id}/workspace?tab=settings`)}>
                                       <Settings className="w-3.5 h-3.5 mr-2 text-slate-400" />
-                                      Configurazione
+                                      Gestisci Workspace
                                     </DropdownMenuItem>
                                     <DropdownMenuItem className="rounded-lg text-xs font-semibold p-2" onClick={() => openEditDialog(client)}>
                                       <Edit className="w-3.5 h-3.5 mr-2 text-slate-400" />
