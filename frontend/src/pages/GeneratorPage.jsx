@@ -73,7 +73,19 @@ export const GeneratorPage = () => {
   const [autopilot, setAutopilot] = useState({ enabled: false, frequency: 'weekly', strategy: 'editorial_plan_first', time_of_day: '09:00', auto_publish: true });
 
   const [userClients, setUserClients] = useState([]);
-  const [currentClientId, setCurrentClientId] = useState(isAdmin ? routeClientId : user?.client_id);
+  const [currentClientId, setCurrentClientId] = useState(() => {
+    if (isAdmin) {
+      return routeClientId || localStorage.getItem('last_admin_client_id');
+    }
+    return user?.client_id;
+  });
+
+  // Persist last client ID for admins
+  useEffect(() => {
+    if (isAdmin && currentClientId) {
+      localStorage.setItem('last_admin_client_id', currentClientId);
+    }
+  }, [currentClientId, isAdmin]);
 
   useEffect(() => {
     if (isAdmin) {

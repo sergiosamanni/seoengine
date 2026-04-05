@@ -72,10 +72,21 @@ const AdminGenerator = ({
     // Persistence Logic: Load on mount
     useEffect(() => {
         if (effectiveClientId) {
-            const saved = localStorage.getItem(`prog_seo_state_${effectiveClientId}`);
-            if (saved) {
+            // Global mode/step persistence
+            const savedGlobal = localStorage.getItem(`admin_gen_state_${effectiveClientId}`);
+            if (savedGlobal) {
                 try {
-                    const data = JSON.parse(saved);
+                    const data = JSON.parse(savedGlobal);
+                    if (data.genMode) setGenMode(data.genMode);
+                    if (data.step) setStep(data.step);
+                } catch (e) { console.error("Error loading global state", e); }
+            }
+
+            // Programmatic state persistence
+            const savedProg = localStorage.getItem(`prog_seo_state_${effectiveClientId}`);
+            if (savedProg) {
+                try {
+                    const data = JSON.parse(savedProg);
                     if (data.keywords) setKeywords(data.keywords);
                     if (data.wizardStep) setWizardStep(data.wizardStep);
                     if (data.programmaticTemplate) setProgrammaticTemplate(data.programmaticTemplate);
@@ -92,12 +103,20 @@ const AdminGenerator = ({
                         setGenerating(true);
                         // Results and progress will be fetched by the job polling effect
                     }
-                } catch (e) { console.error("Error loading saved state", e); }
+                } catch (e) { console.error("Error loading saved prog state", e); }
             }
         }
     }, [effectiveClientId]);
 
-    // Persistence Logic: Save on change (Wizard state)
+    // Persistence Logic: Save Global State (genMode & step)
+    useEffect(() => {
+        if (effectiveClientId) {
+            const globalState = { genMode, step };
+            localStorage.setItem(`admin_gen_state_${effectiveClientId}`, JSON.stringify(globalState));
+        }
+    }, [genMode, step, effectiveClientId]);
+
+    // Persistence Logic: Save Programmatic State
     useEffect(() => {
         if (effectiveClientId && genMode === 'programmatic') {
             const stateToSave = {
@@ -1137,7 +1156,8 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 </button>
             </div>
 
-            {genMode !== 'plan' && (
+            {/* Step Bar (Only for Single/Pillar) */}
+            {(genMode === 'single' || genMode === 'pillar') && (
                 <div className="sticky top-4 z-40 flex items-center gap-1.5 p-1.5 bg-white/90 backdrop-blur-md rounded-2xl border border-[#f1f3f6] shadow-md overflow-x-auto transition-all" data-testid="step-bar">
                 {steps.map((s, i) => {
                     const isActive = step === s.num;
@@ -1169,7 +1189,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
             </div>
             )}
 
-            {genMode !== "plan" && step === 1 && (
+            {(genMode === 'single' || genMode === 'pillar') && step === 1 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="bg-white border border-[#f1f3f6] rounded-[2rem] p-1 shadow-xl shadow-slate-100/50">
                         <ContentStrategyTab strategy={contentStrategy} setStrategy={setContentStrategy} />
@@ -1186,7 +1206,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 </div>
             )}
 
-            {genMode !== "plan" && step === 2 && (
+            {(genMode === 'single' || genMode === 'pillar') && step === 2 && (
                 <div className="space-y-4">
                     <Card className="border-slate-200">
                         <CardHeader>
@@ -1237,7 +1257,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 </div>
             )}
 
-            {genMode !== "plan" && step === 3 && (
+            {(genMode === 'single' || genMode === 'pillar') && step === 3 && (
                 <div className="space-y-4">
                     {gscConnected ? (
                         <Card className="border-sky-200 bg-sky-50/50" data-testid="gsc-step">
@@ -1297,7 +1317,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 </div>
             )}
 
-            {genMode !== "plan" && step === 4 && (
+            {(genMode === 'single' || genMode === 'pillar') && step === 4 && (
                 <div className="space-y-4">
                     <Card className="border-slate-200">
                         <CardHeader>
@@ -1319,7 +1339,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 </div>
             )}
 
-            {genMode !== "plan" && step === 5 && (
+            {(genMode === 'single' || genMode === 'pillar') && step === 5 && (
                 <div className="space-y-6">
                     {/* L'immagine viene ora gestita automaticamente dal sistema */}
 
