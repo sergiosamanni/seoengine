@@ -94,7 +94,7 @@ export const DashboardLayout = ({ children }) => {
     { label: 'Genera', icon: FileText, path: '/generate' },
   ];
   const navItems = isAdmin 
-    ? [...mainNav, { label: 'Genera', icon: PenTool, path: '/generate' }] 
+    ? mainNav 
     : clientNav;
 
   return (

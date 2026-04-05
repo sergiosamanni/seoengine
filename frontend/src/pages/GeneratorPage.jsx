@@ -9,8 +9,9 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Card, CardContent } from '../components/ui/card';
 import {
-  AlertCircle, Loader2, ArrowLeft, Settings, PenTool, BarChart3, 
-  Key, FileText, Sparkles, Globe, History, Save, Zap, MessageCircle, Target, Layers
+  Plus, Search, MoreHorizontal, Edit, Trash2, ExternalLink, Settings,
+  BarChart3, Globe, X, FileText, Users, TrendingUp, Loader2, ChevronDown, ChevronRight,
+  AlertCircle, ArrowLeft, PenTool, Key, Sparkles, History, Save, Zap, MessageCircle, Target, Layers
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -38,7 +39,7 @@ export const GeneratorPage = () => {
   const { getAuthHeaders, user, isAdmin } = useAuth();
   const { 
     client, loading, saving, fetchClient, 
-    updateConfiguration, addToEditorialQueue: addToQueueFromContext 
+    updateConfiguration, addToQueueFromContext 
   } = useClient();
   
   const { clientId: routeClientId } = useParams();

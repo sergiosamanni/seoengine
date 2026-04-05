@@ -266,24 +266,6 @@ export const DashboardPage = () => {
                                                   </div>
                                               </div>
                                               <div className="flex items-center gap-1">
-                                                   <Button 
-                                                       variant="ghost" 
-                                                       size="sm" 
-                                                       className="h-8 px-2 rounded-lg font-black uppercase tracking-widest text-[7px] flex items-center gap-1.5 text-slate-300 hover:text-orange-600 hover:bg-orange-50 transition-all group/gen"
-                                                       onClick={(e) => { e.stopPropagation(); navigate(`/clients/${client.id}/generate`); }}
-                                                   >
-                                                       <PenTool className="w-3 h-3 group-hover/gen:scale-110 transition-transform" />
-                                                       <span className="hidden sm:inline">Genera</span>
-                                                   </Button>
-                                                   <Button 
-                                                       variant="ghost" 
-                                                       size="sm" 
-                                                       className="h-8 px-2 rounded-lg font-black uppercase tracking-widest text-[7px] flex items-center gap-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50 transition-all group/btn"
-                                                       onClick={(e) => { e.stopPropagation(); navigate(`/reports/client/${client.id}`); }}
-                                                   >
-                                                      <FileText className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
-                                                      <span className="hidden sm:inline">Report</span>
-                                                  </Button>
                                                   <Button 
                                                       variant="ghost" 
                                                       size="sm" 
