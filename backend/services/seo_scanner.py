@@ -104,8 +104,8 @@ class SEOScanner:
                     url = prop.get("url")
                     if not url: continue
                     
-                    # Check if task already exists for this URL to avoid duplicates
-                    exists = await db.autopilot_tasks.find_one({"url": url, "status": "pending"})
+                    # Check if task already exists (any status) to avoid duplicates/re-proposing rejected
+                    exists = await db.autopilot_tasks.find_one({"url": url, "status": {"$in": ["pending", "completed", "rejected"]}})
                     if not exists:
                         await db.autopilot_tasks.insert_one({
                             "id": str(uuid.uuid4()),
@@ -175,11 +175,11 @@ class SEOScanner:
                 
                 # Verify keys
                 if "source_url" in prop and "target_url" in prop:
-                    # Check if task already exists
+                    # Check if task already exists (any status)
                     exists = await db.autopilot_tasks.find_one({
                         "source_url": prop["source_url"], 
                         "target_url": prop["target_url"], 
-                        "status": "pending"
+                        "status": {"$in": ["pending", "completed", "rejected"]}
                     })
                     if not exists:
                         await db.autopilot_tasks.insert_one({
@@ -256,11 +256,11 @@ class SEOScanner:
                     loser_url = prop.get("loser_url")
                     if not winner_url or not loser_url: continue
                     
-                    # Check if task already exists
+                    # Check if task already exists (any status)
                     exists = await db.autopilot_tasks.find_one({
                         "winner_url": winner_url, 
                         "loser_url": loser_url, 
-                        "status": "pending"
+                        "status": {"$in": ["pending", "completed", "rejected"]}
                     })
                     if not exists:
                         await db.autopilot_tasks.insert_one({
@@ -328,11 +328,11 @@ class SEOScanner:
                     prop = json.loads(json_match.group(0))
                     if not isinstance(prop, dict): continue
                     
-                    # Check if task already exists
+                    # Check if task already exists (any status)
                     exists = await db.autopilot_tasks.find_one({
                         "url": kw_info.get("url"), 
                         "title": {"$regex": "Semantic Gap"}, 
-                        "status": "pending"
+                        "status": {"$in": ["pending", "completed", "rejected"]}
                     })
                     if not exists:
                         await db.autopilot_tasks.insert_one({
@@ -352,22 +352,31 @@ class SEOScanner:
     @classmethod
     async def evaluate_editorial_plan(cls, client):
         client_id = client["id"]
-        # Simple picker for now: pick the first task from editorial plan not already proposed
         plan = await db.editorial_plans.find_one({"client_id": client_id})
         if not plan or not plan.get("topics"):
             return
             
-        topic = plan["topics"][0]
-        exists = await db.autopilot_tasks.find_one({"title": {"$regex": topic["titolo"]}, "status": "pending"})
-        if not exists:
+        # Find the first topic not already in tasks (any status)
+        selected_topic = None
+        for topic in plan["topics"]:
+            exists = await db.autopilot_tasks.find_one({
+                "client_id": client_id,
+                "title": {"$regex": re.escape(topic["titolo"])},
+                "status": {"$in": ["pending", "completed", "rejected"]}
+            })
+            if not exists:
+                selected_topic = topic
+                break
+        
+        if selected_topic:
             await db.autopilot_tasks.insert_one({
                 "id": str(uuid.uuid4()),
                 "client_id": client_id,
                 "type": "NEW_CONTENT",
                 "status": "pending",
-                "title": f"Nuovo Contenuto: {topic['titolo']}",
-                "reason": f"Pianificato nel Piano Editoriale. Keyword: {topic.get('keyword')}",
-                "suggestion": f"Generazione articolo basata sull'outline: {topic.get('outline')[:100]}...",
-                "payload": topic, # Save the full topic object for later generation
+                "title": f"Nuovo Contenuto: {selected_topic['titolo']}",
+                "reason": f"Pianificato nel Piano Editoriale. Keyword: {selected_topic.get('keyword')}",
+                "suggestion": f"Generazione articolo basata sull'outline: {selected_topic.get('outline', '')[:100]}...",
+                "payload": selected_topic,
                 "created_at": datetime.now(timezone.utc).isoformat()
             })

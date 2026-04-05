@@ -157,7 +157,13 @@ async def refuse_autopilot_task(task_id: str, current_user: dict = Depends(get_c
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Unauthorized")
     
-    await db.autopilot_tasks.delete_one({"id": task_id})
+    await db.autopilot_tasks.update_one(
+        {"id": task_id}, 
+        {"$set": {
+            "status": "rejected",
+            "rejected_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
     return {"status": "success"}
 
 @router.post("/autopilot/notifications/mark-seen")
