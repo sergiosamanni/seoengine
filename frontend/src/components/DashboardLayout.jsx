@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import {
-  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X, Globe, MapPin, BookOpen, Zap, MessageSquare, Mail
+  LayoutDashboard, LogOut, FileText, Users, Activity, Menu, X, Globe, MapPin, BookOpen, Zap, MessageSquare, Mail, PenTool
 } from 'lucide-react';
 import axios from 'axios';
 import { API_URL as API } from '../config';
