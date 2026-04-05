@@ -15,6 +15,48 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+// ErrorBoundary to catch and display rendering errors in the generator
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("Generator Runtime Error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-12 bg-red-50 border border-red-200 rounded-[2rem] text-center space-y-6 animate-in fade-in zoom-in duration-500">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto shadow-inner">
+            <AlertCircle className="w-10 h-10 text-red-600" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-red-900 tracking-tight">Ops! Errore di Rendering</h2>
+            <p className="text-red-600/80 text-sm max-w-md mx-auto font-medium">Si è verificato un errore critico durante il caricamento del generatore. I dati potrebbero essere malformati.</p>
+          </div>
+          <div className="p-6 bg-white/80 backdrop-blur rounded-2xl text-left border border-red-100 overflow-auto max-h-60 shadow-inner">
+            <p className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-2">Dettagli Errore:</p>
+            <code className="text-[11px] text-red-800 font-mono whitespace-pre-wrap break-all">{this.state.error?.toString()}</code>
+          </div>
+          <div className="flex justify-center gap-4 pt-4">
+            <Button onClick={() => window.location.reload()} variant="outline" className="rounded-xl px-8 border-red-200 text-red-700 hover:bg-red-100">
+              Ricarica Pagina
+            </Button>
+            <Button onClick={() => this.setState({ hasError: false, error: null })} variant="ghost" className="rounded-xl px-8 text-red-400 hover:text-red-600">
+              Riprova
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // Components
 import AdminGenerator from '../components/admin-workspace/AdminGenerator';
 import { ClientGenerator } from '../components/client-workspace/ClientGenerator';
@@ -47,22 +89,30 @@ export const GeneratorPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState('config');
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl) return tabFromUrl;
+    if (location.pathname.endsWith('/config')) return 'config';
+    if (location.pathname.endsWith('/gsc')) return 'gsc';
+    if (location.pathname.endsWith('/generate')) return 'generate';
+    return (isAdmin ? 'config' : 'generate');
+  });
+
+  const effectiveClientId = routeClientId || client?.id;
+
+  // Diagnostics
+  console.log("[GeneratorPage] State:", { activeTab, isAdmin, clientId: client?.id, effectiveClientId, routeClientId });
+
+  useEffect(() => {
+    if (routeClientId) fetchClient(routeClientId);
+  }, [routeClientId]);
 
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
-    if (tabFromUrl) {
+    if (tabFromUrl && tabFromUrl !== activeTab) {
       setActiveTab(tabFromUrl);
-    } else if (location.pathname.endsWith('/config')) {
-      setActiveTab('config');
-    } else if (location.pathname.endsWith('/gsc')) {
-      setActiveTab('gsc');
-    } else if (location.pathname.endsWith('/generate')) {
-      setActiveTab('generate');
-    } else {
-      setActiveTab('config');
     }
-  }, [location.pathname, searchParams]);
+  }, [searchParams]);
 
   // Configuration States
   const [wordpress, setWordpress] = useState({ url_api: '', utente: '', password_applicazione: '', stato_pubblicazione: 'draft' });
@@ -72,49 +122,6 @@ export const GeneratorPage = () => {
   const [tono, setTono] = useState({ registro: 'professionale_accessibile', persona_narrativa: 'seconda_singolare', descrizione_tono_libera: '', aggettivi_brand: [], parole_vietate: [], frasi_vietate: [] });
   const [knowledge, setKnowledge] = useState({ descrizione_attivita: '', storia_brand: '', citta_principale: '', regione: '', descrizione_geografica: '', punti_di_interesse_locali: [], punti_di_forza: [], pubblico_target_primario: '', pubblico_target_secondario: '', call_to_action_principale: '' });
   const [autopilot, setAutopilot] = useState({ enabled: false, frequency: 'weekly', strategy: 'editorial_plan_first', time_of_day: '09:00', auto_publish: true });
-
-  const [userClients, setUserClients] = useState([]);
-  const [currentClientId, setCurrentClientId] = useState(() => {
-    if (isAdmin) {
-      return routeClientId || localStorage.getItem('last_admin_client_id');
-    }
-    return user?.client_id;
-  });
-
-  // Persist last client ID for admins
-  useEffect(() => {
-    if (isAdmin && currentClientId) {
-      localStorage.setItem('last_admin_client_id', currentClientId);
-    }
-  }, [currentClientId, isAdmin]);
-
-  useEffect(() => {
-    if (isAdmin) {
-      setCurrentClientId(routeClientId);
-    }
-  }, [isAdmin, routeClientId]);
-
-  useEffect(() => {
-    if (!isAdmin && user?.client_ids?.length > 1) {
-      const fetchUserClients = async () => {
-        try {
-          const res = await axios.get(`${API}/clients`, { headers: getAuthHeaders() });
-          setUserClients(res.data);
-        } catch (e) {
-          console.error("Error fetching user clients", e);
-        }
-      };
-      fetchUserClients();
-    }
-  }, [isAdmin, user, getAuthHeaders]);
-
-  const effectiveClientId = currentClientId;
-
-  useEffect(() => {
-    if (effectiveClientId) {
-      fetchClient(effectiveClientId);
-    }
-  }, [effectiveClientId, fetchClient]);
 
   useEffect(() => {
     if (client) {
@@ -156,132 +163,112 @@ export const GeneratorPage = () => {
 
   if (!effectiveClientId) {
     return (
-      <div className="max-w-2xl mx-auto mt-20">
-        <Alert className="bg-amber-50 border-amber-200">
-          <AlertCircle className="h-5 w-5 text-amber-600" />
-          <AlertDescription className="text-amber-800 font-medium ml-2">
-            {isAdmin ? 'Seleziona un cliente dalla lista per iniziare a configurare il workspace.' : 'Nessun cliente associato al tuo account. Contatta l\'amministratore.'}
-          </AlertDescription>
-        </Alert>
+      <div className="max-w-4xl mx-auto py-20 px-6 text-center">
+        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+            <AlertCircle className="w-10 h-10 text-slate-200" />
+        </div>
+        <h1 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Client non trovato</h1>
+        <p className="text-slate-500 mb-8 max-w-sm mx-auto font-medium">Non è stato possibile identificare il cliente per questo workspace. Torna alla dashboard.</p>
+        <Button onClick={() => navigate('/dashboard')} className="rounded-[1.5rem] px-10 h-16 bg-slate-950 border-none shadow-2xl shadow-slate-300 font-bold uppercase tracking-widest text-xs">
+            Torna alla Dashboard
+        </Button>
       </div>
     );
   }
 
-  if (!client && !loading) {
-      return (
-        <div className="flex flex-col items-center justify-center h-64 space-y-4">
-            <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-            <p className="text-sm text-slate-500">Inizializzazione workspace...</p>
-        </div>
-      );
-  }
-
   return (
-    <div className="space-y-8 animate-fade-in max-w-5xl mx-auto pb-20">
-      {/* Header */}
-      <div className="hidden lg:flex items-center justify-between">
-        <div className="flex items-center gap-5">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} className="h-10 w-10 rounded-xl bg-white border border-[#f1f3f6] hover:bg-slate-50 shadow-sm">
-            <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-slate-900" />
+    <div className="space-y-8 animate-fade-in max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
+      {/* Enhanced Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[#f1f3f6]">
+        <div className="flex items-center gap-6">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} className="h-12 w-12 rounded-2xl bg-white border border-[#f1f3f6] hover:bg-slate-50 shadow-sm transition-all active:scale-95">
+            <ArrowLeft className="w-5 h-5 text-slate-400" />
           </Button>
           
-          <div className="flex items-center gap-4">
-            <div className="relative group">
-                <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-slate-200">
-                    {client?.nome?.charAt(0).toUpperCase() || 'C'}
-                </div>
-                {!isAdmin && user?.client_ids?.length > 1 && (
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
-                        <Globe className="w-3 h-3 text-white" />
-                    </div>
-                )}
+          <div className="flex items-center gap-5">
+            <div className="w-16 h-16 rounded-[2rem] bg-slate-950 flex items-center justify-center text-white font-black text-2xl shadow-2xl shadow-slate-200">
+                {client?.nome?.charAt(0).toUpperCase() || 'C'}
             </div>
-            <div className="leading-tight">
+            <div className="space-y-1">
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">{client?.nome}</h1>
                 <div className="flex items-center gap-2">
-                    <h1 className="text-xl font-bold text-slate-900 tracking-tight">{client?.nome}</h1>
-                    {!isAdmin && user?.client_ids?.length > 1 && (
-                        <select 
-                            value={effectiveClientId} 
-                            onChange={(e) => setCurrentClientId(e.target.value)}
-                            className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50/50 border-none rounded-lg px-2 py-1 outline-none cursor-pointer hover:bg-blue-100 transition-all"
-                        >
-                            {userClients.map(c => (
-                                <option key={c.id} value={c.id}>{c.nome}</option>
-                            ))}
-                        </select>
-                    )}
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black">{client?.sito_web?.replace('https://', '')?.replace('http://', '')}</p>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-[0.2em] font-bold">Workspace: {client?.sito_web?.replace('https://', '')?.replace('http://', '')}</p>
             </div>
           </div>
         </div>
         
         {(activeTab === 'config' || activeTab === 'autopilot') && (
             <div className="flex items-center gap-3">
-                <Button onClick={handleSaveConfig} disabled={saving} className="bg-slate-900 hover:bg-slate-800 h-10 rounded-xl px-6 text-xs font-bold uppercase tracking-widest shadow-xl shadow-slate-200 transition-all active:scale-95">
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                    Salva Modifiche
+                <Button onClick={handleSaveConfig} disabled={saving} className="bg-slate-950 hover:bg-slate-900 h-14 rounded-2xl px-10 text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-slate-200 transition-all active:scale-95">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-3" />}
+                    Salva Workspace
                 </Button>
             </div>
         )}
       </div>
 
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="hidden lg:flex w-full justify-start bg-transparent p-0 h-auto flex-wrap mb-10 border-b border-[#f1f3f6] rounded-none gap-6">
-          {isAdmin && (
-            <>
-              <TabsTrigger value="config" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all">
-                Configurazione Workspace
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
+            <TabsList className="bg-slate-100/50 p-1.5 rounded-2xl h-auto flex flex-wrap gap-1">
+              {isAdmin && (
+                <>
+                  <TabsTrigger value="config" className="px-6 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg text-[10px] font-black uppercase tracking-widest transition-all">
+                    Configurazione
+                  </TabsTrigger>
+                  <TabsTrigger value="gsc" className="px-6 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:text-sky-600 data-[state=active]:shadow-lg text-[10px] font-black uppercase tracking-widest transition-all">
+                    Search Console
+                  </TabsTrigger>
+                </>
+              )}
+              <TabsTrigger value="generate" className="px-6 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-lg text-[10px] font-black uppercase tracking-widest transition-all">
+                Genera Contenuti
               </TabsTrigger>
-              <TabsTrigger value="gsc" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all">
-                Dashboard Search Console
-              </TabsTrigger>
-            </>
-          )}
-          <TabsTrigger value="generate" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5">
-            <PenTool className="w-3.5 h-3.5" />
-            Genera Contenuti
-          </TabsTrigger>
 
-          {isAdmin && (
-            <>
-              <TabsTrigger value="autopilot" className="rounded-none py-4 px-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 data-[state=active]:text-slate-900 transition-all flex items-center gap-1.5 ">
-                <Zap className="w-3 h-3 text-emerald-500 fill-current" />
-                Autopilot
-              </TabsTrigger>
-            </>
-          )}
-        </TabsList>
+              {isAdmin && (
+                <TabsTrigger value="autopilot" className="px-6 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-lg text-[10px] font-black uppercase tracking-widest transition-all">
+                  Autopilot
+                </TabsTrigger>
+              )}
+            </TabsList>
 
-        <TabsContent value="config">
-            <div className="grid grid-cols-1 gap-8">
+            {isAdmin && (
+                <div className="flex items-center gap-3 px-5 py-2.5 bg-blue-50/50 border border-blue-100 rounded-2xl shadow-sm">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-600">Administrative Control Active</span>
+                </div>
+            )}
+        </div>
+
+        <TabsContent value="config" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="grid grid-cols-1">
                 <Tabs defaultValue="kb" className="w-full">
-                    <TabsList className="bg-slate-100/50 p-1 mb-8 rounded-2xl inline-flex h-auto">
-                        <TabsTrigger value="api" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">API Keys</TabsTrigger>
-                        <TabsTrigger value="kb" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">Knowledge Base</TabsTrigger>
-                        <TabsTrigger value="tono" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">Tono & Stile</TabsTrigger>
-                        <TabsTrigger value="seo" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">SEO Settings</TabsTrigger>
-                        <TabsTrigger value="wp" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">WordPress</TabsTrigger>
-                        <TabsTrigger value="gsc_setup" className="rounded-xl text-[10px] font-bold uppercase tracking-widest px-6 py-2">Google Link</TabsTrigger>
+                    <TabsList className="bg-slate-100/30 p-1.5 mb-10 rounded-2xl inline-flex h-auto gap-1 border border-slate-100">
+                        <TabsTrigger value="api" className="rounded-xl text-[9px] font-black uppercase tracking-widest px-6 py-2.5">API Keys</TabsTrigger>
+                        <TabsTrigger value="kb" className="rounded-xl text-[9px] font-black uppercase tracking-widest px-6 py-2.5">Knowledge Base</TabsTrigger>
+                        <TabsTrigger value="tono" className="rounded-xl text-[9px] font-black uppercase tracking-widest px-6 py-2.5">Tono & Stile</TabsTrigger>
+                        <TabsTrigger value="seo" className="rounded-xl text-[9px] font-black uppercase tracking-widest px-6 py-2.5">SEO Settings</TabsTrigger>
+                        <TabsTrigger value="wp" className="rounded-xl text-[9px] font-black uppercase tracking-widest px-6 py-2.5">WordPress</TabsTrigger>
+                        <TabsTrigger value="gsc_setup" className="rounded-xl text-[9px] font-black uppercase tracking-widest px-6 py-2.5">GSC Link</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="api" className="m-0 animate-in fade-in duration-300">
+                    <TabsContent value="api" className="animate-in fade-in duration-500">
                         <ApiKeysTab llm={llm} setLlm={setLlm} openai={openai} setOpenai={setOpenai} wordpress={wordpress} setWordpress={setWordpress} />
                     </TabsContent>
-
-                    <TabsContent value="kb" className="m-0 animate-in fade-in duration-300">
+                    <TabsContent value="kb" className="animate-in fade-in duration-500">
                         <KnowledgeBaseTab knowledge={knowledge} setKnowledge={setKnowledge} isAdmin={isAdmin} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
                     </TabsContent>
-                    <TabsContent value="tono" className="m-0 animate-in fade-in duration-300">
+                    <TabsContent value="tono" className="animate-in fade-in duration-500">
                         <ToneStyleTab tono={tono} setTono={setTono} />
                     </TabsContent>
-                    <TabsContent value="seo" className="m-0 animate-in fade-in duration-300">
+                    <TabsContent value="seo" className="animate-in fade-in duration-500">
                         <SEOSettingsTab seo={seo} setSeo={setSeo} />
                     </TabsContent>
-                    <TabsContent value="wp" className="m-0 animate-in fade-in duration-300">
+                    <TabsContent value="wp" className="animate-in fade-in duration-500">
                         <WordPressTab wordpress={wordpress} setWordpress={setWordpress} />
                     </TabsContent>
-                    <TabsContent value="gsc_setup" className="m-0 animate-in fade-in duration-300">
+                    <TabsContent value="gsc_setup" className="animate-in fade-in duration-500">
                         <GscConnectionTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} isAdmin={isAdmin} />
                     </TabsContent>
                 </Tabs>
@@ -289,30 +276,30 @@ export const GeneratorPage = () => {
         </TabsContent>
 
         <TabsContent value="gsc" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <GscDataTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} addToQueue={addToEditorialQueue} />
+            <ErrorBoundary>
+                <GscDataTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} addToQueue={addToEditorialQueue} />
+            </ErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="generate" className="mt-0 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {isAdmin ? (
-            <AdminGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
-          ) : (
-            <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
-          )}
-          <div className="pt-8 border-t border-[#f1f3f6]">
+        <TabsContent value="generate" className="mt-0 space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <ErrorBoundary>
+            {isAdmin ? (
+              <AdminGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
+            ) : (
+              <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
+            )}
+          </ErrorBoundary>
+          
+          <ErrorBoundary>
             <ArticleHistory effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
-          </div>
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="autopilot" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <AutopilotTab autopilot={autopilot} setAutopilot={setAutopilot} clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
-            <div className="mt-12 flex justify-center">
-                <Button onClick={handleSaveConfig} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 h-14 rounded-2xl px-12 text-xs font-bold uppercase tracking-widest shadow-2xl shadow-emerald-200 transition-all active:scale-95 group">
-                    {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />}
-                    Attiva / Salva Configurazione Autopilot
-                </Button>
-            </div>
+           <ErrorBoundary>
+                <AutopilotTab effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} addToQueueFromContext={addToQueueFromContext} />
+           </ErrorBoundary>
         </TabsContent>
-
       </Tabs>
     </div>
   );

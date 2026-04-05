@@ -23,6 +23,9 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
   const [serpData, setSerpData] = useState(null);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [clientNotes, setClientNotes] = useState('');
+
+  // Diagnostics
+  console.log("[ClientGenerator] Render:", { clientId: initialClient?.id, clientName: initialClient?.nome });
   const [result, setResult] = useState(null);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [uploading, setUploading] = useState(false);

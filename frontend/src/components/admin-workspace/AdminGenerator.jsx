@@ -39,6 +39,9 @@ const AdminGenerator = ({
     const [saving, setSaving] = useState(false);
     const [step, setStep] = useState(1);
 
+    // Diagnostics
+    console.log("[AdminGenerator] Render:", { effectiveClientId, genMode: externalMode || 'single', clientName: client?.nome });
+
     // Strategy state
     const [contentStrategy, setContentStrategy] = useState({
         funnel_stage: 'TOFU', obiettivo_primario: 'traffico', modello_copywriting: 'PAS',
@@ -201,32 +204,34 @@ const AdminGenerator = ({
     const clientConfig = client?.configuration || {};
     const allPlanTopics = React.useMemo(() => {
         const planItems = plan?.topics || [];
-        const queueItems = (client?.configuration?.editorial_queue || []).map(itemText => {
-            // Smart parsing
-            let title = itemText;
-            let kw = itemText;
-            if (itemText.includes('] ')) {
-                const parts = itemText.split('] ');
-                title = parts[1] || itemText;
-                if (title.includes(': ')) {
-                    const subParts = title.split(': ');
-                    title = subParts.slice(1).join(': ');
-                    kw = subParts[0] || title;
-                } else {
-                    kw = title;
+        const queueItems = (client?.configuration?.editorial_queue || [])
+            .filter(item => typeof item === 'string') // Safety check
+            .map(itemText => {
+                // Smart parsing
+                let title = itemText;
+                let kw = itemText;
+                if (itemText.includes('] ')) {
+                    const parts = itemText.split('] ');
+                    title = parts[1] || itemText;
+                    if (title.includes(': ')) {
+                        const subParts = title.split(': ');
+                        title = subParts.slice(1).join(': ');
+                        kw = subParts[0] || title;
+                    } else {
+                        kw = title;
+                    }
                 }
-            }
 
-            return {
-                titolo: title,
-                keyword: kw,
-                funnel: 'TOFU',
-                motivo: 'Priorità Audit AI (Freshness/GSC)',
-                isQueueItem: true,
-                topic: 'Contenuti Suggeriti dal Sistema',
-                originalText: itemText
-            };
-        });
+                return {
+                    titolo: title,
+                    keyword: kw,
+                    funnel: 'TOFU',
+                    motivo: 'Priorità Audit AI (Freshness/GSC)',
+                    isQueueItem: true,
+                    topic: 'Contenuti Suggeriti dal Sistema',
+                    originalText: itemText
+                };
+            });
         return [...planItems, ...queueItems];
     }, [plan, client?.configuration?.editorial_queue]);
     const llmConfig = clientConfig.llm || clientConfig.openai || {};

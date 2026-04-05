@@ -19,6 +19,9 @@ export const ArticleHistory = ({ effectiveClientId, getAuthHeaders }) => {
   const [open, setOpen] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [expandedContent, setExpandedContent] = useState(null);
+
+  // Diagnostics
+  console.log("[ArticleHistory] Render:", { effectiveClientId });
   
   // Deletion States
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
