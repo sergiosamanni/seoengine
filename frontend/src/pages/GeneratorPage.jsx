@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import axios from 'axios';
 import { API_URL as API } from '../config';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,22 +20,22 @@ import { toast } from 'sonner';
 import ErrorBoundary from '../components/ui/error-boundary';
 
 // Components
-import AdminGenerator from '../components/admin-workspace/AdminGenerator';
-import { ClientGenerator } from '../components/client-workspace/ClientGenerator';
-import { ArticleHistory } from '../components/client-workspace/ArticleHistory';
+const AdminGenerator = lazy(() => import('../components/admin-workspace/AdminGenerator').then(m => ({ default: m.AdminGenerator })));
+const ClientGenerator = lazy(() => import('../components/client-workspace/ClientGenerator').then(m => ({ default: m.ClientGenerator })));
+const ArticleHistory = lazy(() => import('../components/client-workspace/ArticleHistory').then(m => ({ default: m.ArticleHistory })));
 
 // Configuration Tabs
-import { ApiKeysTab } from './configuration/ApiKeysTab';
-import { KnowledgeBaseTab } from './configuration/KnowledgeBaseTab';
-import { ToneStyleTab } from './configuration/ToneStyleTab';
-import { SEOSettingsTab } from './configuration/SEOSettingsTab';
-import { KeywordsTab } from './configuration/KeywordsTab';
-import { WordPressTab } from './configuration/WordPressTab';
-import { ContentStrategyTab } from './configuration/ContentStrategyTab';
-import { AutopilotTab } from './configuration/AutopilotTab';
-import { GscConnectionTab } from './configuration/GscConnectionTab';
-import { GscDataTab } from './configuration/GscDataTab';
-import FreshnessTab from './client-workspace/FreshnessTab';
+const ApiKeysTab = lazy(() => import('./configuration/ApiKeysTab').then(m => ({ default: m.ApiKeysTab })));
+const KnowledgeBaseTab = lazy(() => import('./configuration/KnowledgeBaseTab').then(m => ({ default: m.KnowledgeBaseTab })));
+const ToneStyleTab = lazy(() => import('./configuration/ToneStyleTab').then(m => ({ default: m.ToneStyleTab })));
+const SEOSettingsTab = lazy(() => import('./configuration/SEOSettingsTab').then(m => ({ default: m.SEOSettingsTab })));
+const KeywordsTab = lazy(() => import('./configuration/KeywordsTab').then(m => ({ default: m.KeywordsTab })));
+const WordPressTab = lazy(() => import('./configuration/WordPressTab').then(m => ({ default: m.WordPressTab })));
+const ContentStrategyTab = lazy(() => import('./configuration/ContentStrategyTab').then(m => ({ default: m.ContentStrategyTab })));
+const AutopilotTab = lazy(() => import('./configuration/AutopilotTab').then(m => ({ default: m.AutopilotTab })));
+const GscConnectionTab = lazy(() => import('./configuration/GscConnectionTab').then(m => ({ default: m.GscConnectionTab })));
+const GscDataTab = lazy(() => import('./configuration/GscDataTab').then(m => ({ default: m.GscDataTab })));
+const FreshnessTab = lazy(() => import('./client-workspace/FreshnessTab'));
 
 
 
@@ -215,22 +216,34 @@ export const GeneratorPage = () => {
                     </TabsList>
 
                     <TabsContent value="api" className="animate-in fade-in duration-500">
-                        <ApiKeysTab llm={llm} setLlm={setLlm} openai={openai} setOpenai={setOpenai} wordpress={wordpress} setWordpress={setWordpress} />
+                        <Suspense fallback={<div className="p-4 text-xs animate-pulse">Loading API...</div>}>
+                            <ApiKeysTab llm={llm} setLlm={setLlm} openai={openai} setOpenai={setOpenai} wordpress={wordpress} setWordpress={setWordpress} />
+                        </Suspense>
                     </TabsContent>
                     <TabsContent value="kb" className="animate-in fade-in duration-500">
-                        <KnowledgeBaseTab knowledge={knowledge} setKnowledge={setKnowledge} isAdmin={isAdmin} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
+                        <Suspense fallback={<div className="p-4 text-xs animate-pulse">Loading KB...</div>}>
+                            <KnowledgeBaseTab knowledge={knowledge} setKnowledge={setKnowledge} isAdmin={isAdmin} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
+                        </Suspense>
                     </TabsContent>
                     <TabsContent value="tono" className="animate-in fade-in duration-500">
-                        <ToneStyleTab tono={tono} setTono={setTono} />
+                        <Suspense fallback={<div className="p-4 text-xs animate-pulse">Loading Tone...</div>}>
+                            <ToneStyleTab tono={tono} setTono={setTono} />
+                        </Suspense>
                     </TabsContent>
                     <TabsContent value="seo" className="animate-in fade-in duration-500">
-                        <SEOSettingsTab seo={seo} setSeo={setSeo} />
+                        <Suspense fallback={<div className="p-4 text-xs animate-pulse">Loading SEO...</div>}>
+                            <SEOSettingsTab seo={seo} setSeo={setSeo} />
+                        </Suspense>
                     </TabsContent>
                     <TabsContent value="wp" className="animate-in fade-in duration-500">
-                        <WordPressTab wordpress={wordpress} setWordpress={setWordpress} />
+                        <Suspense fallback={<div className="p-4 text-xs animate-pulse">Loading WP...</div>}>
+                            <WordPressTab wordpress={wordpress} setWordpress={setWordpress} />
+                        </Suspense>
                     </TabsContent>
                     <TabsContent value="gsc_setup" className="animate-in fade-in duration-500">
-                        <GscConnectionTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} isAdmin={isAdmin} />
+                        <Suspense fallback={<div className="p-4 text-xs animate-pulse">Loading GSC...</div>}>
+                            <GscConnectionTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} isAdmin={isAdmin} />
+                        </Suspense>
                     </TabsContent>
                 </Tabs>
             </div>
@@ -238,27 +251,35 @@ export const GeneratorPage = () => {
 
         <TabsContent value="gsc" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <ErrorBoundary>
-                <GscDataTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} addToQueue={addToEditorialQueue} />
+                <Suspense fallback={<div className="p-4 text-xs animate-pulse">Loading GSC Data...</div>}>
+                    <GscDataTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} addToQueue={addToEditorialQueue} />
+                </Suspense>
             </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="generate" className="mt-0 space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <ErrorBoundary>
-            {isAdmin ? (
-              <AdminGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
-            ) : (
-              <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
-            )}
+            <Suspense fallback={<div className="flex items-center justify-center p-12 text-slate-400 font-medium italic animate-pulse"><Loader2 className="w-5 h-5 mr-3 animate-spin" />Inizializzazione Generatore...</div>}>
+              {isAdmin ? (
+                <AdminGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
+              ) : (
+                <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
+              )}
+            </Suspense>
           </ErrorBoundary>
           
           <ErrorBoundary>
-            <ArticleHistory effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
+            <Suspense fallback={<div className="p-4 text-xs animate-pulse">Loading History...</div>}>
+                <ArticleHistory effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
+            </Suspense>
           </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="autopilot" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
            <ErrorBoundary>
-                <AutopilotTab effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} addToQueueFromContext={addToQueueFromContext} />
+                <Suspense fallback={<div className="p-4 text-xs animate-pulse">Loading Autopilot...</div>}>
+                    <AutopilotTab effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} addToQueueFromContext={addToQueueFromContext} />
+                </Suspense>
            </ErrorBoundary>
         </TabsContent>
       </Tabs>

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import * as React from 'react';
+import { useState, useEffect, useMemo, Fragment, useRef, Suspense, lazy } from 'react';
 import axios from 'axios';
 import config, { API_URL as API, BASE_URL } from '../../config';
 import {
@@ -25,55 +26,170 @@ import {
 import { toast } from 'sonner';
 import { Switch } from '../ui/switch';
 
-import { ContentStrategyTab } from '../../pages/configuration/ContentStrategyTab';
-import { KeywordsTab } from '../../pages/configuration/KeywordsTab';
+const ContentStrategyTab = lazy(() => import('../../pages/configuration/ContentStrategyTab').then(m => ({ default: m.ContentStrategyTab })));
+const KeywordsTab = lazy(() => import('../../pages/configuration/KeywordsTab').then(m => ({ default: m.KeywordsTab })));
 
 
 
-const AdminGenerator = ({
+export function AdminGenerator({
     client, effectiveClientId, getAuthHeaders, navigate, externalMode, initialData, onDataUsed
-}) => {
+}) {
+    // 1. ALL HOOKS AND STATE AT THE TOP (TDZ SAFETY)
     const [automation, setAutomation] = useState({ enabled: false, articles_per_week: 1 });
     const [targetKeywords, setTargetKeywords] = useState([]);
     const [branding, setBranding] = useState({});
     const [saving, setSaving] = useState(false);
     const [step, setStep] = useState(1);
-
-    // Diagnostics
-    console.log("[AdminGenerator] Render:", { effectiveClientId, genMode: externalMode || 'single', clientName: client?.nome });
-
-    // Strategy state
     const [contentStrategy, setContentStrategy] = useState({
         funnel_stage: 'TOFU', obiettivo_primario: 'traffico', modello_copywriting: 'PAS',
         buyer_persona_nome: '', buyer_persona_descrizione: '', buyer_persona_obiezioni: '',
         cta_finale: '', search_intent: 'informazionale', leve_psicologiche: [],
         keyword_secondarie: [], keyword_lsi: [], lunghezza_target: 1500, note_speciali: ''
     });
-
-    // SERP state
     const [serpKeyword, setSerpKeyword] = useState('');
     const [serpLoading, setSerpLoading] = useState(false);
     const [serpData, setSerpData] = useState(null);
-
-    // GSC state
     const [gscData, setGscData] = useState(null);
     const [gscLoading, setGscLoading] = useState(false);
-
-    // Prompt state
     const [advancedPrompt, setAdvancedPrompt] = useState('');
     const [gscSite, setGscSite] = useState('');
-
-    // Generation state
     const [autoGenerateCover, setAutoGenerateCover] = useState(true);
     const [genMode, setGenMode] = useState(externalMode || 'single');
-    
+    const [singleTitle, setSingleTitle] = useState('');
+    const [singleKeywords, setSingleKeywords] = useState('');
+    const [singleObjective, setSingleObjective] = useState('');
+    const [singleGenerating, setSingleGenerating] = useState(false);
+    const [refiningObjective, setRefiningObjective] = useState(false);
+    const [singleResult, setSingleResult] = useState(null);
+    const [singleScheduledDate, setSingleScheduledDate] = useState('');
+    const [imageSource, setImageSource] = useState('ai'); 
+    const [imgSearchQuery, setImgSearchQuery] = useState("");
+    const [imgSearchResults, setImgSearchResults] = useState([]);
+    const [searchingImages, setSearchingImages] = useState(false);
+    const [singleSelectedImage, setSingleSelectedImage] = useState(null); 
+    const [siloClusters, setSiloClusters] = useState([]);
+    const [suggestingSilo, setSuggestingSilo] = useState(false);
+    const [selectedSiloClusters, setSelectedSiloClusters] = useState([]);
+    const [keywords, setKeywords] = useState({ servizi: [], citta_e_zone: [], tipi_o_qualificatori: [] });
+    const [combinations, setCombinations] = useState([]);
+    const [selectedCombinations, setSelectedCombinations] = useState([]);
+    const [generating, setGenerating] = useState(false);
+    const [results, setResults] = useState([]);
+    const [publishToWp, setPublishToWp] = useState(true);
+    const [progressPercent, setProgressPercent] = useState(0);
+    const [coverLoading, setCoverLoading] = useState({}); 
+    const [contentType, setContentType] = useState('articolo');
+    const [adminUploadedImages, setAdminUploadedImages] = useState([]);
+    const [adminUploading, setAdminUploading] = useState(false);
+    const [useSpintax, setUseSpintax] = useState(false);
+    const [programmaticTemplate, setProgrammaticTemplate] = useState('');
+    const [sidebarTemplate, setSidebarTemplate] = useState('');
+    const [ctaConfig, setCtaConfig] = useState({ enabled: true, text: 'Richiedi Preventivo', url: '', color: '#4f46e5' });
+    const [wizardStep, setWizardStep] = useState(1);
+    const [isArchitecting, setIsArchitecting] = useState(false);
+    const [webCorrelates, setWebCorrelates] = useState([]);
+    const [globalImages, setGlobalImages] = useState([]);
+    const [imageUploadLoading, setImageUploadLoading] = useState(false);
+    const [previewContent, setPreviewContent] = useState('');
+    const [internalLinkingEnabled, setInternalLinkingEnabled] = useState(true);
+    const [activeJobId, setActiveJobId] = useState(null);
+    const [totalInJob, setTotalInJob] = useState(0);
+    const [plan, setPlan] = useState(null);
+    const [planLoading, setPlanLoading] = useState(false);
+    const [planGenerating, setPlanGenerating] = useState(false);
+    const [newPlanKeyword, setNewPlanKeyword] = useState("");
+    const [numArticles, setNumArticles] = useState(10);
+    const [selectedPlanTopics, setSelectedPlanTopics] = useState([]);
+    const [showPlanSettings, setShowPlanSettings] = useState(false);
+    const [fullPreview, setFullPreview] = useState(null);
+    const [templateStyle, setTemplateStyle] = useState('modern_conversion');
+    const [refineFeedback, setRefineFeedback] = useState('');
+    const [refining, setRefining] = useState(false);
+    const [recentArticles, setRecentArticles] = useState([]);
+    const [activePlanImageIndex, setActivePlanImageIndex] = useState(null);
+    const [recentSidebarOpen, setRecentSidebarOpen] = useState(true);
+    const [expandedOutlines, setExpandedOutlines] = useState({});
+    const [deletingPlan, setDeletingPlan] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    // Diagnostics
+    console.log("[AdminGenerator] Render:", { effectiveClientId, genMode, clientName: client?.nome });
+
+    // useMemo AFTER useState
+    const allPlanTopics = useMemo(() => {
+        const planItems = plan?.topics || [];
+        const queueItems = (client?.configuration?.editorial_queue || [])
+            .filter(item => typeof item === 'string') 
+            .map(itemText => {
+                let title = itemText;
+                let kw = itemText;
+                if (itemText.includes('] ')) {
+                    const parts = itemText.split('] ');
+                    title = parts[1] || itemText;
+                    if (title.includes(': ')) {
+                        const subParts = title.split(': ');
+                        title = subParts.slice(1).join(': ');
+                        kw = subParts[0] || title;
+                    } else {
+                        kw = title;
+                    }
+                }
+                return {
+                    titolo: title,
+                    keyword: kw,
+                    funnel: 'TOFU',
+                    motivo: 'Priorità Audit AI (Freshness/GSC)',
+                    isQueueItem: true,
+                    topic: 'Contenuti Suggeriti dal Sistema',
+                    originalText: itemText
+                };
+            });
+        return [...planItems, ...queueItems];
+    }, [plan, client?.configuration?.editorial_queue]);
+
+    // Derived Constants
+    const clientConfig = client?.configuration || {};
+    const llmConfig = clientConfig.llm || clientConfig.openai || {};
+    const hasApiKey = !!(llmConfig.api_key || llmConfig.apiKey);
+    const wpConfig = clientConfig.wordpress || {};
+    const hasWpConfig = wpConfig.url_api && wpConfig.utente && wpConfig.password_applicazione;
+    const gscConnected = client?.configuration?.gsc?.connected || false;
+
+    // 2. HELPER FUNCTIONS (USE function DECLARATIONS FOR HOISTING SAFETY)
+    async function fetchRecentArticles() {
+        if (!effectiveClientId) return;
+        try {
+            const res = await axios.get(`${API}/articles?client_id=${effectiveClientId}`, { headers: getAuthHeaders() });
+            setRecentArticles(res.data.slice(0, 50));
+        } catch (error) {
+            console.error("Error fetching recent articles:", error);
+        }
+    }
+
+    async function fetchPlan() {
+        if (!effectiveClientId) return;
+        setPlanLoading(true);
+        try {
+            const res = await axios.get(`${API}/editorial-plan/${effectiveClientId}`, {
+                headers: getAuthHeaders()
+            });
+            setPlan(res.data || null); 
+        } catch (error) {
+            console.error("Error fetching editorial plan:", error);
+            setPlan(null);
+        } finally {
+            setPlanLoading(false);
+        }
+    }
+
+
+    // 3. MAIN LOGIC AND EFFECTS
     useEffect(() => {
         if (externalMode && ['single', 'plan', 'programmatic'].includes(externalMode)) {
             setGenMode(externalMode);
         }
     }, [externalMode]);
 
-    // Persistence Logic: Load on mount
     useEffect(() => {
         if (effectiveClientId) {
             // Global mode/step persistence
@@ -105,14 +221,12 @@ const AdminGenerator = ({
                         setActiveJobId(data.activeJobId);
                         setTotalInJob(data.totalInJob || 0);
                         setGenerating(true);
-                        // Results and progress will be fetched by the job polling effect
                     }
                 } catch (e) { console.error("Error loading saved prog state", e); }
             }
         }
     }, [effectiveClientId]);
 
-    // Persistence Logic: Save Global State (genMode & step)
     useEffect(() => {
         if (effectiveClientId) {
             const globalState = { genMode, step };
@@ -120,7 +234,6 @@ const AdminGenerator = ({
         }
     }, [genMode, step, effectiveClientId]);
 
-    // Persistence Logic: Save Programmatic State
     useEffect(() => {
         if (effectiveClientId && genMode === 'programmatic') {
             const stateToSave = {
@@ -131,114 +244,6 @@ const AdminGenerator = ({
             localStorage.setItem(`prog_seo_state_${effectiveClientId}`, JSON.stringify(stateToSave));
         }
     }, [keywords, wizardStep, programmaticTemplate, sidebarTemplate, ctaConfig, templateStyle, internalLinkingEnabled, globalImages, webCorrelates, activeJobId, totalInJob, effectiveClientId, genMode]);
-
-    const [singleTitle, setSingleTitle] = useState('');
-    const [singleKeywords, setSingleKeywords] = useState('');
-    const [singleObjective, setSingleObjective] = useState('');
-    const [singleGenerating, setSingleGenerating] = useState(false);
-    const [refiningObjective, setRefiningObjective] = useState(false);
-    const [singleResult, setSingleResult] = useState(null);
-    const [singleScheduledDate, setSingleScheduledDate] = useState('');
-
-    // Image Source State for Single Generate
-    const [imageSource, setImageSource] = useState('ai'); // 'ai', 'upload', 'search'
-    const [imgSearchQuery, setImgSearchQuery] = useState("");
-    const [imgSearchResults, setImgSearchResults] = useState([]);
-    const [searchingImages, setSearchingImages] = useState(false);
-    const [singleSelectedImage, setSingleSelectedImage] = useState(null); // { id, url }
-    
-    // Silo State
-    const [siloClusters, setSiloClusters] = useState([]);
-    const [suggestingSilo, setSuggestingSilo] = useState(false);
-    const [selectedSiloClusters, setSelectedSiloClusters] = useState([]);
-
-    // Programmatic state
-    const [keywords, setKeywords] = useState({ servizi: [], citta_e_zone: [], tipi_o_qualificatori: [] });
-    const [combinations, setCombinations] = useState([]);
-    const [selectedCombinations, setSelectedCombinations] = useState([]);
-    const [generating, setGenerating] = useState(false);
-    const [results, setResults] = useState([]);
-    const [publishToWp, setPublishToWp] = useState(true);
-    const [progressPercent, setProgressPercent] = useState(0);
-    const [coverLoading, setCoverLoading] = useState({}); // { article_id: boolean }
-    const [contentType, setContentType] = useState('articolo');
-    const [adminUploadedImages, setAdminUploadedImages] = useState([]);
-    const [adminUploading, setAdminUploading] = useState(false);
-    const [useSpintax, setUseSpintax] = useState(false);
-    const [programmaticTemplate, setProgrammaticTemplate] = useState('');
-    const [sidebarTemplate, setSidebarTemplate] = useState('');
-    const [ctaConfig, setCtaConfig] = useState({ enabled: true, text: 'Richiedi Preventivo', url: '', color: '#4f46e5' });
-    
-    // Premium Wizard States
-    const [wizardStep, setWizardStep] = useState(1);
-    const [isArchitecting, setIsArchitecting] = useState(false);
-    const [webCorrelates, setWebCorrelates] = useState([]);
-    const [globalImages, setGlobalImages] = useState([]);
-    const [imageUploadLoading, setImageUploadLoading] = useState(false);
-    const [previewContent, setPreviewContent] = useState('');
-    const [internalLinkingEnabled, setInternalLinkingEnabled] = useState(true);
-
-    const [activeJobId, setActiveJobId] = useState(null);
-    const [totalInJob, setTotalInJob] = useState(0);
-
-
-    // Editorial Plan states
-    const [plan, setPlan] = useState(null);
-    const [planLoading, setPlanLoading] = useState(false);
-    const [planGenerating, setPlanGenerating] = useState(false);
-    const [newPlanKeyword, setNewPlanKeyword] = useState("");
-    const [numArticles, setNumArticles] = useState(10);
-    const [selectedPlanTopics, setSelectedPlanTopics] = useState([]);
-    const [showPlanSettings, setShowPlanSettings] = useState(false);
-    const [fullPreview, setFullPreview] = useState(null);
-    const [templateStyle, setTemplateStyle] = useState('modern_conversion');
-    const [refineFeedback, setRefineFeedback] = useState('');
-    const [refining, setRefining] = useState(false);
-    const [recentArticles, setRecentArticles] = useState([]);
-    const [activePlanImageIndex, setActivePlanImageIndex] = useState(null);
-    const [recentSidebarOpen, setRecentSidebarOpen] = useState(true);
-    const [expandedOutlines, setExpandedOutlines] = useState({});
-    const [deletingPlan, setDeletingPlan] = useState(false);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-    const clientConfig = client?.configuration || {};
-    const allPlanTopics = useMemo(() => {
-        const planItems = plan?.topics || [];
-        const queueItems = (client?.configuration?.editorial_queue || [])
-            .filter(item => typeof item === 'string') // Safety check
-            .map(itemText => {
-                // Smart parsing
-                let title = itemText;
-                let kw = itemText;
-                if (itemText.includes('] ')) {
-                    const parts = itemText.split('] ');
-                    title = parts[1] || itemText;
-                    if (title.includes(': ')) {
-                        const subParts = title.split(': ');
-                        title = subParts.slice(1).join(': ');
-                        kw = subParts[0] || title;
-                    } else {
-                        kw = title;
-                    }
-                }
-
-                return {
-                    titolo: title,
-                    keyword: kw,
-                    funnel: 'TOFU',
-                    motivo: 'Priorità Audit AI (Freshness/GSC)',
-                    isQueueItem: true,
-                    topic: 'Contenuti Suggeriti dal Sistema',
-                    originalText: itemText
-                };
-            });
-        return [...planItems, ...queueItems];
-    }, [plan, client?.configuration?.editorial_queue]);
-    const llmConfig = clientConfig.llm || clientConfig.openai || {};
-    const hasApiKey = !!(llmConfig.api_key || llmConfig.apiKey);
-    const wpConfig = clientConfig.wordpress || {};
-    const hasWpConfig = wpConfig.url_api && wpConfig.utente && wpConfig.password_applicazione;
-    const gscConnected = client?.configuration?.gsc?.connected || false;
 
     useEffect(() => {
         if (!effectiveClientId) {
@@ -272,7 +277,7 @@ const AdminGenerator = ({
     }, [imageSource, imgSearchQuery]);
 
 
-    const handleSuggestSilo = async () => {
+    async function handleSuggestSilo() {
         if (!singleObjective) {
             toast.error("Inserisci prima l'obiettivo della Pillar Page");
             return;
@@ -284,7 +289,7 @@ const AdminGenerator = ({
                 clientId: effectiveClientId 
             }, { headers: getAuthHeaders() });
             setSiloClusters(data.clusters || []);
-            setSelectedSiloClusters(data.clusters || []); // All selected by default
+            setSelectedSiloClusters(data.clusters || []); 
             toast.success("Strategia Silo generata con successo!");
         } catch (err) {
             console.error("Silo suggestion error:", err);
@@ -292,17 +297,17 @@ const AdminGenerator = ({
         } finally {
             setSuggestingSilo(false);
         }
-    };
+    }
 
-    const toggleSiloCluster = (cluster) => {
+    function toggleSiloCluster(cluster) {
         setSelectedSiloClusters(prev => 
             prev.find(c => c.titolo === cluster.titolo)
             ? prev.filter(c => c.titolo !== cluster.titolo)
             : [...prev, cluster]
         );
-    };
+    }
 
-    const handleGenerateSilo = async () => {
+    async function handleGenerateSilo() {
         if (!singleObjective) return;
         if (selectedSiloClusters.length === 0) {
             toast.error("Seleziona almeno un cluster di supporto");
@@ -328,53 +333,27 @@ const AdminGenerator = ({
             }, { headers: getAuthHeaders() });
             
             toast.success(`Batch Silo avviato! ${selectedSiloClusters.length + 1} articoli in coda.`);
-            setStep(1); // Return to list/dashboard
+            setStep(1); 
         } catch (err) {
             console.error("Silo batch error:", err);
             toast.error("Errore avvio generazione Silo");
         } finally {
             setGenerating(false);
         }
-    };
+    }
 
-    const fetchRecentArticles = async () => {
-        if (!effectiveClientId) return;
-        try {
-            const res = await axios.get(`${API}/articles?client_id=${effectiveClientId}`, { headers: getAuthHeaders() });
-            setRecentArticles(res.data.slice(0, 50));
-        } catch (error) {
-            console.error("Error fetching recent articles:", error);
-        }
-    };
-
-    const fetchPlan = async () => {
-        if (!effectiveClientId) return;
-        setPlanLoading(true);
-        try {
-            const res = await axios.get(`${API}/editorial-plan/${effectiveClientId}`, {
-                headers: getAuthHeaders()
-            });
-            setPlan(res.data || null); // Ensure null if empty to clear previous client data
-        } catch (error) {
-            console.error("Error fetching editorial plan:", error);
-            setPlan(null);
-        } finally {
-            setPlanLoading(false);
-        }
-    };
-
-    const loadFullPreview = async (id) => {
+    async function loadFullPreview(id) {
         try {
             const res = await axios.get(`${API}/articles/${id}/full`, { headers: getAuthHeaders() });
             setFullPreview(res.data);
         } catch (e) {
             toast.error('Errore caricamento anteprima');
         }
-    };
+    }
 
-    const generateNewPlan = async () => {
+    async function generateNewPlan() {
         setPlanGenerating(true);
-        setResults([]); // Reset results when generating new strategy
+        setResults([]); 
         try {
             const res = await axios.post(`${API}/generate-plan/${effectiveClientId}`, {
                 objective: advancedPrompt,
@@ -390,13 +369,13 @@ const AdminGenerator = ({
         } finally {
             setPlanGenerating(false);
         }
-    };
+    }
 
-    const handleDeletePlan = () => {
+    function handleDeletePlan() {
         setShowDeleteConfirm(true);
-    };
+    }
 
-    const confirmDeletePlan = async () => {
+    async function confirmDeletePlan() {
         setDeletingPlan(true);
         try {
             await axios.delete(`${API}/editorial-plan/${effectiveClientId}`, { headers: getAuthHeaders() });
@@ -412,7 +391,7 @@ const AdminGenerator = ({
         }
     };
 
-    const handleSavePlan = async () => {
+    async function handleSavePlan() {
         if (!effectiveClientId || !plan) return;
         setSaving(true);
         try {
@@ -494,7 +473,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
         }
     }, [step, genMode, contentStrategy, advancedPrompt, client]);
 
-    const handleImproveObjective = async () => {
+    async function handleImproveObjective() {
         if (!effectiveClientId) return;
         setRefiningObjective(true);
         try {
@@ -542,7 +521,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
         setAdminUploadedImages(prev => { const c = [...prev]; URL.revokeObjectURL(c[idx].preview); c.splice(idx, 1); return c; });
     };
 
-    const runSerpAnalysis = async () => {
+    async function runSerpAnalysis() {
         if (!serpKeyword.trim()) { toast.error('Inserisci una keyword'); return; }
         setSerpLoading(true);
         try {
@@ -557,7 +536,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
         } finally { setSerpLoading(false); }
     };
 
-    const loadGscData = async () => {
+    async function loadGscData() {
         setGscLoading(true);
         try {
             const res = await axios.get(`${API}/clients/${effectiveClientId}/gsc-data?days=28`, { headers: getAuthHeaders() });
@@ -805,7 +784,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
         }
     };
 
-    const handleRefine = async () => {
+    async function handleRefine() {
         if (!refineFeedback.trim()) {
             toast.error('Inserisci un feedback per l\'agente');
             return;
@@ -992,7 +971,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
         }
     };
 
-    const handleProgrammaticGenerate = async () => {
+    async function handleProgrammaticGenerate() {
         if (selectedCombinations.length === 0) { toast.error('Seleziona almeno una combinazione'); return; }
         setGenerating(true); setResults([]); setProgressPercent(0);
         await saveConfig();
@@ -1024,7 +1003,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
         }
     };
 
-    const handleBatchPlanGenerate = async () => {
+    async function handleBatchPlanGenerate() {
         if (selectedPlanTopics.length === 0) { toast.error('Seleziona almeno un articolo'); return; }
         setGenerating(true); setResults([]); setProgressPercent(0);
 
@@ -1186,7 +1165,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                     const isActive = step === s.num;
                     const isDone = s.done && !isActive;
                     return (
-                        <React.Fragment key={s.num}>
+                        <Fragment key={s.num}>
                             <button
                                 onClick={() => setStep(s.num)}
                                 className={`flex items-center gap-3 px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-300 whitespace-nowrap ${
@@ -1206,7 +1185,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                 <span className="tracking-widest">{s.label}</span>
                             </button>
                             {i < steps.length - 1 && <div className="w-4 h-px bg-slate-100 flex-shrink-0 mx-1" />}
-                        </React.Fragment>
+                        </Fragment>
                     );
                 })}
             </div>
@@ -1215,7 +1194,9 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
             {(genMode === 'single' || genMode === 'pillar') && step === 1 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="bg-white border border-[#f1f3f6] rounded-[2rem] p-1 shadow-xl shadow-slate-100/50">
-                        <ContentStrategyTab strategy={contentStrategy} setStrategy={setContentStrategy} />
+                        <Suspense fallback={<div className="p-8 text-center text-xs animate-pulse">Caricamento Strategia...</div>}>
+                            <ContentStrategyTab strategy={contentStrategy} setStrategy={setContentStrategy} />
+                        </Suspense>
                     </div>
                     <div className="flex justify-end p-2">
                         <Button 
@@ -1709,7 +1690,9 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                 {wizardStep === 1 && (
                                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                         <div className="grid grid-cols-1 gap-6">
-                                            <KeywordsTab keywords={keywords} setKeywords={setKeywords} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
+                                                <Suspense fallback={<div className="p-8 text-center text-xs animate-pulse text-indigo-400">Architettore Keyword AI...</div>}>
+                                                    <KeywordsTab keywords={keywords} setKeywords={setKeywords} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
+                                                </Suspense>
                                         </div>
                                         <div className="flex justify-end p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
                                             <Button 
@@ -2602,6 +2585,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                     )}
         </div>
     );
-};
+}
 
-export default AdminGenerator;
+// End of AdminGenerator function
+

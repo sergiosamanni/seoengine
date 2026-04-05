@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import axios from 'axios';
 import { API_URL as API } from '../../config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';

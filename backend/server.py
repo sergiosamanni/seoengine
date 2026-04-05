@@ -37,11 +37,11 @@ from routes.reddit import router as reddit_router
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"] if os.environ.get("ENVIRONMENT") == "development" else [
+    allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",") if os.environ.get("ENVIRONMENT") == "development" else [
         "https://seoengine-eta.vercel.app", 
         "https://seoengine-dashboard.vercel.app",
         "http://localhost:3000",
-        "http://127.0.0.1:3000"
+        "http://127.0.0.1:3000",
     ],
     allow_origin_regex=r"https://.*\.vercel\.app", # This is the magic line
     allow_methods=["*"],
