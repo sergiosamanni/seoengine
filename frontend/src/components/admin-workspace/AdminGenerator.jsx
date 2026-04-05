@@ -20,7 +20,7 @@ import {
     PenTool, ChevronRight, Sparkles, ImagePlus, X, Camera, Image as ImageIcon,
     Calendar, BrainCircuit, RefreshCcw, Info, AlertTriangle, Plus,
     ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, Save, History, ListPlus, MousePointerClick, FileCode,
-    Library, Check, Layers, ArrowRight, ArrowLeft
+    Library, Check, Layers, ArrowRight, ArrowLeft, RotateCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '../ui/switch';
@@ -69,6 +69,46 @@ const AdminGenerator = ({
         }
     }, [externalMode]);
 
+    // Persistence Logic: Load on mount
+    useEffect(() => {
+        if (effectiveClientId) {
+            const saved = localStorage.getItem(`prog_seo_state_${effectiveClientId}`);
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    if (data.keywords) setKeywords(data.keywords);
+                    if (data.wizardStep) setWizardStep(data.wizardStep);
+                    if (data.programmaticTemplate) setProgrammaticTemplate(data.programmaticTemplate);
+                    if (data.sidebarTemplate) setSidebarTemplate(data.sidebarTemplate);
+                    if (data.ctaConfig) setCtaConfig(data.ctaConfig);
+                    if (data.templateStyle) setTemplateStyle(data.templateStyle);
+                    if (data.internalLinkingEnabled !== undefined) setInternalLinkingEnabled(data.internalLinkingEnabled);
+                    if (data.globalImages) setGlobalImages(data.globalImages);
+                    if (data.webCorrelates) setWebCorrelates(data.webCorrelates);
+                    
+                    if (data.activeJobId) {
+                        setActiveJobId(data.activeJobId);
+                        setTotalInJob(data.totalInJob || 0);
+                        setGenerating(true);
+                        // Results and progress will be fetched by the job polling effect
+                    }
+                } catch (e) { console.error("Error loading saved state", e); }
+            }
+        }
+    }, [effectiveClientId]);
+
+    // Persistence Logic: Save on change (Wizard state)
+    useEffect(() => {
+        if (effectiveClientId && genMode === 'programmatic') {
+            const stateToSave = {
+                keywords, wizardStep, programmaticTemplate, sidebarTemplate, 
+                ctaConfig, templateStyle, internalLinkingEnabled, 
+                globalImages, webCorrelates, activeJobId, totalInJob
+            };
+            localStorage.setItem(`prog_seo_state_${effectiveClientId}`, JSON.stringify(stateToSave));
+        }
+    }, [keywords, wizardStep, programmaticTemplate, sidebarTemplate, ctaConfig, templateStyle, internalLinkingEnabled, globalImages, webCorrelates, activeJobId, totalInJob, effectiveClientId, genMode]);
+
     const [singleTitle, setSingleTitle] = useState('');
     const [singleKeywords, setSingleKeywords] = useState('');
     const [singleObjective, setSingleObjective] = useState('');
@@ -114,6 +154,9 @@ const AdminGenerator = ({
     const [imageUploadLoading, setImageUploadLoading] = useState(false);
     const [previewContent, setPreviewContent] = useState('');
     const [internalLinkingEnabled, setInternalLinkingEnabled] = useState(true);
+
+    const [activeJobId, setActiveJobId] = useState(null);
+    const [totalInJob, setTotalInJob] = useState(0);
 
 
     // Editorial Plan states
@@ -854,11 +897,67 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
         }
     };
 
+    // Resumable Polling Effect
+    useEffect(() => {
+        let isStopped = false;
+        const poll = async () => {
+            if (!activeJobId || !generating || isStopped) return;
+            try {
+                const jr = await axios.get(`${API}/jobs/${activeJobId}`, { headers: getAuthHeaders() });
+                setResults(jr.data.results || []);
+                const total = totalInJob || jr.data.total || 1;
+                setProgressPercent(Math.round((jr.data.completed / total) * 100));
+                
+                if (jr.data.status === 'completed' || jr.data.status === 'failed') {
+                    const s = jr.data.summary || {};
+                    if (jr.data.status === 'completed') {
+                        if ((s.generated_ok || 0) === 0) {
+                            toast.error(`Generazione terminata senza successo.`);
+                        } else {
+                            toast.success(`Completato: ${s.generated_ok || 0} generate`);
+                        }
+                    }
+                    setGenerating(false);
+                    setActiveJobId(null);
+                    setTotalInJob(0);
+                    return;
+                }
+                if (!isStopped) setTimeout(poll, 4000);
+            } catch (e) { 
+                console.error("Polling error", e);
+                if (!isStopped) setTimeout(poll, 5000); 
+            }
+        };
+
+        if (activeJobId && generating) {
+            poll();
+        }
+
+        return () => { isStopped = true; };
+    }, [activeJobId, generating, totalInJob]);
+
+    const handleResetProgrammatic = () => {
+        if (window.confirm("Vuoi resettare la sessione corrente? Perderai il template e i dati inseriti nel wizard.")) {
+            localStorage.removeItem(`prog_seo_state_${effectiveClientId}`);
+            setKeywords({ servizi: [], citta_e_zone: [], tipi_o_qualificatori: [] });
+            setWizardStep(1);
+            setProgrammaticTemplate('');
+            setSidebarTemplate('');
+            setPreviewContent('');
+            setGlobalImages([]);
+            setWebCorrelates([]);
+            setResults([]);
+            setProgressPercent(0);
+            setGenerating(false);
+            setActiveJobId(null);
+            toast.info("Sessione resettata");
+        }
+    };
+
     const handleProgrammaticGenerate = async () => {
         if (selectedCombinations.length === 0) { toast.error('Seleziona almeno una combinazione'); return; }
         setGenerating(true); setResults([]); setProgressPercent(0);
         await saveConfig();
-        // In modalità 'programmatic' (sotto Pagine) genera landing page, altrimenti articoli
         const effectiveContentType = genMode === 'programmatic' ? 'landing_page' : contentType;
         try {
             const res = await axios.post(`${API}/articles/generate-and-publish`, {
@@ -871,31 +970,19 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 generate_cover: autoGenerateCover,
                 template_style: genMode === 'programmatic' ? templateStyle : undefined
             }, { headers: getAuthHeaders() });
+            
             const jobId = res.data.job_id;
             const total = res.data.total;
+            setActiveJobId(jobId);
+            setTotalInJob(total);
+            
             const label = genMode === 'programmatic' ? 'pagine' : 'articoli';
             toast.info(`Job avviato: ${total} ${label} in elaborazione...`);
-            const poll = async () => {
-                try {
-                    const jr = await axios.get(`${API}/jobs/${jobId}`, { headers: getAuthHeaders() });
-                    setResults(jr.data.results || []);
-                    setProgressPercent(Math.round((jr.data.completed / total) * 100));
-                    if (jr.data.status === 'completed') {
-                        const s = jr.data.summary || {};
-                        if ((s.generated_ok || 0) === 0) {
-                            toast.error(`Generazione terminata senza successo: 0 pagine create.`);
-                        } else {
-                            toast.success(`Completato: ${s.generated_ok || 0} generate, ${s.published_ok || 0} pubblicate`);
-                        }
-                        setSelectedCombinations([]); setGenerating(false); return;
-                    }
-                    setTimeout(poll, 4000);
-                } catch (e) { setTimeout(poll, 5000); }
-            };
-            setTimeout(poll, 5000);
+            // The useEffect takes over polling
         } catch (error) {
             toast.error(error.response?.data?.detail || 'Errore generazione');
             setGenerating(false);
+            setActiveJobId(null);
         }
     };
 
@@ -1547,6 +1634,17 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                                 <Badge className="bg-indigo-100 text-indigo-700 border-none text-[10px]">v2.0</Badge>
                                             </h2>
                                             <p className="text-xs text-slate-500 font-medium">Generazione bulk ad alto impatto con intelligenza semantica</p>
+                                        </div>
+                                        <div className="ml-4">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={handleResetProgrammatic}
+                                                className="text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl h-9 px-3 text-[10px] font-bold group transition-all"
+                                            >
+                                                <RotateCcw className="w-3.5 h-3.5 mr-2 group-hover:rotate-[-120deg] transition-transform" />
+                                                NUOVA SESSIONE
+                                            </Button>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
