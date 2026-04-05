@@ -627,27 +627,28 @@ async def serp_images(request: dict, current_user: dict = Depends(get_current_us
         results = []
         try:
             with DDGS(headers={"User-Agent": _random.choice(ua_list)}) as ddgs:
+                # Primary search using it-it to get more relevant local results
                 results = list(ddgs.images(
                     keywords=keyword,
-                    region="wt-wt",
+                    region="it-it",
                     safesearch="moderate",
                     size="Large",
                     max_results=max_results + 5
                 ))
         except Exception as ddg_err:
-            logger.warning(f"Primary DDG image search failed: {ddg_err}. Trying fallback...")
-            # Fallback: Try a different region or just catch it as empty
+            logger.warning(f"Primary DDG image search failed (it-it): {ddg_err}. Trying global (wt-wt)...")
             try:
-                # Different region might bypass some IP-based blocks temporarily
+                # Global fallback
                 with DDGS(headers={"User-Agent": _random.choice(ua_list)}) as ddgs:
                     results = list(ddgs.images(
                         keywords=keyword,
-                        region="it-it",
+                        region="wt-wt",
                         safesearch="moderate",
                         max_results=max_results + 5
                     ))
             except Exception as e2:
-                logger.error(f"Fallback DDG image search also failed: {e2}")
+                logger.error(f"Global DDG image search also failed: {e2}")
+                results = []
                 results = []
 
         if not results:
@@ -922,12 +923,36 @@ async def generate_editorial_plan(client_id: str, req: PlanRequest = None, curre
         objective=objective_with_context
     )
 
+    # Fetch stock images for the plan topics concurrently to improve UX
+    async def fetch_one_image(session, topic_obj):
+        kw = topic_obj.get("keyword") or topic_obj.get("titolo")
+        if not kw: return
+        try:
+            # Note: ddgs.images is synchronous, so we run in executor or just keep it simple if not many
+            results = list(session.images(keywords=kw, max_results=1, safesearch="moderate", region="it-it"))
+            if results:
+                topic_obj["stock_image_url"] = results[0]["image"]
+                topic_obj["stock_image_thumb"] = results[0]["thumbnail"]
+        except:
+            pass
+
+    # Process first 15 topics to avoid massive latency
+    from duckduckgo_search import DDGS
+    import asyncio
     
-    # Optimized: Skip sequential stock image fetching during plan generation to prevent timeouts.
-    # Images will be fetched during actual article generation/publication.
-    for topic in topics:
-        topic["stock_image_url"] = ""
-        topic["stock_image_thumb"] = ""
+    # We use a single session for all requests
+    with DDGS() as ddgs:
+        # Since DDGS is sync, we run them sequentially but very fast for max_results=1
+        # Or we could use threads, but for 15 requests it's usually fast enough (< 5s)
+        for t in topics[:15]:
+            kw = t.get("keyword") or t.get("titolo")
+            if not kw: continue
+            try:
+                res = list(ddgs.images(keywords=kw, max_results=1, region="it-it"))
+                if res:
+                    t["stock_image_url"] = res[0]["image"]
+                    t["stock_image_thumb"] = res[0]["thumbnail"]
+            except: pass
     
     plan_doc = {
         "client_id": client_id,

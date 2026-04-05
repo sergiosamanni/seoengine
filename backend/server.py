@@ -13,6 +13,12 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="SEO Antigravity AI Engine")
 
+@app.get("/api/debug/tasks")
+async def debug_tasks():
+    from database import db
+    tasks = await db.autopilot_tasks.find({}, {"_id": 0}).sort("created_at", -1).limit(20).to_list(20)
+    return tasks
+
 from routes.auth_users import router as auth_router
 from routes.clients import router as clients_router
 from routes.articles import router as articles_router

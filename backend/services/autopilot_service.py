@@ -142,10 +142,24 @@ class AutopilotService:
             if not wp_user or not wp_pass or not wp_url:
                 raise ValueError("Credenziali WordPress mancanti")
 
-            # Make sure we have the base API URL correctly formatted
-            if not wp_url.endswith("/wp-json/wp/v2/posts"):
-                if wp_url.endswith("/"): wp_url = wp_url[:-1]
-                wp_url = f"{wp_url}/wp-json/wp/v2/posts"
+            # Ensure we have a valid WordPress API base URL
+            if not wp_url:
+                wp_url = f"{client.get('url', '').rstrip('/')}/wp-json"
+            
+            # If the URL doesn't contain wp-json, it's likely just the site root
+            if "/wp-json" not in wp_url:
+                wp_url = f"{wp_url.rstrip('/')}/wp-json"
+            
+            # Normalize to include the v2 prefix if missing
+            if "/wp/v2" not in wp_url:
+                wp_url = f"{wp_url.rstrip('/')}/wp/v2"
+            
+            # Ensure it doesn't end with a plural type (update_wordpress_post handles that)
+            for suffix in ["/posts", "/pages", "/"]:
+                if wp_url.endswith(suffix):
+                    wp_url = wp_url[:-len(suffix)]
+            
+            logger.info(f"Using normalized WP API base: {wp_url}")
                 
             if task_type == "INTERNAL_LINKING":
                 source_url = task.get("source_url")
@@ -217,8 +231,26 @@ class AutopilotService:
         task_title = task.get('title', 'N/D') if isinstance(task, dict) else str(task)
         task_suggestion = task.get('suggestion', 'N/D') if isinstance(task, dict) else 'N/D'
 
+        # Determine the landing URL to show in the email
+        landing_url = ""
+        if success:
+            if task_type == "INTERNAL_LINKING":
+                landing_url = task.get("source_url", "")
+            else:
+                landing_url = task.get("url", "") or task.get("target_url", "")
+
+        link_html = ""
+        if success and landing_url:
+            link_html = f"""
+            <div style="margin-top:20px;text-align:center;">
+                <a href="{landing_url}" style="background-color:#4f46e5;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;">
+                    Visualizza Modifica Online &rarr;
+                </a>
+            </div>
+            """
+
         html_body = f"""
-        <div style="font-family:sans-serif;color:#333;">
+        <div style="font-family:sans-serif;color:#333;max-width:600px;margin:auto;border:1px solid #e2e8f0;padding:25px;border-radius:12px;">
             <h2 style="color:{'#059669' if success else '#dc2626'};margin-bottom:10px;">{'✅' if success else '❌'} Esecuzione Diretta CMS: {task_type}</h2>
             <p>A seguito della tua approvazione, SEOEngine ha eseguito l'azione strategica sul sistema WordPress del cliente <b>{client_name}</b>.</p>
             
@@ -231,6 +263,8 @@ class AutopilotService:
             <p style="background:{'#ecfdf5' if success else '#fef2f2'};padding:15px;border:1px solid {'#d1fae5' if success else '#fee2e2'};color:{'#065f46' if success else '#991b1b'};border-radius:8px;font-size:14px;line-height:1.6;white-space:pre-wrap;">
                 {execution_detail}
             </p>
+
+            {link_html}
         </div>
         """
         
