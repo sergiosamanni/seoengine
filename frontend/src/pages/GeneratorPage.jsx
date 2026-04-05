@@ -17,8 +17,8 @@ import { toast } from 'sonner';
 
 // Components
 import AdminGenerator from '../components/admin-workspace/AdminGenerator';
-import ClientGenerator from '../components/client-workspace/ClientGenerator';
-import ArticleHistory from '../components/client-workspace/ArticleHistory';
+import { ClientGenerator } from '../components/client-workspace/ClientGenerator';
+import { ArticleHistory } from '../components/client-workspace/ArticleHistory';
 
 // Configuration Tabs
 import { ApiKeysTab } from './configuration/ApiKeysTab';
