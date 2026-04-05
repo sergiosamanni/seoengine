@@ -2145,22 +2145,30 @@ async def generate_ai_master_spintax(topic: str, correlates: List[str], llm_conf
     The 'Architect': generates a massive Spintax template incorporating correlates and SEO/GEO rules.
     """
     correlates_str = ", ".join(correlates)
-    sys_prompt = "Sei un Programmatic SEO Architect. Scrivi un template in formato SPINTAX {A|B|C} lungo e dettagliato."
-    user_prompt = f"""Crea un template SPINTAX per il servizio '{topic}'.
-    REGOLE:
-    1. Usa i placeholder [[SERVIZIO]] e [[CITTA]] ovunque possa servire (almeno 10-15 volte).
-    2. Integra naturalmente queste CORRELATE: {correlates_str}.
-    3. Segui regole SEO/GEO (menziona quartieri generici, vicinanza a punti di interesse).
-    4. Il testo deve essere di almeno 1000 parole totali (considerando le varianti).
-    5. Usa HTML per la struttura (p, h2, h3, ul).
-    RESTITUISCI SOLO IL CODICE SPINTAX."""
+    sys_prompt = "Sei un Senior Programmatic SEO Architect specializzato in Landing Page ad alta conversione."
+    user_prompt = f"""Crea un template SPINTAX {{{{A|B|C}}}} magistrale per il servizio '{topic}'.
+    
+    ### REGOLE MANDATORIE DI VARIABILIZZAZIONE:
+    1. **MAI** scrivere nomi di città reali (es. Milano, Roma). Usa **SEMPRE** il placeholder [[CITTA]].
+    2. **MAI** scrivere il nome del servizio specifico in modo fisso. Usa **SEMPRE** [[SERVIZIO]].
+    3. Usa il placeholder [[TIPO]] per varianti di qualifica (es. "Economico", "Professionale", "Pronto Intervento").
+    4. Qualunque riferimento a luoghi (quartieri, zone, punti di interesse) deve essere generico o espresso tramite variabili.
+    
+    ### STRUTTURA E CONTENUTO:
+    1. Lunghezza: Almeno 1200 parole (considerando tutte le varianti spintax).
+    2. Integrazione Correlate: Inserisci naturalmente: {correlates_str}.
+    3. Formattazione: Usa HTML semantico (H2, H3, P, UL/LI).
+    4. Tone of Voice: Professionale, persuasivo e orientato alla conversione.
+    5. Distribuzione: Inserisci i placeholder [[SERVIZIO]] e [[CITTA]] almeno 15-20 volte ciascuno.
+    
+    RESTITUISCI SOLO IL CODICE SPINTAX COMPLETO."""
     
     try:
         from helpers import generate_with_rotation
         return await generate_with_rotation(llm_config, sys_prompt, user_prompt)
     except Exception as e:
         logger.error(f"Error generating AI master spintax: {e}")
-        return f"{{Errore generazione template: {str(e)}}}"
+        return f"{{{{Errore generazione template: {str(e)}}}}}"
 
 def distribute_global_images(html: str, image_urls: List[str]) -> str:
     """

@@ -1029,6 +1029,7 @@ async def programmatic_preview(req: ProgrammaticPreviewRequest, current_user: di
         # Replace placeholders
         content = content.replace("[[SERVIZIO]]", req.item.get("servizio", "Servizio"))
         content = content.replace("[[CITTA]]", req.item.get("citta", "Città"))
+        content = content.replace("[[TIPO]]", req.item.get("tipo", "Premium"))
         
         # Distribute images
         if req.global_images:

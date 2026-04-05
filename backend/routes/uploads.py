@@ -3,13 +3,12 @@ import uuid
 import jwt
 import os
 from datetime import datetime, timezone
-from fastapi import APIRouter, UploadFile, File, HTTPException, Response, Query
+from fastapi import APIRouter, UploadFile, File, HTTPException, Response, Query, Form, Depends
 from database import db
 from storage import put_object, get_object, ALLOWED_EXTENSIONS, MAX_FILE_SIZE, APP_NAME
+from auth import JWT_SECRET, get_current_user
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
-
-from auth import JWT_SECRET
 
 
 def _decode_token(token: str) -> dict:
@@ -54,6 +53,54 @@ async def upload_image(file: UploadFile = File(...), token: str = Query(None)):
     await db.files.insert_one(doc)
 
     return {"id": file_id, "path": result["path"], "filename": file.filename, "size": len(data)}
+
+
+@router.post("/article-image")
+async def upload_article_image(
+    file: UploadFile = File(...),
+    client_id: str = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    # Standard check for file extensions
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Formato non supportato. Usa: {', '.join(ALLOWED_EXTENSIONS)}")
+
+    # Standard check for file size
+    data = await file.read()
+    if len(data) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File troppo grande. Max 5MB.")
+
+    file_id = str(uuid.uuid4())
+    user_id = current_user.get("user_id", "anonymous")
+    path = f"{APP_NAME}/uploads/{user_id}/{file_id}.{ext}"
+    content_type = file.content_type or f"image/{ext}"
+
+    # Storage upload
+    result = put_object(path, data, content_type)
+
+    # Database recording
+    doc = {
+        "id": file_id,
+        "storage_path": result["path"],
+        "original_filename": file.filename,
+        "content_type": content_type,
+        "size": len(data),
+        "user_id": user_id,
+        "client_id": client_id,
+        "is_deleted": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.files.insert_one(doc)
+
+    # Return URL for easy frontend use
+    return {
+        "id": file_id, 
+        "url": f"/api/uploads/files/{file_id}", 
+        "path": result["path"], 
+        "filename": file.filename, 
+        "size": len(data)
+    }
 
 
 @router.get("/files/{file_id}")

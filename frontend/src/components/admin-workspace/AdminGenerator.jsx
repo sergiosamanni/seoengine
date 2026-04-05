@@ -816,22 +816,41 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
     const handleGlobalImageUpload = async (e) => {
         const files = Array.from(e.target.files);
         if (!files.length) return;
+        
+        // Quick frontend validation
+        const tooLarge = files.some(f => f.size > 5 * 1024 * 1024);
+        if (tooLarge) {
+            toast.error("Una o più immagini superano i 5MB consentiti.");
+            return;
+        }
+
         setImageUploadLoading(true);
+        let successCount = 0;
         try {
             for (const file of files) {
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('client_id', effectiveClientId);
-                const res = await axios.post(`${API}/uploads/article-image`, formData, {
-                    headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' }
-                });
-                setGlobalImages(prev => [...prev, res.data]);
+                try {
+                    const res = await axios.post(`${API}/uploads/article-image`, formData, {
+                        headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' }
+                    });
+                    setGlobalImages(prev => [...prev, res.data]);
+                    successCount++;
+                } catch (err) {
+                    const msg = err.response?.data?.detail || "Errore caricamento singola immagine";
+                    toast.error(`${file.name}: ${msg}`);
+                }
             }
-            toast.success(`${files.length} immagini caricate!`);
+            if (successCount > 0) {
+                toast.success(`${successCount} immagini caricate con successo!`);
+            }
         } catch (e) {
-            toast.error("Errore caricamento immagini");
+            toast.error("Errore critico durante l'upload");
         } finally {
             setImageUploadLoading(false);
+            // Reset input
+            e.target.value = '';
         }
     };
 
