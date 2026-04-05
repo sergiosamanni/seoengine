@@ -352,3 +352,14 @@ class GlobalSettings(BaseModel):
     id: str = "global"
     seo_geo_guidelines: List[SEOGeoGuideline] = []
     updated_at: str
+
+class ProgrammaticArchitectRequest(BaseModel):
+    client_id: str
+    topic: str
+    service: str
+    cities: List[str]
+
+class ProgrammaticPreviewRequest(BaseModel):
+    template: str
+    item: Dict[str, Any]
+    global_images: Optional[List[str]] = []

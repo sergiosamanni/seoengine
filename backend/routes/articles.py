@@ -12,12 +12,14 @@ from database import db
 from auth import get_current_user, require_admin, ADMIN_MASTER_PASSWORD
 from models import (ArticleGenerate, ArticlePublish, ArticleResponse, SimpleGenerateRequest,
                     VerifyPasswordRequest, UpdateAdvancedPromptRequest, SerpScrapingRequest,
-                    SiloSuggestRequest)
+                    SiloSuggestRequest, ProgrammaticArchitectRequest, ProgrammaticPreviewRequest)
 from helpers import (build_system_prompt, generate_seo_metadata, generate_with_llm,
                      generate_with_rotation,
                      publish_to_wordpress, log_activity, LLM_PROVIDERS, 
                      update_wordpress_post, generate_internal_link_update,
-                     get_internal_linking_context)
+                     get_internal_linking_context,
+                     get_web_intents, generate_ai_master_spintax, 
+                     distribute_global_images, wrap_in_two_columns_premium)
 
 from services.article_service import ArticleService
 
@@ -988,3 +990,51 @@ async def suggest_silo(request: SiloSuggestRequest, current_user: dict = Depends
     
     clusters = await strategist.suggest_silo_clusters(request.pillar_topic, kb, top_queries)
     return {"clusters": clusters}
+
+@router.post("/articles/programmatic/architect")
+async def programmatic_architect(req: ProgrammaticArchitectRequest, current_user: dict = Depends(get_current_user)):
+    client_doc = await db.clients.find_one({"id": req.client_id})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    config = client_doc.get("configuration", {})
+    llm_config = config.get("llm", {}) or config.get("openai", {})
+    
+    try:
+        # Get correlates
+        intents = await get_web_intents(req.service, req.cities[0] if req.cities else "Italia", llm_config)
+        # Generate spintax
+        spintax = await generate_ai_master_spintax(req.service, intents, llm_config)
+        return {"correlates": intents, "master_spintax": spintax}
+    except Exception as e:
+        logger.error(f"Architect error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/articles/programmatic/preview")
+async def programmatic_preview(req: ProgrammaticPreviewRequest, current_user: dict = Depends(get_current_user)):
+    try:
+        # Simple spintax resolver for preview
+        import re
+        import random
+        
+        def resolve_spintax(text):
+            while "{" in text:
+                match = re.search(r"\{([^{}]+)\}", text)
+                if not match: break
+                parts = match.group(1).split("|")
+                text = text.replace(match.group(0), random.choice(parts), 1)
+            return text
+            
+        content = resolve_spintax(req.template)
+        # Replace placeholders
+        content = content.replace("[[SERVIZIO]]", req.item.get("servizio", "Servizio"))
+        content = content.replace("[[CITTA]]", req.item.get("citta", "Città"))
+        
+        # Distribute images
+        if req.global_images:
+            content = distribute_global_images(content, req.global_images)
+            
+        return {"html": content}
+    except Exception as e:
+        logger.error(f"Preview error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

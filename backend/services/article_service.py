@@ -7,7 +7,10 @@ from database import db
 from helpers import (
     build_system_prompt, generate_seo_metadata, generate_with_rotation,
     publish_to_wordpress, log_activity, get_internal_linking_context,
-    generate_internal_link_update, update_wordpress_post
+    generate_internal_link_update, update_wordpress_post,
+    process_programmatic_content, wrap_in_two_columns, generate_wp_button,
+    get_web_intents, generate_ai_master_spintax, distribute_global_images, 
+    wrap_in_two_columns_premium
 )
 import google.oauth2.credentials
 from googleapiclient.discovery import build
@@ -163,7 +166,71 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                     gen_error = str(e)
                     if attempt < 2: await asyncio.sleep(2 ** attempt)
 
+            # --- PROGRAMMATIC SEO PREMIUM ENHANCEMENTS ---
+            prog_config = config.get("programmatic", {})
+            is_programmatic = not is_topic_based and prog_config.get("use_spintax")
+            
+            # Prepare internal linking pool if programmatic
+            prog_links = []
+            if is_programmatic and prog_config.get("internal_linking"):
+                # We can't know absolute URLs perfectly before publication, 
+                # but we can provide titles and potential slugs for cross-batch linking.
+                # For now, let's use a subset of the batch items.
+                batch_others = [it for it in items if it != item]
+                random.shuffle(batch_others)
+                prog_links = batch_others[:3]
+
+            if is_programmatic:
+                master_template = prog_config.get("template", "")
+                sidebar_template = prog_config.get("sidebar_template", "")
+                cta_config = prog_config.get("cta", {})
+                global_images = prog_config.get("global_images", [])
+                
+                if master_template:
+                    # 1. Process Master Content
+                    main_content = process_programmatic_content(master_template, item)
+                    
+                    # 2. Process Sidebar (optional)
+                    sidebar_content = ""
+                    if sidebar_template:
+                        sidebar_content = process_programmatic_content(sidebar_template, item)
+                    
+                    # 3. Generate CTA Button
+                    cta_button = ""
+                    if cta_config.get("enabled"):
+                        cta_button = generate_wp_button(
+                            cta_config.get("text", "Contattaci"),
+                            cta_config.get("url", "#"),
+                            cta_config.get("color", "#1e293b")
+                        )
+                    
+                    # 4. Inject Internal Links (Natural insertion at the end)
+                    if prog_links:
+                        links_html = "\n\n<!-- wp:paragraph -->\n<p><strong>Potrebbe interessarti anche:</strong> "
+                        links_html += ", ".join([f"<u>{it['titolo']}</u>" for it in prog_links]) # Dummy links for now as we don't have final URLs
+                        links_html += "</p>\n<!-- /wp:paragraph -->"
+                        main_content += links_html
+
+                    # 5. Distribute Global Images
+                    if global_images:
+                        main_content = distribute_global_images(main_content, global_images)
+
+                    # 6. Assemble Layout
+                    if sidebar_content:
+                        content = wrap_in_two_columns_premium(main_content, sidebar_content)
+                    else:
+                        from helpers import convert_to_gutenberg_blocks
+                        content = convert_to_gutenberg_blocks(main_content)
+                    
+                    # 7. Append CTA
+                    if cta_button:
+                        content += f"\n\n{cta_button}"
+                    
+                    gen_error = None # clear any AI errors if we used template
+            # ------------------------------------
+
             article_id = str(uuid.uuid4())
+
             now = datetime.now(timezone.utc).isoformat()
             res_item = {"id": article_id, "titolo": titolo, "generation_status": "pending", "publish_status": "pending"}
 

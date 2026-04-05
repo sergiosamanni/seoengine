@@ -19,8 +19,8 @@ import {
     XCircle, Clock, Send, ExternalLink, Search, Lock, Target, BarChart3,
     PenTool, ChevronRight, Sparkles, ImagePlus, X, Camera, Image as ImageIcon,
     Calendar, BrainCircuit, RefreshCcw, Info, AlertTriangle, Plus,
-    ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, Save, History, ListPlus, MousePointerClick,
-    Library, Check, Layers
+    ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, Save, History, ListPlus, MousePointerClick, FileCode,
+    Library, Check, Layers, ArrowRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '../ui/switch';
@@ -101,7 +101,20 @@ const AdminGenerator = ({
     const [contentType, setContentType] = useState('articolo');
     const [adminUploadedImages, setAdminUploadedImages] = useState([]);
     const [adminUploading, setAdminUploading] = useState(false);
-    const [useSpintax, setUseSpintax] = useState(true);
+    const [useSpintax, setUseSpintax] = useState(false);
+    const [programmaticTemplate, setProgrammaticTemplate] = useState('');
+    const [sidebarTemplate, setSidebarTemplate] = useState('');
+    const [ctaConfig, setCtaConfig] = useState({ enabled: true, text: 'Richiedi Preventivo', url: '', color: '#4f46e5' });
+    
+    // Premium Wizard States
+    const [wizardStep, setWizardStep] = useState(1);
+    const [isArchitecting, setIsArchitecting] = useState(false);
+    const [webCorrelates, setWebCorrelates] = useState([]);
+    const [globalImages, setGlobalImages] = useState([]);
+    const [imageUploadLoading, setImageUploadLoading] = useState(false);
+    const [previewContent, setPreviewContent] = useState('');
+    const [internalLinkingEnabled, setInternalLinkingEnabled] = useState(true);
+
 
     // Editorial Plan states
     const [plan, setPlan] = useState(null);
@@ -164,6 +177,12 @@ const AdminGenerator = ({
         if (config.content_strategy) setContentStrategy(prev => ({ ...prev, ...config.content_strategy }));
         if (config.keyword_combinations) setKeywords(config.keyword_combinations);
         if (config.advanced_prompt?.secondo_livello_prompt) setAdvancedPrompt(config.advanced_prompt.secondo_livello_prompt);
+        if (config.programmatic) {
+            setUseSpintax(config.programmatic.use_spintax ?? true);
+            setProgrammaticTemplate(config.programmatic.template || "");
+            setSidebarTemplate(config.programmatic.sidebar_template || "");
+            if (config.programmatic.cta) setCtaConfig(prev => ({ ...prev, ...config.programmatic.cta }));
+        }
 
         fetchPlan();
         fetchRecentArticles();
@@ -632,7 +651,17 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 content_strategy: contentStrategy,
                 keyword_combinations: keywords,
                 editorial_queue: targetKeywords,
-                advanced_prompt: { ...config.advanced_prompt, secondo_livello_prompt: advancedPrompt }
+                advanced_prompt: { ...config.advanced_prompt, secondo_livello_prompt: advancedPrompt },
+                programmatic: {
+                    use_spintax: true,
+                    template: programmaticTemplate,
+                    sidebar_template: sidebarTemplate,
+                    cta: ctaConfig,
+                    global_images: globalImages.map(img => img.url || img.secure_url),
+                    internal_linking: internalLinkingEnabled
+                },
+                publish_to_wordpress: publishToWp,
+                content_type: contentType
             }, { headers: getAuthHeaders() });
         } catch (e) { /* silent */ }
     };
@@ -739,6 +768,72 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
     };
 
     const selectAll = () => setSelectedCombinations(selectedCombinations.length === combinations.length ? [] : [...combinations]);
+
+    const handleArchitectStep = async () => {
+        if (!keywords.servizi.length || !keywords.citta_e_zone.length) {
+            toast.error("Seleziona almeno un servizio e una città nello Step 1.");
+            return;
+        }
+        setIsArchitecting(true);
+        try {
+            const res = await axios.post(`${API}/articles/programmatic/architect`, {
+                client_id: effectiveClientId,
+                topic: keywords.servizi[0],
+                service: keywords.servizi[0],
+                cities: keywords.citta_e_zone
+            }, { headers: getAuthHeaders() });
+            
+            setWebCorrelates(res.data.correlates || []);
+            setProgrammaticTemplate(res.data.master_spintax || "");
+            setWizardStep(2);
+            toast.success("Architettura AI generata con successo!");
+        } catch (e) {
+            toast.error("Errore durante la generazione dell'architettura.");
+        } finally {
+            setIsArchitecting(false);
+        }
+    };
+
+    const handleGeneratePreview = async () => {
+        if (!programmaticTemplate) return;
+        try {
+            const randomItem = {
+                servizio: keywords.servizi[0] || "Servizio",
+                citta: keywords.citta_e_zone[0] || "Città",
+                keyword: (keywords.servizi[0] || "") + " " + (keywords.citta_e_zone[0] || "")
+            };
+            const res = await axios.post(`${API}/articles/programmatic/preview`, {
+                template: programmaticTemplate,
+                item: randomItem,
+                global_images: globalImages.map(img => img.url)
+            }, { headers: getAuthHeaders() });
+            setPreviewContent(res.data.html);
+        } catch (e) {
+            toast.error("Errore nell'anteprima");
+        }
+    };
+
+    const handleGlobalImageUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+        setImageUploadLoading(true);
+        try {
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('client_id', effectiveClientId);
+                const res = await axios.post(`${API}/uploads/article-image`, formData, {
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' }
+                });
+                setGlobalImages(prev => [...prev, res.data]);
+            }
+            toast.success(`${files.length} immagini caricate!`);
+        } catch (e) {
+            toast.error("Errore caricamento immagini");
+        } finally {
+            setImageUploadLoading(false);
+        }
+    };
 
     const handleProgrammaticGenerate = async () => {
         if (selectedCombinations.length === 0) { toast.error('Seleziona almeno una combinazione'); return; }
@@ -1419,125 +1514,292 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                     )}
 
                     {genMode === 'programmatic' && (
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 border-indigo-200 px-3 py-1 flex items-center gap-2">
-                                    <Sparkles className="w-3.5 h-3.5" />
-                                    SEO Programmatica Atttiva (Spintax Template)
-                                </Badge>
-                                <div className="h-px flex-1 bg-indigo-100" />
-                            </div>
-                            
-                            <KeywordsTab keywords={keywords} setKeywords={setKeywords} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
-                            
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                {/* Selezione combinazioni */}
-                                <Card className="border-slate-200 shadow-sm overflow-hidden flex flex-col h-[500px]">
-                                    <CardHeader className="bg-slate-50/50 border-b py-3 px-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <CardTitle className="text-sm font-bold">Varianti Generate</CardTitle>
-                                                <Badge variant="outline" className="text-[10px]">{combinations.length}</Badge>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <Button variant="ghost" size="xs" onClick={refreshCombinations} className="h-7 text-[10px]">
-                                                   <RefreshCcw className="w-3 h-3 mr-1" /> Ricarica
-                                                </Button>
-                                                <Button variant="outline" size="xs" onClick={selectAll} className="h-7 text-[10px]">Sel. Tutte</Button>
-                                            </div>
+                        <div className="space-y-6 flex flex-col">
+                            {/* Wizard Header / Stepper */}
+                            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm mb-4">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+                                            <Zap className="w-6 h-6 text-white" />
                                         </div>
-                                    </CardHeader>
-                                    <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
-                                        <ScrollArea className="flex-1 px-4 py-2">
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 py-2">
-                                                {combinations.map((combo, i) => {
-                                                    const key = `${combo.servizio}-${combo.citta}-${combo.tipo}`;
-                                                    const sel = selectedCombinations.find(c => `${c.servizio}-${c.citta}-${c.tipo}` === key);
-                                                    return (
-                                                        <div key={key} onClick={() => toggleCombo(combo)} className={`p-2 rounded-lg cursor-pointer flex items-center gap-2 border transition-all ${sel ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'hover:bg-slate-50 border-transparent'}`}>
-                                                            <Checkbox checked={!!sel} className="h-3.5 w-3.5" />
-                                                            <span className="text-[11px] font-medium truncate">{combo.titolo}</span>
-                                                        </div>
-                                                    );
-                                                })}
+                                        <div>
+                                            <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                                                SEO Programmatica Premium
+                                                <Badge className="bg-indigo-100 text-indigo-700 border-none text-[10px]">v2.0</Badge>
+                                            </h2>
+                                            <p className="text-xs text-slate-500 font-medium">Generazione bulk ad alto impatto con intelligenza semantica</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {[1, 2, 3, 4].map((step) => (
+                                            <div key={step} className="flex items-center">
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${wizardStep >= step ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-400'}`}>
+                                                    {step}
+                                                </div>
+                                                {step < 4 && <div className={`w-8 h-1 mx-1 rounded-full ${wizardStep > step ? 'bg-indigo-600' : 'bg-slate-100'}`} />}
                                             </div>
-                                        </ScrollArea>
-                                        
-                                        <div className="p-4 bg-slate-50 border-t mt-auto space-y-3">
-                                            <div className="flex items-center justify-between">
-                                               <div className="flex items-center gap-2">
-                                                  <Label className="text-xs font-semibold">Usa Spintax</Label>
-                                                  <Switch checked={useSpintax} onCheckedChange={setUseSpintax} scale={0.8} />
-                                               </div>
-                                               <span className="text-xs font-bold text-slate-600">{selectedCombinations.length} selezionate</span>
-                                            </div>
-                                            
-                                            {generating && <Progress value={progressPercent} className="h-1.5" />}
-                                            
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Step 1: Dati & Keyword */}
+                                {wizardStep === 1 && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                        <div className="grid grid-cols-1 gap-6">
+                                            <KeywordsTab keywords={keywords} setKeywords={setKeywords} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
+                                        </div>
+                                        <div className="flex justify-end p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
                                             <Button 
-                                                className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 shadow-lg" 
-                                                onClick={handleProgrammaticGenerate} 
-                                                disabled={generating || selectedCombinations.length === 0}
+                                                className="bg-indigo-600 hover:bg-indigo-700 px-8 h-12 rounded-xl font-bold shadow-lg shadow-indigo-100"
+                                                onClick={handleArchitectStep}
+                                                disabled={isArchitecting}
                                             >
-                                                {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
-                                                Avvia Generazione Bulk
+                                                {isArchitecting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                                                Configura Architettura AI
                                             </Button>
                                         </div>
-                                    </CardContent>
-                                </Card>
+                                    </div>
+                                )}
 
-                                {/* Risultati veloci */}
-                                <Card className="border-slate-200 shadow-sm overflow-hidden h-[500px]">
-                                    <CardHeader className="bg-slate-50/50 border-b py-3 px-4">
-                                        <CardTitle className="text-sm font-bold">Risultati in Coda</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="p-0 h-full">
-                                        <ScrollArea className="h-full px-4 py-2">
-                                            <div className="space-y-2 py-2">
-                                                {results.map((r, i) => (
-                                                    <div key={i} className="text-xs p-3 bg-white border border-slate-100 rounded-xl flex items-center justify-between gap-3 shadow-sm">
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="font-bold text-slate-800 truncate text-[11px]">{r.titolo}</p>
-                                                            <div className="flex items-center gap-2 mt-1">
-                                                                {r.generation_status === 'done' ? (
-                                                                     <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-none text-[9px] h-4">Pronto</Badge>
-                                                                ) : r.generation_status === 'running' ? (
-                                                                     <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-none text-[9px] h-4 animate-pulse">Running</Badge>
-                                                                ) : (
-                                                                     <Badge variant="outline" className="text-[9px] h-4">In coda</Badge>
-                                                                )}
-                                                                {r.publish_status === 'published' && <Badge className="bg-indigo-600 text-white text-[9px] h-4">Online</Badge>}
+                                {/* Step 2: AI Spintax Architect */}
+                                {wizardStep === 2 && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                            <div className="lg:col-span-8 space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="text-sm font-bold text-slate-800">Master Spintax Template (Generato da AI)</Label>
+                                                    <Button variant="ghost" size="sm" className="text-xs text-indigo-600" onClick={handleArchitectStep} disabled={isArchitecting}>
+                                                        <RefreshCcw className="w-3 h-3 mr-1" /> Rigenera
+                                                    </Button>
+                                                </div>
+                                                <Textarea 
+                                                    className="min-h-[400px] font-mono text-sm bg-slate-50 border-slate-200 focus:bg-white transition-colors p-6 rounded-2xl leading-relaxed"
+                                                    value={programmaticTemplate}
+                                                    onChange={(e) => setProgrammaticTemplate(e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="lg:col-span-4 space-y-4">
+                                                <Card className="border-indigo-100 bg-indigo-50/30 shadow-none rounded-2xl">
+                                                    <CardHeader className="py-4">
+                                                        <CardTitle className="text-xs font-black uppercase text-indigo-700 tracking-widest flex items-center gap-2">
+                                                            <Globe className="w-3.5 h-3.5" /> Correlate dal Web
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="px-4 pb-4">
+                                                        <div className="flex flex-wrap gap-2 text-xs">
+                                                            {webCorrelates.map((c, i) => (
+                                                                <Badge key={i} variant="secondary" className="bg-white border-indigo-200 text-indigo-700 px-3 py-1 text-[11px] font-medium shadow-sm">
+                                                                    {c}
+                                                                </Badge>
+                                                            ))}
+                                                            {webCorrelates.length === 0 && <p className="text-[10px] text-slate-400 italic">Nessun intento trovato...</p>}
+                                                        </div>
+                                                        <div className="mt-6 p-4 bg-white/60 rounded-xl border border-indigo-100 text-[10px] text-slate-500 leading-relaxed">
+                                                            L'AI ha incorporato questi intenti naturali nel testo per massimizzare la rilevanza semantica e GEO.
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+
+                                                <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl space-y-3">
+                                                    <h4 className="text-[11px] font-black text-orange-700 uppercase">Suggerimenti</h4>
+                                                    <ul className="text-[10px] text-orange-600 space-y-2 list-disc pl-4">
+                                                        <li>Usa [[CITTA]] per la località</li>
+                                                        <li>Usa [[SERVIZIO]] per il core service</li>
+                                                        <li>Controlla la chiusura delle parentesi per Spintax</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl">
+                                            <Button variant="ghost" onClick={() => setWizardStep(1)}>Indietro</Button>
+                                            <Button 
+                                                className="bg-indigo-600 hover:bg-indigo-700 px-8 h-12 rounded-xl font-bold shadow-lg shadow-indigo-100"
+                                                onClick={() => { setWizardStep(3); handleGeneratePreview(); }}
+                                            >
+                                                Scegli Design & Media <ArrowRight className="w-4 h-4 ml-2" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Step 3: Design & Media */}
+                                {wizardStep === 3 && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            {/* Design Controls */}
+                                            <div className="space-y-6">
+                                                <Card className="border-slate-200 shadow-sm overflow-hidden rounded-2xl">
+                                                    <CardHeader className="bg-slate-50/50 py-3 border-b">
+                                                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                                            <ImageIcon className="w-4 h-4 text-emerald-600" /> Immagini Globali (Batch)
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="p-4 space-y-4">
+                                                        <div className="grid grid-cols-4 gap-2">
+                                                            {globalImages.map((img, i) => (
+                                                                <div key={i} className="relative aspect-square rounded-lg border overflow-hidden group">
+                                                                    <img src={img.url || img.secure_url} className="w-full h-full object-cover" />
+                                                                    <button className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setGlobalImages(prev => prev.filter((_, idx) => idx !== i))}>
+                                                                        <X className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                            <label className="border-2 border-dashed border-slate-200 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors">
+                                                                {imageUploadLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-400" /> : <Plus className="w-6 h-6 text-slate-300" />}
+                                                                <span className="text-[8px] font-bold text-slate-400 mt-1">UPLOAD</span>
+                                                                <input type="file" className="hidden" multiple accept="image/*" onChange={handleGlobalImageUpload} />
+                                                            </label>
+                                                        </div>
+                                                        <p className="text-[10px] text-slate-500 italic">Queste immagini verranno distribuite omogeneamente in tutte le pagine del batch.</p>
+                                                    </CardContent>
+                                                </Card>
+
+                                                <Card className="border-slate-200 shadow-sm overflow-hidden rounded-2xl">
+                                                    <CardHeader className="bg-slate-50/50 py-3 border-b">
+                                                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                                            <MousePointerClick className="w-4 h-4 text-orange-600" /> Conversione & Strategia
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="p-4 space-y-6">
+                                                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                            <div className="space-y-0.5">
+                                                                <Label className="text-xs font-bold">Linking Interno Incrociato</Label>
+                                                                <p className="text-[9px] text-slate-500 italic">Collega 3 località casuali del batch per ogni pagina</p>
+                                                            </div>
+                                                            <Switch checked={internalLinkingEnabled} onCheckedChange={setInternalLinkingEnabled} />
+                                                        </div>
+                                                        
+                                                        <div className="space-y-3">
+                                                            <div className="flex items-center justify-between">
+                                                                <Label className="text-xs font-bold">Configurazione CTA</Label>
+                                                                <Switch checked={ctaConfig.enabled} onCheckedChange={(v) => setCtaConfig({...ctaConfig, enabled: v})} />
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <Input className="h-9 text-xs" placeholder="Testo Bottone" value={ctaConfig.text} onChange={(e) => setCtaConfig({...ctaConfig, text: e.target.value})} />
+                                                                <Input className="h-9 text-xs" placeholder="URL Destinazione" value={ctaConfig.url} onChange={(e) => setCtaConfig({...ctaConfig, url: e.target.value})} />
                                                             </div>
                                                         </div>
+                                                    </CardContent>
+                                                </Card>
+                                            </div>
+
+                                            {/* Live Preview */}
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                                                    <Eye className="w-3.5 h-3.5" /> Anteprima Real-Time (Testata su {keywords.citta_e_zone[0] || 'Città'})
+                                                </Label>
+                                                <div className="border border-slate-200 rounded-3xl overflow-hidden shadow-2xl h-[450px] bg-slate-50 relative">
+                                                    <ScrollArea className="h-full">
+                                                        <div className="p-6 bg-white prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: previewContent || '<p class="text-slate-400 text-center mt-20">Generazione anteprima...</p>' }} />
+                                                    </ScrollArea>
+                                                    <Button variant="outline" size="sm" className="absolute top-4 right-4 bg-white/80 backdrop-blur-sm rounded-full h-8 px-4 text-[10px] font-bold" onClick={handleGeneratePreview}>
+                                                        <RefreshCcw className="w-3 h-3 mr-2" /> Rimescola
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl">
+                                            <Button variant="ghost" onClick={() => setWizardStep(2)}>Indietro</Button>
+                                            <Button 
+                                                className="bg-indigo-600 hover:bg-indigo-700 px-8 h-12 rounded-xl font-bold shadow-lg shadow-indigo-100"
+                                                onClick={() => { setWizardStep(4); refreshCombinations(); }}
+                                            >
+                                                Verifica & Lancio <ArrowRight className="w-4 h-4 ml-2" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Step 4: Lancio Bulk */}
+                                {wizardStep === 4 && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            <Card className="border-slate-200 shadow-sm overflow-hidden flex flex-col h-[500px] rounded-3xl">
+                                                <CardHeader className="bg-slate-50/50 border-b py-4 px-6">
+                                                    <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
-                                                            {r.image_url && (
-                                                                <img src={r.image_url.startsWith('http') ? r.image_url : `${API.replace('/api', '')}${r.image_url}`} className="w-8 h-8 rounded-lg object-cover border border-slate-200" alt="img" />
-                                                            )}
-                                                            <Button
-                                                                size="icon"
-                                                                variant="ghost"
-                                                                className="h-8 w-8 hover:bg-slate-100"
-                                                                onClick={() => handleGenerateCover(r.id, r.titolo)}
-                                                                disabled={coverLoading[r.id]}
-                                                            >
-                                                                {coverLoading[r.id] ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
-                                                            </Button>
+                                                            <CardTitle className="text-sm font-bold">Combinazioni da Generare</CardTitle>
+                                                            <Badge variant="outline" className="text-[10px]">{combinations.length}</Badge>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <Button variant="ghost" size="xs" onClick={refreshCombinations} className="h-7 text-[10px]">Refresh</Button>
+                                                            <Button variant="outline" size="xs" onClick={selectAll} className="h-7 text-[10px]">{selectedCombinations.length === combinations.length ? 'Nessuna' : 'Tutte'}</Button>
                                                         </div>
                                                     </div>
-                                                ))}
-                                                {results.length === 0 && (
-                                                    <div className="h-full flex flex-col items-center justify-center opacity-40 mt-32">
-                                                        <FileText className="w-8 h-8 mb-2" />
-                                                        <p className="text-xs">Nessun contenuto generato</p>
+                                                </CardHeader>
+                                                <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
+                                                    <ScrollArea className="flex-1 p-6">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                            {combinations.map((combo, i) => {
+                                                                const key = `${combo.servizio}-${combo.citta}-${combo.tipo}`;
+                                                                const sel = selectedCombinations.find(c => `${c.servizio}-${c.citta}-${c.tipo}` === key);
+                                                                return (
+                                                                    <div key={key} onClick={() => toggleCombo(combo)} className={`p-3 rounded-xl cursor-pointer flex items-center gap-3 border transition-all ${sel ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'hover:bg-slate-50 border-slate-100'}`}>
+                                                                        <Checkbox checked={!!sel} className="h-4 w-4" />
+                                                                        <div className="min-w-0">
+                                                                            <p className="text-[11px] font-bold truncate leading-none uppercase tracking-tight">{combo.titolo}</p>
+                                                                            <p className="text-[9px] text-slate-400 mt-1">{combo.servizio} • {combo.citta}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </ScrollArea>
+                                                    <div className="p-6 bg-slate-50 border-t mt-auto">
+                                                        <div className="flex justify-between items-center mb-6">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Totale Selezionato</span>
+                                                                <span className="text-3xl font-black text-indigo-600 leading-none">{selectedCombinations.length} <span className="text-xs text-slate-400 font-normal">Pagine</span></span>
+                                                            </div>
+                                                            <Button 
+                                                                className="h-14 px-10 bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-100 rounded-2xl font-black text-lg group"
+                                                                onClick={handleProgrammaticGenerate}
+                                                                disabled={generating || selectedCombinations.length === 0}
+                                                            >
+                                                                {generating ? <Loader2 className="w-5 h-5 animate-spin mr-3" /> : <Zap className="w-5 h-5 mr-3 group-hover:scale-125 transition-transform" />}
+                                                                LANCIO BULK
+                                                            </Button>
+                                                        </div>
+                                                        {generating && <Progress value={progressPercent} className="h-2 bg-indigo-100" />}
                                                     </div>
-                                                )}
-                                            </div>
-                                        </ScrollArea>
-                                    </CardContent>
-                                </Card>
+                                                </CardContent>
+                                            </Card>
+
+                                            <Card className="border-slate-200 shadow-sm overflow-hidden flex flex-col h-[500px] rounded-3xl">
+                                                <CardHeader className="bg-slate-50/50 border-b py-4 px-6">
+                                                    <CardTitle className="text-sm font-bold">Stato Lavorazioni</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="p-0 flex-1 overflow-hidden bg-slate-50/20">
+                                                    <ScrollArea className="h-full p-6">
+                                                        <div className="space-y-2">
+                                                            {results.map((r, i) => (
+                                                                <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between gap-4">
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <h4 className="text-[11px] font-black text-slate-800 leading-none uppercase tracking-tight truncate">{r.titolo}</h4>
+                                                                        <div className="flex items-center gap-2 mt-2">
+                                                                            <Badge className={`text-[8px] h-3.5 border-none font-black ${r.generation_status === 'done' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600 animate-pulse'}`}>
+                                                                                {r.generation_status === 'done' ? 'PRONTO' : 'GENERAZIONE...'}
+                                                                            </Badge>
+                                                                            {r.publish_status === 'published' && <Badge className="bg-indigo-600 text-white text-[8px] h-3.5 border-none font-black">LIVE</Badge>}
+                                                                        </div>
+                                                                    </div>
+                                                                    <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl hover:bg-slate-50">
+                                                                        <Eye className="w-4 h-4 text-slate-400" />
+                                                                    </Button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </ScrollArea>
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
+
 
                     
                 </div>

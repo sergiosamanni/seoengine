@@ -6,14 +6,21 @@ import asyncio
 import httpx
 import json
 from datetime import datetime, timezone
+import random
 from typing import List, Optional, Dict, Any
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
 from database import db
 
 
 logger = logging.getLogger("server")
+
+def parse_spintax(text: str) -> str:
+    """Helper to parse spintax in content."""
+    from utils import spintax
+    return spintax.parse(text)
+
 
 
 # ============== HTML SANITIZATION & GUTENBERG ==============
@@ -151,6 +158,64 @@ def distribute_images_in_blocks(blocks_str: str, image_blocks: list) -> str:
         parts.insert(usable[pos_idx] + 1, img)
         
     return '\n\n'.join(parts)
+
+
+# ============== PROGRAMMATIC LAYOUT HELPERS ==============
+
+def generate_wp_button(text: str, url: str, color: str = "#1e293b", align: str = "center") -> str:
+    """Generate Gutenberg button block."""
+    if not text or not url:
+        return ""
+    
+    # Sanitize color and align
+    align_class = f"align{align}" if align != "center" else ""
+    
+    return f"""<!-- wp:buttons {{"layout":{{"type":"flex","justifyContent":"{align}"}}}} -->
+<div class="wp-block-buttons">
+<!-- wp:button {{"backgroundColor":"slate-900","style":{{"border":{{"radius":"12px"}},"color":{{"background":"{color}"}}}}}} -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="{url}" style="border-radius:12px;background-color:{color}">{text}</a></div>
+<!-- /wp:button -->
+</div>
+<!-- /wp:buttons -->"""
+
+
+def wrap_in_two_columns(main_html: str, sidebar_html: str) -> str:
+    """Wrap content in a Gutenberg 2-column layout (70/30)."""
+    # Convert both parts to blocks if they aren't already
+    main_blocks = convert_to_gutenberg_blocks(main_html)
+    sidebar_blocks = convert_to_gutenberg_blocks(sidebar_html)
+    
+    return f"""<!-- wp:columns {{"verticalAlignment":"top"}} -->
+<div class="wp-block-columns are-vertically-aligned-top">
+<!-- wp:column {{"width":"66.66%"}} -->
+<div class="wp-block-column" style="flex-basis:66.66%">
+{main_blocks}
+</div>
+<!-- /wp:column -->
+
+<!-- wp:column {{"width":"33.33%"}} -->
+<div class="wp-block-column" style="flex-basis:33.33%">
+{sidebar_blocks}
+</div>
+<!-- /wp:column -->
+</div>
+<!-- /wp:columns -->"""
+
+
+def process_programmatic_content(template: str, variables: dict) -> str:
+    """Process a template by filling placeholders and parsing spintax."""
+    content = template
+    
+    # 1. Fill placeholders [[VARIABLE]]
+    for key, value in variables.items():
+        placeholder = f"[[{key.upper()}]]"
+        content = content.replace(placeholder, str(value))
+        
+    # 2. Parse Spintax
+    content = parse_spintax(content)
+    
+    return content
+
 
 
 # ============== ACTIVITY LOG ==============
@@ -2059,3 +2124,94 @@ async def scrape_links_content(urls: List[str]) -> List[Dict[str, Any]]:
                 logger.error(f"Error scraping {url}: {e}")
                 results.append({"url": url, "error": str(e)})
     return results
+
+# ============== PREMIUM PROGRAMMATIC HELPERS ==============
+
+async def get_web_intents(service: str, city: str, llm_config: dict) -> List[str]:
+    """
+    Simulates or performs web intent extraction using LLM.
+    """
+    prompt = f"Trova 5 intenti di ricerca reali e keyword correlate per '{service}' a '{city}'. Esempi: 'senza carta di credito', 'vicino alla stazione', 'low cost'. Ritorna solo una lista separata da virgola."
+    try:
+        from helpers import generate_with_rotation
+        res = await generate_with_rotation(llm_config, "Sei un esperto SEO locale.", prompt)
+        return [k.strip() for k in res.split(",") if k.strip()]
+    except Exception as e:
+        logger.error(f"Error getting web intents: {e}")
+        return ["prezzi convenienti", "migliore qualità", "assistenza professionale"]
+
+async def generate_ai_master_spintax(topic: str, correlates: List[str], llm_config: dict) -> str:
+    """
+    The 'Architect': generates a massive Spintax template incorporating correlates and SEO/GEO rules.
+    """
+    correlates_str = ", ".join(correlates)
+    sys_prompt = "Sei un Programmatic SEO Architect. Scrivi un template in formato SPINTAX {A|B|C} lungo e dettagliato."
+    user_prompt = f"""Crea un template SPINTAX per il servizio '{topic}'.
+    REGOLE:
+    1. Usa i placeholder [[SERVIZIO]] e [[CITTA]] ovunque possa servire (almeno 10-15 volte).
+    2. Integra naturalmente queste CORRELATE: {correlates_str}.
+    3. Segui regole SEO/GEO (menziona quartieri generici, vicinanza a punti di interesse).
+    4. Il testo deve essere di almeno 1000 parole totali (considerando le varianti).
+    5. Usa HTML per la struttura (p, h2, h3, ul).
+    RESTITUISCI SOLO IL CODICE SPINTAX."""
+    
+    try:
+        from helpers import generate_with_rotation
+        return await generate_with_rotation(llm_config, sys_prompt, user_prompt)
+    except Exception as e:
+        logger.error(f"Error generating AI master spintax: {e}")
+        return f"{{Errore generazione template: {str(e)}}}"
+
+def distribute_global_images(html: str, image_urls: List[str]) -> str:
+    """
+    Distributes a global set of images evenly throughout the HTML content.
+    Targeting a 2-column landing page feel.
+    """
+    if not image_urls:
+        return html
+        
+    soup = BeautifulSoup(html, 'html.parser')
+    paragraphs = soup.find_all(['p', 'h2', 'h3'])
+    if not paragraphs:
+        return html
+        
+    # Determine insertion interval
+    num_paras = len(paragraphs)
+    num_imgs = len(image_urls)
+    interval = max(2, num_paras // (num_imgs + 1))
+    
+    for i, img_url in enumerate(image_urls):
+        idx = (i + 1) * interval
+        if idx < num_paras:
+            img_container = soup.new_tag("div", attrs={"class": "my-6"})
+            img_tag = soup.new_tag("img", src=img_url, attrs={
+                "class": "w-full rounded-2xl shadow-xl object-cover",
+                "style": "aspect-ratio: 16/9; max-height: 400px;",
+                "alt": "Servizio SEO Locale"
+            })
+            img_container.append(img_tag)
+            paragraphs[idx].insert_after(img_container)
+            
+    return str(soup)
+
+def wrap_in_two_columns_premium(main_content: str, sidebar_content: str) -> str:
+    """
+    Enhanced version for Premium Landing Pages.
+    """
+    return f"""
+<!-- wp:columns {{"style":{{"spacing":{{"blockGap":{{"top":"2rem","left":"2rem"}}}}}}}} -->
+<div class="wp-block-columns">
+    <!-- wp:column {{"width":"66.66%"}} -->
+    <div class="wp-block-column" style="flex-basis:66.66%">
+        {main_content}
+    </div>
+    <!-- /wp:column -->
+
+    <!-- wp:column {{"width":"33.33%","style":{{"spacing":{{"padding":{{"top":"20px","right":"20px","bottom":"20px","left":"20px"}}}}}},"backgroundColor":"slate-50"}} -->
+    <div class="wp-block-column has-slate-50-background-color has-background" style="flex-basis:33.33%;padding:20px;background-color:#f8fafc">
+        {sidebar_content}
+    </div>
+    <!-- /wp:column -->
+</div>
+<!-- /wp:columns -->
+"""
