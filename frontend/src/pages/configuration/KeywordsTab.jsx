@@ -76,7 +76,14 @@ export const KeywordsTab = ({ keywords, setKeywords, effectiveClientId, getAuthH
   const servizi = keywords.servizi || [];
   const citta_e_zone = keywords.citta_e_zone || [];
   const tipi = keywords.tipi_o_qualificatori || [];
-  const totalCombos = servizi.length * citta_e_zone.length * tipi.length;
+  
+  // Calculate total combinations by treating empty lists as 1 (optional fields)
+  // but if both core fields are empty, the total is 0.
+  const s_count = servizi.length || 1;
+  const c_count = citta_e_zone.length || 1;
+  const t_count = tipi.length || 1;
+  
+  const totalCombos = (servizi.length === 0 && citta_e_zone.length === 0) ? 0 : (s_count * c_count * t_count);
 
   return (
     <div className="space-y-6">

@@ -60,7 +60,7 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
             refined = await generate_with_llm("openai", api_key, model, temp, sys_prompt, user_prompt)
             return clean_llm_output(refined)
         except Exception as e:
-            logger.error(f"Refinement error: {e}")
+            logger.warning(f"Refinement error (skipping Step 2): {e}")
             return content
 
     @classmethod

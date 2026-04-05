@@ -1238,8 +1238,17 @@ async def get_wp_id_by_url(url: str, username: str, password: str, target_url: s
 async def update_wordpress_post(url: str, username: str, password: str, post_id: str, content: str, wp_type: str = "post", title: str = None) -> bool:
     """Update an existing WordPress post/page."""
     async with httpx.AsyncClient(verify=False) as http_client:
-        base_url = url.replace("/posts", "")
-        endpoint = f"{base_url}/pages/{post_id}" if wp_type == "page" else f"{url}/{post_id}"
+        # Normalize the base URL - ensure it refers to the root of the v2 API
+        base_v2 = url
+        for suffix in ["/posts", "/pages", "/"]:
+            if base_v2.endswith(suffix):
+                base_v2 = base_v2[:-len(suffix)]
+        
+        # Determine the correct plural type for the endpoint
+        plural_type = "pages" if wp_type == "page" else "posts"
+        endpoint = f"{base_v2}/{plural_type}/{post_id}"
+        
+        logger.debug(f"Attempting WP update on endpoint: {endpoint}")
         
         post_data = {}
         if content:
@@ -1254,7 +1263,7 @@ async def update_wordpress_post(url: str, username: str, password: str, post_id:
                 if response.status_code in [200, 201]:
                     return True
                 else:
-                    logger.warning(f"WP Update failed (attempt {attempt}): {response.status_code} - {response.text}")
+                    logger.warning(f"WP Update failed (attempt {attempt}) on {endpoint}: {response.status_code} - {response.text}")
             except Exception as e:
                 logger.error(f"WP Update error (attempt {attempt}): {e}")
             await asyncio.sleep(1)

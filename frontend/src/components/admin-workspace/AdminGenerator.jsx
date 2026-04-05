@@ -20,7 +20,7 @@ import {
     PenTool, ChevronRight, Sparkles, ImagePlus, X, Camera, Image as ImageIcon,
     Calendar, BrainCircuit, RefreshCcw, Info, AlertTriangle, Plus,
     ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, Save, History, ListPlus, MousePointerClick, FileCode,
-    Library, Check, Layers, ArrowRight
+    Library, Check, Layers, ArrowRight, ArrowLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '../ui/switch';
@@ -1552,10 +1552,13 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                     <div className="flex items-center gap-2">
                                         {[1, 2, 3, 4].map((step) => (
                                             <div key={step} className="flex items-center">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${wizardStep >= step ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-400'}`}>
+                                                <div 
+                                                    onClick={() => wizardStep > step && setWizardStep(step)}
+                                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${wizardStep >= step ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-400'} ${wizardStep > step ? 'cursor-pointer hover:bg-indigo-500' : ''}`}
+                                                >
                                                     {step}
                                                 </div>
-                                                {step < 4 && <div className={`w-8 h-1 mx-1 rounded-full ${wizardStep > step ? 'bg-indigo-600' : 'bg-slate-100'}`} />}
+                                                {step < 4 && <div className={`w-8 h-1 mx-1 rounded-full ${wizardStep > step ? 'bg-indigo-600 cursor-pointer' : 'bg-slate-100'}`} onClick={() => wizardStep > step && setWizardStep(step)} />}
                                             </div>
                                         ))}
                                     </div>
@@ -1812,6 +1815,12 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                                     </ScrollArea>
                                                 </CardContent>
                                             </Card>
+                                        </div>
+                                        
+                                        <div className="flex justify-start items-center bg-slate-50 p-4 rounded-2xl mt-6">
+                                            <Button variant="ghost" onClick={() => setWizardStep(3)}>
+                                                <ArrowLeft className="w-4 h-4 mr-2" /> Indietro
+                                            </Button>
                                         </div>
                                     </div>
                                 )}

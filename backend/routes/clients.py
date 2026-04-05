@@ -117,10 +117,27 @@ async def get_combinations(client_id: str, current_user: dict = Depends(get_curr
     servizi = kw.get("servizi", [])
     citta = kw.get("citta_e_zone", [])
     tipi = kw.get("tipi_o_qualificatori", [])
+    
+    # Fallback to single empty string if list is empty to avoid 0 products
+    s_list = servizi if servizi else [""]
+    c_list = citta if citta else [""]
+    t_list = tipi if tipi else [""]
+    
     combinations = []
-    for combo in itertools.product(servizi, citta, tipi):
-        combinations.append({"servizio": combo[0], "citta": combo[1], "tipo": combo[2],
-                             "titolo": f"{combo[0]} {combo[2]} a {combo[1]}"})
+    for combo in itertools.product(s_list, c_list, t_list):
+        if not combo[0] and not combo[1]: continue # Skip if both core fields are empty
+        
+        # Build clean title
+        parts = [p for p in [combo[0], combo[2]] if p]
+        titolo_base = " ".join(parts)
+        titolo = f"{titolo_base} a {combo[1]}" if combo[1] else titolo_base
+        
+        combinations.append({
+            "servizio": combo[0], 
+            "citta": combo[1], 
+            "tipo": combo[2],
+            "titolo": titolo.strip().title()
+        })
     return {"combinations": combinations, "total": len(combinations)}
 
 
