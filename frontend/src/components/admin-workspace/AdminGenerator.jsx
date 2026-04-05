@@ -411,12 +411,12 @@ export function AdminGenerator({
 
 
     const addTargetKeyword = () => {
-        if (!newPlanKeyword.trim()) return;
-        if (targetKeywords.includes(newPlanKeyword.trim())) {
+        if (!String(newPlanKeyword || "").trim()) return;
+        if (targetKeywords.includes(String(newPlanKeyword || "").trim())) {
             toast.error("Keyword già presente");
             return;
         }
-        setTargetKeywords([...targetKeywords, newPlanKeyword.trim()]);
+        setTargetKeywords([...targetKeywords, String(newPlanKeyword || "").trim()]);
         setNewPlanKeyword("");
     };
 
@@ -443,10 +443,10 @@ export function AdminGenerator({
         if (initialData) {
             setStep(4); // Go straight to generation
             setGenMode('single');
-            setSingleTitle(initialData.titolo || '');
-            setSingleKeywords(initialData.keyword || '');
-            setSingleObjective(initialData.funnel || 'TOFU');
-            if (initialData.keyword) setSerpKeyword(initialData.keyword);
+            setSingleTitle(String(initialData.titolo || ''));
+            setSingleKeywords(String(initialData.keyword || ''));
+            setSingleObjective(String(initialData.funnel || 'TOFU'));
+            if (initialData.keyword) setSerpKeyword(String(initialData.keyword));
 
             // Notify that data was consumed
             if (onDataUsed) onDataUsed();
@@ -456,7 +456,7 @@ export function AdminGenerator({
     // Step checks
     const strategyDone = contentStrategy.funnel_stage && contentStrategy.modello_copywriting;
     const serpDone = serpData && serpData.competitors?.length > 0;
-    const promptDone = advancedPrompt.trim().length > 20;
+    const promptDone = String(advancedPrompt || "").trim().length > 20;
 
     // Auto-fill Strategic Objective based on Step 1, 4 and KB
     useEffect(() => {
@@ -522,7 +522,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
     };
 
     async function runSerpAnalysis() {
-        if (!serpKeyword.trim()) { toast.error('Inserisci una keyword'); return; }
+        if (!String(serpKeyword || "").trim()) { toast.error('Inserisci una keyword'); return; }
         setSerpLoading(true);
         try {
             const res = await axios.post(`${API}/serp/analyze-full`, {
@@ -530,7 +530,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
             }, { headers: getAuthHeaders() });
             setSerpData(res.data);
             toast.success(`Analizzati ${res.data.count} competitor per "${serpKeyword}"`);
-            if (!advancedPrompt.trim()) buildDefaultPrompt(res.data, gscData);
+            if (!String(advancedPrompt || "").trim()) buildDefaultPrompt(res.data, gscData);
         } catch (error) {
             toast.error(error.response?.data?.detail || 'Errore analisi SERP');
         } finally { setSerpLoading(false); }
@@ -542,7 +542,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
             const res = await axios.get(`${API}/clients/${effectiveClientId}/gsc-data?days=28`, { headers: getAuthHeaders() });
             setGscData(res.data);
             toast.success(`Dati GSC caricati: ${res.data.keywords?.length || 0} keyword`);
-            if (serpData && !advancedPrompt.trim()) buildDefaultPrompt(serpData, res.data);
+            if (serpData && !String(advancedPrompt || "").trim()) buildDefaultPrompt(serpData, res.data);
         } catch (error) {
             if (error.response?.status === 401) toast.error('Token GSC scaduto. Riconnetti dalla Configurazione.');
             else toast.error(error.response?.data?.detail || 'Errore caricamento GSC');
@@ -550,8 +550,8 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
     };
 
     const handleImageSearch = async (count = 12, queryOverride = null) => {
-        const searchQ = queryOverride || imgSearchQuery;
-        if (!searchQ.trim()) return;
+        const searchQ = (typeof queryOverride === 'string' ? queryOverride : null) || imgSearchQuery || "";
+        if (!String(searchQ).trim()) return;
         setSearchingImages(true);
         // If count == 12 (fresh search), reset results. Otherwise append.
         const isFreshSearch = (count === 12);
@@ -739,7 +739,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
     };
 
     const handleSingleGenerate = async (typeOverride = null) => {
-        if (!singleKeywords.trim() && !singleTitle.trim()) { toast.error('Inserisci almeno keywords o titolo'); return; }
+        if (!String(singleKeywords || "").trim() && !String(singleTitle || "").trim()) { toast.error('Inserisci almeno keywords o titolo'); return; }
         setSingleGenerating(true);
         setSingleResult(null);
         try {
@@ -785,7 +785,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
     };
 
     async function handleRefine() {
-        if (!refineFeedback.trim()) {
+        if (!String(refineFeedback || "").trim()) {
             toast.error('Inserisci un feedback per l\'agente');
             return;
         }

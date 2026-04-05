@@ -66,7 +66,7 @@ export const ContentStrategyTab = ({ strategy, setStrategy }) => {
   };
 
   const addKw = () => {
-    const trimmed = newKw.trim();
+    const trimmed = String(newKw || "").trim();
     const current = strategy.keyword_secondarie || [];
     if (trimmed && !current.includes(trimmed)) {
       setStrategy({ ...strategy, keyword_secondarie: [...current, trimmed] });

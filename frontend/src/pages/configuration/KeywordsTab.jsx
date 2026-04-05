@@ -21,7 +21,7 @@ export const KeywordsTab = ({ keywords, setKeywords, effectiveClientId, getAuthH
   const [xlsxResult, setXlsxResult] = React.useState(null);
 
   const addToList = (field, value, setValue) => {
-    const trimmedValue = value.trim();
+    const trimmedValue = String(value || "").trim();
     const currentArray = keywords[field] || [];
     if (trimmedValue && !currentArray.includes(trimmedValue)) {
       setKeywords({ ...keywords, [field]: [...currentArray, trimmedValue] });

@@ -61,7 +61,7 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
   const gscConnected = config.gsc?.connected;
 
   const runAutoAnalysis = async () => {
-    if (!keyword.trim()) { toast.error('Inserisci una keyword'); return; }
+    if (!String(keyword || "").trim()) { toast.error('Inserisci una keyword'); return; }
     setAnalyzing(true);
     setSerpData(null);
     setResult(null);
@@ -338,7 +338,7 @@ export const ClientGenerator = ({ client: initialClient, getAuthHeaders }) => {
 
             <Button 
                 onClick={runAutoAnalysis} 
-                disabled={analyzing || !keyword.trim()}
+                disabled={analyzing || !String(keyword || "").trim()}
                 className="w-full bg-slate-900 text-white h-16 rounded-[1.5rem] font-black uppercase tracking-[0.2em] shadow-2xl shadow-slate-200 active:scale-95"
             >
                 {analyzing ? <Loader2 className="w-6 h-6 animate-spin" /> : "Analizza & Prepara"}
