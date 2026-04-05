@@ -21,8 +21,9 @@ import {
     PenTool, ChevronRight, Sparkles, ImagePlus, X, Camera, Image as ImageIcon,
     Calendar, BrainCircuit, RefreshCcw, Info, AlertTriangle, Plus,
     ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, Save, History, ListPlus, MousePointerClick, FileCode,
-    Library, Check, Layers, ArrowRight, ArrowLeft, RotateCcw
+    Library, Check, Layers, ArrowRight, ArrowLeft, RotateCcw, LayoutList, LayoutGrid
 } from 'lucide-react';
+import { EditorialCalendar } from './EditorialCalendar';
 import { toast } from 'sonner';
 import { Switch } from '../ui/switch';
 
@@ -107,6 +108,7 @@ export function AdminGenerator({
     const [refining, setRefining] = useState(false);
     const [recentArticles, setRecentArticles] = useState([]);
     const [activePlanImageIndex, setActivePlanImageIndex] = useState(null);
+    const [planView, setPlanView] = useState('list'); // 'list' | 'calendar'
     const [recentSidebarOpen, setRecentSidebarOpen] = useState(true);
     const [expandedOutlines, setExpandedOutlines] = useState({});
     const [deletingPlan, setDeletingPlan] = useState(false);
@@ -1150,7 +1152,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                     <FileText className="w-4 h-4" /> Pillar Page
                 </button>
                 <button onClick={() => setGenMode('plan')} className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold transition-all ${genMode === 'plan' ? 'bg-white text-indigo-600 shadow-md ring-1 ring-indigo-100' : 'text-slate-500 hover:text-slate-800'}`}>
-                    <Calendar className="w-4 h-4" /> Piano Editoriale
+                    <Calendar className="w-4 h-4" /> Editorial Hub
                 </button>
 
                 <button onClick={() => setGenMode('programmatic')} className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold transition-all ${genMode === 'programmatic' ? 'bg-white text-purple-600 shadow-md ring-1 ring-purple-100' : 'text-slate-500 hover:text-slate-800'}`}>
@@ -2181,20 +2183,30 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
                                     {allPlanTopics.length > 0 && (
-                                        <div className="flex items-center bg-slate-100 rounded-lg p-1 mr-2">
+                                        <div className="flex items-center bg-slate-100/50 rounded-xl p-1 shadow-inner border border-slate-200/40">
                                             <Button 
                                                 variant="ghost" 
                                                 size="sm" 
-                                                onClick={selectAllPlanTopics} 
-                                                className={`text-[11px] h-8 px-3 ${selectedPlanTopics.length === allPlanTopics.length ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
+                                                onClick={() => setPlanView('list')} 
+                                                className={`h-8 w-10 p-0 rounded-lg transition-all ${planView === 'list' ? 'bg-white shadow-md text-indigo-600 border border-slate-100' : 'text-slate-400 opacity-60 hover:opacity-100'}`}
+                                                title="Vista Elenco"
                                             >
-                                                {selectedPlanTopics.length === allPlanTopics.length ? "Deseleziona" : "Seleziona Tutti"}
+                                                <LayoutList className="w-4 h-4" />
+                                            </Button>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={() => setPlanView('calendar')} 
+                                                className={`h-8 w-10 p-0 rounded-lg transition-all ${planView === 'calendar' ? 'bg-white shadow-md text-indigo-600 border border-slate-100' : 'text-slate-400 opacity-60 hover:opacity-100'}`}
+                                                title="Vista Calendario"
+                                            >
+                                                <LayoutGrid className="w-4 h-4" />
                                             </Button>
                                         </div>
                                     )}
                                     <Button onClick={generateNewPlan} disabled={planGenerating} className="h-10 bg-slate-900 hover:bg-slate-800 shadow-sm transition-all active:scale-95">
                                         {planGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCcw className="w-4 h-4 mr-2" />}
-                                        {(plan?.topics?.length > 0 || allPlanTopics.length > 0) ? "Aggiorna Strategia" : "Genera Piano Editoriale"}
+                                        {(plan?.topics?.length > 0 || allPlanTopics.length > 0) ? "Aggiorna Strategia" : "Genera Hub Editoriale"}
                                     </Button>
                                     {allPlanTopics.length > 0 && (
                                         <div className="flex items-center gap-2">
@@ -2252,7 +2264,14 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                 </div>
                             )}
 
-                            {allPlanTopics.length > 0 && (
+                             {allPlanTopics.length > 0 && planView === 'calendar' && (
+                                <EditorialCalendar 
+                                    topics={allPlanTopics} 
+                                    onArticleClick={(art) => handleUseTopicInGenerator(art)}
+                                />
+                            )}
+
+                            {allPlanTopics.length > 0 && planView === 'list' && (
                                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
                                     {/* Sidebar Toggle Button (Sticky) */}
                                     <Button 
