@@ -444,8 +444,7 @@ export function AdminGenerator({
             setPlan(res.data);
             toast.success("Piano editoriale generato con successo!");
         } catch (error) {
-            const detail = error.response?.data?.detail || "Errore sconosciuto";
-            toast.error(`Errore generazione: ${detail}`);
+            toast.error("Errore durante la generazione del piano");
             console.error(error);
         } finally {
             setPlanGenerating(false);
