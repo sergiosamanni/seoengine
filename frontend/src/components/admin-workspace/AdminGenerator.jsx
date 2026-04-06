@@ -254,35 +254,55 @@ export function AdminGenerator({
     }, [effectiveClientId, gscConnected]);
 
     const gscInsights = useMemo(() => {
-        if (!gscData || !gscData.keywords) return [];
+        if (!gscData?.keywords) return [];
         const insights = [];
-        const keywords = gscData.keywords || [];
+        const keywords = gscData.keywords;
 
-        // 1. CTR Low Opportunity (High impressions, low CTR)
+        // 1. CTR Optimization Opportunity
         const lowCtr = keywords
             .filter(k => k.impressions > 1000 && k.ctr < 0.02)
             .sort((a,b) => b.impressions - a.impressions)
-            .slice(0, 3);
+            .slice(0, 2);
         if (lowCtr.length > 0) {
             insights.push({
-                type: 'opportunity',
-                title: 'Basso CTR in Impressioni',
-                desc: `Le keyword "${lowCtr.map(k=>k.query).join(', ')}" hanno molte impressioni ma pochi click. Ottimizza i meta titoli per aumentare il traffico.`,
-                icon: TrendingUp
+                type: 'optimization',
+                title: 'CTR Optimization Support',
+                desc: `High visibility detected for "${lowCtr.map(k=>k.keyword).join(', ')}". Update Meta Titles to capture search intent.`,
+                icon: MousePointerClick,
+                color: 'text-amber-600',
+                bg: 'bg-amber-50'
             });
         }
 
-        // 2. Rising stars (Falling position but growing impressions)
-        const quickWins = keywords
-            .filter(k => k.position > 10 && k.position < 30)
-            .sort((a,b) => b.clicks - a.clicks)
+        // 2. High-Potential Ranking Gains
+        const pageTwo = keywords
+            .filter(k => k.position > 10 && k.position < 25)
+            .sort((a,b) => b.impressions - a.impressions)
             .slice(0, 2);
-        if (quickWins.length > 0) {
+        if (pageTwo.length > 0) {
             insights.push({
-                type: 'quickwin',
-                title: 'Quick Wins Pagina 2',
-                desc: `"${quickWins.map(k=>k.query).join(', ')}" sono vicine alla prima pagina. Un articolo di supporto potrebbe spingerle in alto.`,
-                icon: Zap
+                type: 'growth',
+                title: 'Semantic Expansion Required',
+                desc: `"${pageTwo.map(k=>k.keyword).join(', ')}" are ranking on page 2. Create supporting cluster content to push into Top 10.`,
+                icon: Target,
+                color: 'text-indigo-600',
+                bg: 'bg-indigo-50'
+            });
+        }
+
+        // 3. New Emerging Trends
+        const emerging = keywords
+            .filter(k => k.impressions > 500 && k.clicks === 0)
+            .sort((a,b) => b.impressions - a.impressions)
+            .slice(0, 1);
+        if (emerging.length > 0) {
+            insights.push({
+                type: 'trend',
+                title: 'Market Trend Detected',
+                desc: `Growing interest in "${emerging[0].keyword}". Build an authoritative guide now to secure early market position.`,
+                icon: TrendingUp,
+                color: 'text-emerald-500',
+                bg: 'bg-emerald-50'
             });
         }
 
@@ -1182,1437 +1202,184 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
 
     if (!effectiveClientId) return null;
 
+
     return (
-        
-        <div className="space-y-8 animate-fade-in">
-            {/* Unified Creative Workspace Selector */}
-            <div className="flex flex-col gap-5">
-                <div className="flex flex-wrap items-center justify-between gap-4 bg-white/40 backdrop-blur-2xl p-2 rounded-[2.5rem] border border-slate-200/60 shadow-2xl shadow-slate-200/20">
-                    <div className="flex flex-wrap items-center gap-1.5">
+        <div className="space-y-8 animate-fade-in min-h-screen pb-20">
+            {/* 1. Header & Mode Selector */}
+            <div className="flex flex-col gap-6">
+                <div className="flex flex-wrap items-center justify-between gap-4 bg-white/60 backdrop-blur-3xl p-3 rounded-[3rem] border border-slate-200 shadow-2xl shadow-slate-200/20">
+                    <div className="flex flex-wrap items-center gap-2">
                         {[
-                            { id: 'single', label: 'Articolo Singolo', icon: PenTool, color: 'orange' },
-                            { id: 'pillar', label: 'Pillar Page', icon: Layers, color: 'emerald' },
+                            { id: 'single', label: 'Articolo', icon: PenTool, color: 'orange' },
+                            { id: 'pillar', label: 'Pillar', icon: Layers, color: 'emerald' },
                             { id: 'plan', label: 'Editorial Hub', icon: Calendar, color: 'indigo' },
                             { id: 'programmatic', label: 'Programmatica', icon: Library, color: 'purple' }
                         ].map((mode) => (
                             <button 
                                 key={mode.id}
-                                onClick={() => setGenMode(mode.id)} 
-                                className={`group flex items-center gap-3 px-6 py-3.5 rounded-[1.8rem] text-[10px] uppercase tracking-[0.15em] font-black transition-all duration-500 relative overflow-hidden ${
-                                    genMode === mode.id ? 'bg-slate-900 border-none text-white shadow-2xl shadow-slate-400' : 'text-slate-500 hover:bg-white hover:text-slate-950 border border-transparent hover:border-slate-100 shadow-sm'
+                                onClick={() => { setGenMode(mode.id); setStep(1); }} 
+                                className={`group flex items-center gap-3 px-6 py-4 rounded-[2rem] text-[10px] uppercase tracking-[0.15em] font-black transition-all duration-500 ${
+                                    genMode === mode.id ? 'bg-slate-900 text-white shadow-xl scale-105' : 'text-slate-500 hover:bg-white hover:border-slate-100 border border-transparent'
                                 }`}
                             >
-                                <mode.icon className={`w-4 h-4 transition-transform duration-500 group-hover:scale-110 ${genMode === mode.id ? 'text-white' : `text-${mode.color}-300 opacity-60`}`} /> 
+                                <Library className={`w-4 h-4 ${genMode === mode.id ? 'text-white' : 'text-slate-400'}`} /> 
                                 {mode.label}
-                                {genMode === mode.id && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full translate-y-2 group-hover:translate-y-[-4px] transition-transform" />}
                             </button>
                         ))}
                     </div>
-                    
-                    <div className="hidden md:flex items-center gap-4 pr-6">
-                        <div className="flex flex-col text-right">
-                            <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{client?.nome}</span>
-                            <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest opacity-60">Creative Workspace Active</span>
+                    <div className="pr-8 flex items-center gap-3 text-right">
+                        <div className="hidden sm:block">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{client?.nome || 'CLIENTE'}</p>
                         </div>
-                        <div className="w-10 h-10 rounded-[1.2rem] bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center">
                             <Sparkles className="w-5 h-5 text-indigo-500" />
                         </div>
                     </div>
                 </div>
 
-                {/* Proactive GSC Insights Bar */}
-                {gscInsights.length > 0 && genMode === 'plan' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-top-4 duration-500">
+                {/* GSC Insights - Visual High impact */}
+                {genMode === 'plan' && gscInsights.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {gscInsights.map((insight, idx) => (
-                            <Alert key={idx} className="bg-gradient-to-br from-indigo-500/5 to-purple-500/5 border-indigo-100/50 rounded-3xl p-5 shadow-sm group hover:shadow-md transition-all cursor-default relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-1 opacity-20">
-                                    <insight.icon className="w-12 h-12 text-indigo-500 -rotate-12 translate-x-4 -translate-y-4" />
-                                </div>
+                            <div key={idx} className={`rounded-[2.5rem] p-6 shadow-sm border-none ${insight.bg}`}>
                                 <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                                        <insight.icon className="w-6 h-6 text-indigo-600" />
+                                    <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center flex-shrink-0">
+                                        <Target className={`w-6 h-6 ${insight.color}`} />
                                     </div>
-                                    <div className="relative z-10">
-                                        <h4 className="text-[11px] font-black text-indigo-950 uppercase tracking-widest mb-1 flex items-center gap-2">
-                                            {insight.title}
-                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                                        </h4>
-                                        <p className="text-xs text-slate-600 leading-relaxed font-medium">{insight.desc}</p>
+                                    <div>
+                                        <h4 className={`text-[11px] font-black uppercase tracking-widest mb-1 ${insight.color}`}>{insight.title}</h4>
+                                        <p className="text-[10px] text-slate-600 leading-relaxed font-semibold">{insight.desc}</p>
                                     </div>
                                 </div>
-                            </Alert>
+                            </div>
                         ))}
                     </div>
                 )}
             </div>
 
-            {/* Step Bar (Only for Single/Pillar) */}
-            {(genMode === 'single' || genMode === 'pillar') && (
-                <div className="sticky top-4 z-40 flex items-center gap-1.5 p-1.5 bg-white/90 backdrop-blur-md rounded-2xl border border-[#f1f3f6] shadow-md overflow-x-auto transition-all" data-testid="step-bar">
-                {steps.map((s, i) => {
-                    const isActive = step === s.num;
-                    const isDone = s.done && !isActive;
-                    return (
-                        <Fragment key={s.num}>
-                            <button
-                                onClick={() => setStep(s.num)}
-                                className={`flex items-center gap-3 px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-300 whitespace-nowrap ${
-                                    isActive 
-                                    ? 'bg-slate-900 text-white shadow-lg shadow-slate-200 scale-[1.02]' 
-                                    : isDone 
-                                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-                                        : 'bg-transparent text-slate-400 hover:text-slate-900 hover:bg-slate-50'
-                                }`}
-                                data-testid={`step-${s.num}-btn`}
-                            >
-                                <div className={`flex items-center justify-center w-5 h-5 rounded-lg border text-[9px] font-black transition-colors ${
-                                    isActive ? 'border-white/20 bg-white/10' : 'border-slate-100 bg-slate-50'
-                                }`}>
-                                    {isDone ? <CheckCircle2 className="w-3 h-3" /> : s.num}
-                                </div>
-                                <span className="tracking-widest">{s.label}</span>
-                            </button>
-                            {i < steps.length - 1 && <div className="w-4 h-px bg-slate-100 flex-shrink-0 mx-1" />}
-                        </Fragment>
-                    );
-                })}
-            </div>
-            )}
-
-            {(genMode === 'single' || genMode === 'pillar') && step === 1 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="bg-white border border-[#f1f3f6] rounded-[2rem] p-1 shadow-xl shadow-slate-100/50">
-                        <Suspense fallback={<div className="p-8 text-center text-xs animate-pulse">Caricamento Strategia...</div>}>
-                            <ContentStrategyTab strategy={contentStrategy} setStrategy={setContentStrategy} />
-                        </Suspense>
-                    </div>
-                    <div className="flex justify-end p-2">
-                        <Button 
-                            onClick={() => setStep(2)} 
-                            className="bg-slate-900 hover:bg-slate-800 h-11 px-8 rounded-xl text-[11px] font-bold uppercase tracking-[0.2em] shadow-xl shadow-slate-200 transition-all active:scale-95" 
-                            data-testid="next-step-2-btn"
-                        >
-                            Analisi SERP <ChevronRight className="w-4 h-4 ml-2 opacity-50" />
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {(genMode === 'single' || genMode === 'pillar') && step === 2 && (
-                <div className="space-y-4">
-                    <Card className="border-slate-200">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Search className="w-5 h-5 text-blue-600" />Analisi SERP</CardTitle>
-                            <CardDescription>Analizza i competitor per la keyword target ed estrai titoli e headings</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex gap-3">
-                                <Input value={serpKeyword} onChange={(e) => setSerpKeyword(e.target.value)}
-                                    placeholder="Es: noleggio auto salerno" className="flex-1" data-testid="serp-keyword-input"
-                                    onKeyDown={(e) => e.key === 'Enter' && runSerpAnalysis()} />
-                                <Button onClick={runSerpAnalysis} disabled={serpLoading} className="bg-blue-600 hover:bg-blue-700 min-w-[140px]" data-testid="serp-analyze-btn">
-                                    {serpLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Search className="w-4 h-4 mr-2" />}
-                                    {serpLoading ? 'Analisi...' : 'Analizza SERP'}
-                                </Button>
-                            </div>
-
-                            {serpData && (
-                                <div className="space-y-4 mt-4">
-                                    {serpData.competitors?.map((c, i) => (
-                                        <Card key={i} className="border-slate-200 bg-slate-50/50">
-                                            <CardContent className="p-4">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <Badge variant="outline" className="text-xs font-mono">#{c.position}</Badge>
-                                                            <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline truncate max-w-[300px]">
-                                                                {c.url} <ExternalLink className="w-3 h-3 inline ml-1" />
-                                                            </a>
-                                                        </div>
-                                                        <p className="font-semibold text-slate-900 text-sm">{c.title}</p>
-                                                        {c.description && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{c.description}</p>}
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                    <div className="flex justify-between">
-                        <Button variant="outline" onClick={() => setStep(1)}>Indietro</Button>
-                        <Button onClick={() => setStep(gscConnected ? 3 : 4)} className="bg-slate-900 hover:bg-slate-800" data-testid="next-step-3-btn">
-                            Prosegui: {gscConnected ? 'Dati GSC' : 'Prompt'} <ChevronRight className="w-4 h-4 ml-1" />
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {(genMode === 'single' || genMode === 'pillar') && step === 3 && (
-                <div className="space-y-4">
-                    {gscConnected ? (
-                        <Card className="border-sky-200 bg-sky-50/50" data-testid="gsc-step">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <BarChart3 className="w-5 h-5 text-sky-600" />Google Search Console
-                                        </CardTitle>
-                                        <CardDescription>{gscSite}</CardDescription>
-                                    </div>
-                                    {gscData && (
-                                        <Button variant="outline" size="sm" onClick={loadGscData} disabled={gscLoading}>
-                                            Aggiorna
-                                        </Button>
-                                    )}
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                {gscLoading && !gscData ? (
-                                    <Loader2 className="w-6 h-6 animate-spin text-sky-600 mx-auto" />
-                                ) : gscData ? (
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-4 gap-3">
-                                            {[
-                                                { label: 'Click', value: gscData.totals?.total_clicks || 0 },
-                                                { label: 'Impressioni', value: gscData.totals?.total_impressions || 0 },
-                                                { label: 'CTR medio', value: `${gscData.totals?.avg_ctr || 0}%` },
-                                                { label: 'Posiz. media', value: gscData.totals?.avg_position || 0 },
-                                            ].map(m => (
-                                                <div key={m.label} className="p-3 bg-white rounded-lg text-center border border-sky-100">
-                                                    <p className="text-xl font-bold text-slate-900">{m.value}</p>
-                                                    <p className="text-xs text-slate-500">{m.label}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {gscData.keywords?.slice(0, 12).map((k, i) => (
-                                                <Badge key={i} variant="outline" className="text-xs bg-white font-mono">
-                                                    {k.keyword}
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <Button onClick={loadGscData} disabled={gscLoading}>Carica dati GSC</Button>
-                                )}
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <Card className="p-6 text-center text-slate-500">GSC non connesso. Puoi saltare questo step.</Card>
-                    )}
-                    <div className="flex justify-between">
-                        <Button variant="outline" onClick={() => setStep(2)}>Indietro</Button>
-                        <Button onClick={() => setStep(4)} className="bg-slate-900 hover:bg-slate-800">Prosegui</Button>
-                    </div>
-                </div>
-            )}
-
-            {(genMode === 'single' || genMode === 'pillar') && step === 4 && (
-                <div className="space-y-4">
-                    <Card className="border-slate-200">
-                        <CardHeader>
-                            <CardTitle>Prompt Avanzato</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <Textarea
-                                value={advancedPrompt}
-                                onChange={(e) => setAdvancedPrompt(e.target.value)}
-                                rows={12}
-                                className="font-mono text-sm"
-                            />
-                        </CardContent>
-                    </Card>
-                    <div className="flex justify-between">
-                        <Button variant="outline" onClick={() => setStep(gscConnected ? 3 : 2)}>Indietro</Button>
-                        <Button onClick={() => setStep(5)} className="bg-slate-900 hover:bg-slate-800">Prosegui</Button>
-                    </div>
-                </div>
-            )}
-
-            {(genMode === 'single' || genMode === 'pillar') && step === 5 && (
-                <div className="space-y-6">
-                    {/* L'immagine viene ora gestita automaticamente dal sistema */}
-
-                    {(genMode === 'single' || genMode === 'pillar') && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                                {/* Colonna Sinistra: Configurazione */}
-                                <div className="lg:col-span-7 space-y-6">
-                                    <Card className="border-slate-200 shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-lg font-black text-slate-800 flex items-center gap-2 uppercase tracking-tight">
-                                                {genMode === 'pillar' ? <FileText className="w-5 h-5 text-emerald-500" /> : <PenTool className="w-5 h-5 text-orange-500" />} 
-                                                {genMode === 'pillar' ? 'Dati Pillar Page' : 'Dati Articolo'}
-                                            </CardTitle>
-                                            <CardDescription className="text-xs">
-                                                {genMode === 'pillar' ? 'Crea una pagina pilastro esaustiva (2500+ parole) con indice e anchor links' : 'Inserisci i dettagli per l\'analisi e la scrittura AI'}
-                                            </CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="space-y-6 pt-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-bold text-slate-700">Titolo Suggerito (Opzionale)</Label>
-                                                <Input 
-                                                    className={`h-12 rounded-xl text-sm bg-slate-50/50 border-slate-200 transition-all font-medium focus-visible:ring-${genMode === 'pillar' ? 'emerald' : 'orange'}-500`}
-                                                    value={singleTitle} 
-                                                    onChange={(e) => setSingleTitle(e.target.value)} 
-                                                    placeholder={genMode === 'pillar' ? "Es: La Guida Definitiva al Noleggio Auto a Salerno" : "Es: Come noleggiare un'auto senza carta di credito a Salerno"} 
-                                                />
+            {/* 2. Main Body Content Area */}
+            <div className="flex-1">
+                {(genMode === 'single' || genMode === 'pillar') && (
+                    <div className="space-y-8">
+                        <div className="sticky top-4 z-40 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 p-2 flex items-center gap-2 shadow-xl overflow-x-auto">
+                            {steps.map((s, i) => {
+                                const active = step === s.num;
+                                const done = s.done && !active;
+                                return (
+                                    <Fragment key={s.num}>
+                                        <button onClick={() => setStep(s.num)} className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-bold uppercase transition-all ${active ? 'bg-slate-900 text-white shadow-lg' : done ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400 hover:bg-slate-50'}`}>
+                                            <div className="w-5 h-5 flex items-center justify-center rounded-lg border font-black text-[9px]">
+                                                {done ? <CheckCircle2 className="w-3 h-3" /> : s.num}
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-bold text-slate-700">Focus Keyword *</Label>
-                                                <Input 
-                                                    className={`h-12 rounded-xl text-sm bg-slate-50/50 border-slate-200 transition-all font-bold focus-visible:ring-${genMode === 'pillar' ? 'emerald' : 'orange'}-500`}
-                                                    value={singleKeywords} 
-                                                    onChange={(e) => setSingleKeywords(e.target.value)} 
-                                                    placeholder="Es: noleggio auto salerno" 
-                                                />
-                                                <p className="text-[10px] text-slate-400">Inserisci la parola chiave principale per l'ottimizzazione SEO</p>
-                                            </div>
-                                            <div className="space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <Label className="text-sm font-bold text-slate-700">Obiettivo / Note Speciali</Label>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm" 
-                                                        onClick={handleImproveObjective}
-                                                        disabled={refiningObjective || !singleObjective}
-                                                        className="h-8 px-3 rounded-lg text-[10px] font-bold uppercase tracking-wider text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border border-indigo-100 shadow-sm transition-all"
-                                                    >
-                                                        {refiningObjective ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
-                                                        Migliora con IA
-                                                    </Button>
-                                                </div>
-                                                <Textarea 
-                                                    className={`min-h-[140px] rounded-xl text-sm bg-slate-50/50 border-slate-200 transition-all leading-relaxed focus-visible:ring-${genMode === 'pillar' ? 'emerald' : 'orange'}-500`}
-                                                    value={singleObjective} 
-                                                    onChange={(e) => setSingleObjective(e.target.value)} 
-                                                    placeholder={genMode === 'pillar' ? "Indica punti chiave, opinioni forti da includere o previsioni di settore..." : "Descrivi il target, il tono di voce o specifiche SEO..."} 
-                                                />
-                                            </div>
+                                            {s.label}
+                                        </button>
+                                        {i < steps.length - 1 && <div className="w-4 h-px bg-slate-100 flex-shrink-0" />}
+                                    </Fragment>
+                                );
+                            })}
+                        </div>
 
-                                            {genMode === 'pillar' && (
-                                                <div className="pt-2">
-                                                    <Button 
-                                                        onClick={handleSuggestSilo}
-                                                        disabled={suggestingSilo || (!singleTitle && !singleKeywords)}
-                                                        className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 font-bold transition-all"
-                                                    >
-                                                        {suggestingSilo ? <Loader2 className="w-5 h-5 animate-spin" /> : <Layers className="w-5 h-5" />}
-                                                        Strategia Silo: Suggerisci 5 Cluster di Sostegno
-                                                    </Button>
-                                                </div>
-                                            )}
-                                            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                                                <div className="flex-1 p-4 bg-indigo-50/80 rounded-2xl border border-indigo-100 flex items-center justify-between shadow-sm transition-all hover:bg-indigo-100/50">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-indigo-500">
-                                                            <Globe className="w-5 h-5" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-bold text-sm text-indigo-900">WordPress</p>
-                                                            <p className="text-[10px] text-indigo-600 font-medium">Pubblicazione Live</p>
-                                                        </div>
-                                                    </div>
-                                                    <Switch checked={publishToWp} onCheckedChange={setPublishToWp} />
-                                                </div>
-
-
-                                                <div className="flex-1 p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col justify-center">
-                                                    <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Calendarizza (Opzionale)</Label>
-                                                    <Input
-                                                        type="datetime-local"
-                                                        value={singleScheduledDate}
-                                                        onChange={(e) => setSingleScheduledDate(e.target.value)}
-                                                        className="h-7 text-xs bg-transparent border-none p-0 focus-visible:ring-0 font-bold text-slate-700"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-
-                                {/* Colonna Destra: Media & Risultato */}
-                                <div className="lg:col-span-5 space-y-6">
-                                    <Card className="border-slate-200 shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
-                                        <CardHeader className="bg-slate-50/50 py-4 border-b border-slate-100">
-                                            <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                                <Camera className="w-4 h-4 text-orange-500" /> Immagine in Evidenza
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-5 space-y-5">
-                                            <div className="flex bg-slate-100/80 p-1.5 rounded-xl border border-slate-200 shadow-inner">
-                                                <button onClick={() => setImageSource('ai')} className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold transition-all ${imageSource === 'ai' ? 'bg-white shadow text-orange-600' : 'text-slate-500 hover:text-slate-800'}`}>Generata AI</button>
-                                                <button onClick={() => { setImageSource('upload'); if (singleTitle && !imgSearchQuery) setImgSearchQuery(singleTitle); }} className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold transition-all ${imageSource === 'upload' ? 'bg-white shadow text-orange-600' : 'text-slate-500 hover:text-slate-800'}`}>Upload</button>
-                                                <button onClick={() => { setImageSource('search'); if (singleTitle && !imgSearchQuery) setImgSearchQuery(singleTitle); }} className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold transition-all ${imageSource === 'search' ? 'bg-white shadow text-orange-600' : 'text-slate-500 hover:text-slate-800'}`}>Cerca Web</button>
-                                            </div>
-
-                                            {imageSource === 'ai' && (
-                                                <div className="p-6 border-2 border-dashed border-emerald-100 rounded-3xl bg-emerald-50/30 text-center space-y-3 animate-in fade-in zoom-in-95">
-                                                    <Sparkles className="w-10 h-10 text-emerald-400 mx-auto" />
-                                                    <p className="text-xs text-slate-600 font-bold px-4 leading-normal">
-                                                        L'AI creerà una cover cinematografica coerente con il brand e il contenuto dell'articolo.
-                                                    </p>
-                                                </div>
-                                            )}
-
-                                            {(imageSource === 'upload' || imageSource === 'search') && (
-                                                <div className="space-y-4">
-                                                    {singleSelectedImage ? (
-                                                        <div className="relative group rounded-2xl overflow-hidden border-2 border-orange-200 shadow-lg">
-                                                            <img src={singleSelectedImage.url} className="w-full aspect-video object-cover transition-transform group-hover:scale-105 duration-500" alt="selected" />
-                                                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <button onClick={() => setSingleSelectedImage(null)} className="w-full h-8 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-sm">
-                                                                    <Trash2 className="w-3.5 h-3.5" /> Rimuovi
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    ) : imageSource === 'upload' ? (
-                                                        <div className="border-2 border-dashed rounded-3xl p-10 text-center hover:bg-slate-50 transition-all cursor-pointer relative group border-slate-200 hover:border-orange-300">
-                                                            <Input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleSingleFileUpload} accept="image/*" />
-                                                            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors">
-                                                                <ImagePlus className="w-8 h-8 text-slate-300 group-hover:text-orange-400" />
-                                                            </div>
-                                                            <p className="text-xs font-bold text-slate-500">Seleziona immagine</p>
-                                                            <p className="text-[10px] text-slate-400 mt-1">PNG, JPG fino a 5MB</p>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="space-y-4">
-                                                            <div className="flex gap-2">
-                                                                <Input 
-                                                                    className="h-10 rounded-xl text-xs bg-slate-50 focus-visible:ring-orange-500" 
-                                                                    placeholder="Cerca foto ad alta qualità..." 
-                                                                    value={imgSearchQuery} 
-                                                                    onChange={(e) => setImgSearchQuery(e.target.value)}
-                                                                    onKeyDown={(e) => e.key === 'Enter' && handleImageSearch(12)}
-                                                                />
-                                                                <Button size="sm" onClick={() => handleImageSearch(12)} disabled={searchingImages} className="h-10 px-4 bg-orange-500 hover:bg-orange-600 rounded-xl shadow-lg shadow-orange-100">
-                                                                    {searchingImages ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                                                                </Button>
-                                                            </div>
-                                                            {imgSearchResults.length > 0 && (
-                                                                <ScrollArea className="h-[280px] rounded-2xl border border-slate-100 bg-slate-50 p-2 shadow-inner">
-                                                                    <div className="grid grid-cols-2 gap-2">
-                                                                        {imgSearchResults.map((img, i) => (
-                                                                            <div key={i} className="relative group cursor-pointer aspect-square rounded-xl overflow-hidden shadow-sm" onClick={() => importExternalImage(img.image)}>
-                                                                                <img src={img.thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={img.title || ""} loading="lazy" />
-                                                                                <div className="absolute inset-0 bg-orange-600/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-center">
-                                                                                    <ImagePlus className="w-6 h-6 text-white mb-1 shadow-md" />
-                                                                                    <span className="text-[8px] font-bold text-white bg-black/40 px-1.5 py-0.5 rounded-full">{img.width}x{img.height}</span>
-                                                                                </div>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                    <div className="mt-4 pb-2 text-center">
-                                                                        <Button variant="ghost" size="sm" onClick={() => handleImageSearch(imgSearchResults.length + 10)} disabled={searchingImages} className="text-[10px] font-black text-slate-400 hover:text-orange-500">
-                                                                            {searchingImages ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
-                                                                            CARICA ALTRE IMMAGINI
-                                                                        </Button>
-                                                                    </div>
-                                                                </ScrollArea>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-
-                                    {genMode === 'pillar' && (
-                                        <div className="space-y-4 mb-4">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex flex-col">
-                                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Strategia Pillar & Cluster</h3>
-                                                    <p className="text-[10px] text-slate-500 font-medium">Genera 5 articoli satellite per creare un Silo SEO</p>
-                                                </div>
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm" 
-                                                    onClick={handleSuggestSilo}
-                                                    disabled={suggestingSilo || !singleObjective}
-                                                    className="h-9 border-indigo-100 bg-indigo-50/50 text-indigo-700 hover:bg-indigo-100 font-bold rounded-xl"
-                                                >
-                                                    {suggestingSilo ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Library className="w-3.5 h-3.5 mr-2" />}
-                                                    Suggerisci Clusters
-                                                </Button>
-                                            </div>
-
-                                            {siloClusters.length > 0 && (
-                                                <div className="bg-white border border-indigo-100 rounded-2xl overflow-hidden shadow-sm animate-in slide-in-from-bottom-2 duration-500">
-                                                    <div className="p-3 bg-indigo-50/50 border-b border-indigo-100 flex items-center justify-between">
-                                                        <span className="text-[10px] font-black text-indigo-700 uppercase">Cluster Suggeriti</span>
-                                                        <Badge className="bg-indigo-600 text-white font-bold">{selectedSiloClusters.length} Selezionati</Badge>
-                                                    </div>
-                                                    <div className="p-2 space-y-1">
-                                                        {siloClusters.map((cluster, idx) => {
-                                                            const isSelected = !!selectedSiloClusters.find(c => c.titolo === cluster.titolo);
-                                                            return (
-                                                                <div 
-                                                                    key={idx} 
-                                                                    onClick={() => toggleSiloCluster(cluster)}
-                                                                    className={`group flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer ${isSelected ? 'bg-indigo-50/50 border-indigo-200' : 'bg-transparent border-slate-100 hover:border-indigo-100'}`}
-                                                                >
-                                                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white group-hover:border-indigo-400'}`}>
-                                                                        {isSelected && <Check className="w-3.5 h-3.5" />}
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <p className={`text-[11px] font-bold truncate ${isSelected ? 'text-indigo-900' : 'text-slate-600'}`}>{cluster.titolo}</p>
-                                                                        <p className="text-[9px] text-slate-400 line-clamp-1 italic">{cluster.objective}</p>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                    <div className="p-4 bg-slate-50 border-t border-indigo-100">
-                                                        <Button 
-                                                            onClick={handleGenerateSilo} 
-                                                            disabled={generating || selectedSiloClusters.length === 0}
-                                                            className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-lg shadow-indigo-100"
-                                                        >
-                                                            {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
-                                                            LANCIA SILO (Pillar + {selectedSiloClusters.length} Cluster)
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    <Button 
-                                        onClick={() => handleSingleGenerate('articolo')} 
-                                        disabled={singleGenerating} 
-                                        className={`w-full h-12 bg-gradient-to-r from-slate-900 to-slate-800 hover:to-orange-600 shadow-xl border-0 text-white rounded-2xl group transition-all duration-500 ${genMode === 'pillar' && siloClusters.length > 0 ? 'hidden' : ''}`}
-                                    >
-                                        <div className="flex items-center justify-center w-full relative">
-                                            {singleGenerating ? (
-                                                <Loader2 className="w-6 h-6 mr-3 animate-spin" />
-                                            ) : (
-                                                <Zap className="w-6 h-6 mr-3 text-amber-400 group-hover:scale-125 transition-transform" />
-                                            )}
-                                            <span className="text-sm font-black tracking-tight uppercase">
-                                                {singleGenerating ? 'Generazione in corso...' : (genMode === 'pillar' ? 'Genera Solo Pillar' : 'Avvia Generazione')}
-                                            </span>
-                                        </div>
+                        {step === 1 && (
+                            <Card className="border-slate-200 rounded-[3.5rem] p-12 overflow-hidden shadow-2xl">
+                                <Suspense fallback={<div>Loading...</div>}>
+                                    <ContentStrategyTab strategy={contentStrategy} setStrategy={setContentStrategy} />
+                                </Suspense>
+                                <div className="mt-12 flex justify-end">
+                                    <Button onClick={() => setStep(2)} className="h-16 px-12 bg-slate-950 text-white rounded-3xl font-black text-xs uppercase tracking-widest">
+                                        Analisi SERP <ChevronRight className="w-5 h-5 ml-4" />
                                     </Button>
-
-                                    {singleResult && (
-                                        <div className="mt-4 p-5 border border-emerald-100 bg-emerald-50 rounded-2xl space-y-4 shadow-sm animate-in zoom-in-95 duration-300">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="p-1.5 bg-emerald-500 rounded-lg shadow-sm shadow-emerald-200">
-                                                        <CheckCircle2 className="w-4 h-4 text-white" />
-                                                    </div>
-                                                    <p className="font-bold text-sm text-emerald-900">
-                                                        {singleResult.status === 'completed' ? 'Articolo Generato!' : 'In elaborazione...'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {singleResult.wordpress_link && (
-                                                <div className="bg-white/80 border border-emerald-100 p-3 rounded-xl flex items-center justify-between group">
-                                                    <div className="flex items-center gap-2 overflow-hidden">
-                                                        <Globe className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                                                        <span className="text-[10px] font-bold text-slate-600 truncate">{singleResult.wordpress_link.split('//')[1]}</span>
-                                                    </div>
-                                                    <a href={singleResult.wordpress_link} target="_blank" rel="noreferrer" className="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg shadow-sm transition-all hover:scale-105">
-                                                        <ExternalLink className="w-3.5 h-3.5" />
-                                                    </a>
-                                                </div>
-                                            )}
-                                            {singleResult.id && (
-                                                <Button variant="outline" size="sm" className="w-full text-xs font-black text-emerald-800 border-emerald-200 h-10 hover:bg-emerald-100/50 rounded-xl" onClick={() => loadFullPreview(singleResult.id)}>
-                                                    <Eye className="w-4 h-4 mr-2" /> ANTEPRIMA COMPLETA
-                                                </Button>
-                                            )}
-                                        </div>
-                                    )}
                                 </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {genMode === 'programmatic' && (
-                        <div className="space-y-6 flex flex-col">
-                            {/* Wizard Header / Stepper */}
-                            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm mb-4">
-                                <div className="flex items-center justify-between mb-8">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200">
-                                            <Zap className="w-6 h-6 text-white" />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                                                SEO Programmatica Premium
-                                                <Badge className="bg-indigo-100 text-indigo-700 border-none text-[10px]">v2.0</Badge>
-                                            </h2>
-                                            <p className="text-xs text-slate-500 font-medium">Generazione bulk ad alto impatto con intelligenza semantica</p>
-                                        </div>
-                                        <div className="ml-4">
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                onClick={handleResetProgrammatic}
-                                                className="text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl h-9 px-3 text-[10px] font-bold group transition-all"
-                                            >
-                                                <RotateCcw className="w-3.5 h-3.5 mr-2 group-hover:rotate-[-120deg] transition-transform" />
-                                                NUOVA SESSIONE
-                                            </Button>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {[1, 2, 3, 4].map((step) => (
-                                            <div key={step} className="flex items-center">
-                                                <div 
-                                                    onClick={() => wizardStep > step && setWizardStep(step)}
-                                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${wizardStep >= step ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-400'} ${wizardStep > step ? 'cursor-pointer hover:bg-indigo-500' : ''}`}
-                                                >
-                                                    {step}
-                                                </div>
-                                                {step < 4 && <div className={`w-8 h-1 mx-1 rounded-full ${wizardStep > step ? 'bg-indigo-600 cursor-pointer' : 'bg-slate-100'}`} onClick={() => wizardStep > step && setWizardStep(step)} />}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Step 1: Dati & Keyword */}
-                                {wizardStep === 1 && (
-                                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                        <div className="grid grid-cols-1 gap-6">
-                                                <Suspense fallback={<div className="p-8 text-center text-xs animate-pulse text-indigo-400">Architettore Keyword AI...</div>}>
-                                                    <KeywordsTab keywords={keywords} setKeywords={setKeywords} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} />
-                                                </Suspense>
-                                        </div>
-                                        <div className="flex justify-end p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
-                                            <Button 
-                                                className="bg-indigo-600 hover:bg-indigo-700 px-8 h-12 rounded-xl font-bold shadow-lg shadow-indigo-100"
-                                                onClick={handleArchitectStep}
-                                                disabled={isArchitecting}
-                                            >
-                                                {isArchitecting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
-                                                Configura Architettura AI
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Step 2: AI Spintax Architect */}
-                                {wizardStep === 2 && (
-                                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                            <div className="lg:col-span-8 space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <Label className="text-sm font-bold text-slate-800">Master Spintax Template (Generato da AI)</Label>
-                                                    <Button variant="ghost" size="sm" className="text-xs text-indigo-600" onClick={handleArchitectStep} disabled={isArchitecting}>
-                                                        <RefreshCcw className="w-3 h-3 mr-1" /> Rigenera
-                                                    </Button>
-                                                </div>
-                                                <Textarea 
-                                                    className="min-h-[400px] font-mono text-sm bg-slate-50 border-slate-200 focus:bg-white transition-colors p-6 rounded-2xl leading-relaxed"
-                                                    value={programmaticTemplate}
-                                                    onChange={(e) => setProgrammaticTemplate(e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="lg:col-span-4 space-y-4">
-                                                <Card className="border-indigo-100 bg-indigo-50/30 shadow-none rounded-2xl">
-                                                    <CardHeader className="py-4">
-                                                        <CardTitle className="text-xs font-black uppercase text-indigo-700 tracking-widest flex items-center gap-2">
-                                                            <Globe className="w-3.5 h-3.5" /> Correlate dal Web
-                                                        </CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="px-4 pb-4">
-                                                        <div className="flex flex-wrap gap-2 text-xs">
-                                                            {webCorrelates.map((c, i) => (
-                                                                <Badge key={i} variant="secondary" className="bg-white border-indigo-200 text-indigo-700 px-3 py-1 text-[11px] font-medium shadow-sm">
-                                                                    {c}
-                                                                </Badge>
-                                                            ))}
-                                                            {webCorrelates.length === 0 && <p className="text-[10px] text-slate-400 italic">Nessun intento trovato...</p>}
-                                                        </div>
-                                                        <div className="mt-6 p-4 bg-white/60 rounded-xl border border-indigo-100 text-[10px] text-slate-500 leading-relaxed">
-                                                            L'AI ha incorporato questi intenti naturali nel testo per massimizzare la rilevanza semantica e GEO.
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-
-                                                <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl space-y-3">
-                                                    <h4 className="text-[11px] font-black text-orange-700 uppercase">Suggerimenti</h4>
-                                                    <ul className="text-[10px] text-orange-600 space-y-2 list-disc pl-4">
-                                                        <li>Usa [[CITTA]] per la località</li>
-                                                        <li>Usa [[SERVIZIO]] per il core service</li>
-                                                        <li>Controlla la chiusura delle parentesi per Spintax</li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl">
-                                            <Button variant="ghost" onClick={() => setWizardStep(1)}>Indietro</Button>
-                                            <Button 
-                                                className="bg-indigo-600 hover:bg-indigo-700 px-8 h-12 rounded-xl font-bold shadow-lg shadow-indigo-100"
-                                                onClick={() => { setWizardStep(3); handleGeneratePreview(); }}
-                                            >
-                                                Scegli Design & Media <ArrowRight className="w-4 h-4 ml-2" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Step 3: Design & Media */}
-                                {wizardStep === 3 && (
-                                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                            {/* Design Controls */}
-                                            <div className="space-y-6">
-                                                <Card className="border-slate-200 shadow-sm overflow-hidden rounded-2xl">
-                                                    <CardHeader className="bg-slate-50/50 py-3 border-b">
-                                                        <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                                            <ImageIcon className="w-4 h-4 text-emerald-600" /> Immagini Globali (Batch)
-                                                        </CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="p-4 space-y-4">
-                                                        <div className="grid grid-cols-4 gap-2">
-                                                            {globalImages.map((img, i) => (
-                                                                <div key={i} className="relative aspect-square rounded-lg border overflow-hidden group">
-                                                                    <img src={img.url || img.secure_url} className="w-full h-full object-cover" />
-                                                                    <button className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setGlobalImages(prev => prev.filter((_, idx) => idx !== i))}>
-                                                                        <X className="w-3 h-3" />
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                            <label className="border-2 border-dashed border-slate-200 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors">
-                                                                {imageUploadLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-400" /> : <Plus className="w-6 h-6 text-slate-300" />}
-                                                                <span className="text-[8px] font-bold text-slate-400 mt-1">UPLOAD</span>
-                                                                <input type="file" className="hidden" multiple accept="image/*" onChange={handleGlobalImageUpload} />
-                                                            </label>
-                                                        </div>
-                                                        <p className="text-[10px] text-slate-500 italic">Queste immagini verranno distribuite omogeneamente in tutte le pagine del batch.</p>
-                                                    </CardContent>
-                                                </Card>
-
-                                                <Card className="border-slate-200 shadow-sm overflow-hidden rounded-2xl">
-                                                    <CardHeader className="bg-slate-50/50 py-3 border-b">
-                                                        <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                                            <MousePointerClick className="w-4 h-4 text-orange-600" /> Conversione & Strategia
-                                                        </CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="p-4 space-y-6">
-                                                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                                            <div className="space-y-0.5">
-                                                                <Label className="text-xs font-bold">Linking Interno Incrociato</Label>
-                                                                <p className="text-[9px] text-slate-500 italic">Collega 3 località casuali del batch per ogni pagina</p>
-                                                            </div>
-                                                            <Switch checked={internalLinkingEnabled} onCheckedChange={setInternalLinkingEnabled} />
-                                                        </div>
-                                                        
-                                                        <div className="space-y-3">
-                                                            <div className="flex items-center justify-between">
-                                                                <Label className="text-xs font-bold">Configurazione CTA</Label>
-                                                                <Switch checked={ctaConfig.enabled} onCheckedChange={(v) => setCtaConfig({...ctaConfig, enabled: v})} />
-                                                            </div>
-                                                            <div className="grid grid-cols-2 gap-3">
-                                                                <Input className="h-9 text-xs" placeholder="Testo Bottone" value={ctaConfig.text} onChange={(e) => setCtaConfig({...ctaConfig, text: e.target.value})} />
-                                                                <Input className="h-9 text-xs" placeholder="URL Destinazione" value={ctaConfig.url} onChange={(e) => setCtaConfig({...ctaConfig, url: e.target.value})} />
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            </div>
-
-                                            {/* Live Preview */}
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
-                                                    <Eye className="w-3.5 h-3.5" /> Anteprima Real-Time (Testata su {keywords.citta_e_zone[0] || 'Città'})
-                                                </Label>
-                                                <div className="border border-slate-200 rounded-3xl overflow-hidden shadow-2xl h-[450px] bg-slate-50 relative">
-                                                    <ScrollArea className="h-full">
-                                                        <div className="p-6 bg-white prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: previewContent || '<p class="text-slate-400 text-center mt-20">Generazione anteprima...</p>' }} />
-                                                    </ScrollArea>
-                                                    <Button variant="outline" size="sm" className="absolute top-4 right-4 bg-white/80 backdrop-blur-sm rounded-full h-8 px-4 text-[10px] font-bold" onClick={handleGeneratePreview}>
-                                                        <RefreshCcw className="w-3 h-3 mr-2" /> Rimescola
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl">
-                                            <Button variant="ghost" onClick={() => setWizardStep(2)}>Indietro</Button>
-                                            <Button 
-                                                className="bg-indigo-600 hover:bg-indigo-700 px-8 h-12 rounded-xl font-bold shadow-lg shadow-indigo-100"
-                                                onClick={() => { setWizardStep(4); refreshCombinations(); }}
-                                            >
-                                                Verifica & Lancio <ArrowRight className="w-4 h-4 ml-2" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Step 4: Lancio Bulk */}
-                                {wizardStep === 4 && (
-                                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                            <Card className="border-slate-200 shadow-sm overflow-hidden flex flex-col h-[500px] rounded-3xl">
-                                                <CardHeader className="bg-slate-50/50 border-b py-4 px-6">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <CardTitle className="text-sm font-bold">Combinazioni da Generare</CardTitle>
-                                                            <Badge variant="outline" className="text-[10px]">{combinations.length}</Badge>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <Button variant="ghost" size="xs" onClick={refreshCombinations} className="h-7 text-[10px]">Refresh</Button>
-                                                            <Button variant="outline" size="xs" onClick={selectAll} className="h-7 text-[10px]">{selectedCombinations.length === combinations.length ? 'Nessuna' : 'Tutte'}</Button>
-                                                        </div>
-                                                    </div>
-                                                </CardHeader>
-                                                <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
-                                                    <ScrollArea className="flex-1 p-6">
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                            {combinations.map((combo, i) => {
-                                                                const key = `${combo.servizio}-${combo.citta}-${combo.tipo}`;
-                                                                const sel = selectedCombinations.find(c => `${c.servizio}-${c.citta}-${c.tipo}` === key);
-                                                                return (
-                                                                    <div key={key} onClick={() => toggleCombo(combo)} className={`p-3 rounded-xl cursor-pointer flex items-center gap-3 border transition-all ${sel ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'hover:bg-slate-50 border-slate-100'}`}>
-                                                                        <Checkbox checked={!!sel} className="h-4 w-4" />
-                                                                        <div className="min-w-0">
-                                                                            <p className="text-[11px] font-bold truncate leading-none uppercase tracking-tight">{combo.titolo}</p>
-                                                                            <p className="text-[9px] text-slate-400 mt-1">{combo.servizio} • {combo.citta}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </ScrollArea>
-                                                    <div className="p-6 bg-slate-50 border-t mt-auto">
-                                                        <div className="flex justify-between items-center mb-6">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Totale Selezionato</span>
-                                                                <span className="text-3xl font-black text-indigo-600 leading-none">{selectedCombinations.length} <span className="text-xs text-slate-400 font-normal">Pagine</span></span>
-                                                            </div>
-                                                            <Button 
-                                                                className="h-14 px-10 bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-100 rounded-2xl font-black text-lg group"
-                                                                onClick={handleProgrammaticGenerate}
-                                                                disabled={generating || selectedCombinations.length === 0}
-                                                            >
-                                                                {generating ? <Loader2 className="w-5 h-5 animate-spin mr-3" /> : <Zap className="w-5 h-5 mr-3 group-hover:scale-125 transition-transform" />}
-                                                                LANCIO BULK
-                                                            </Button>
-                                                        </div>
-                                                        {generating && <Progress value={progressPercent} className="h-2 bg-indigo-100" />}
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-
-                                            <Card className="border-slate-200 shadow-sm overflow-hidden flex flex-col h-[500px] rounded-3xl">
-                                                <CardHeader className="bg-slate-50/50 border-b py-4 px-6">
-                                                    <CardTitle className="text-sm font-bold">Stato Lavorazioni</CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="p-0 flex-1 overflow-hidden bg-slate-50/20">
-                                                    <ScrollArea className="h-full p-6">
-                                                        <div className="space-y-2">
-                                                            {results.map((r, i) => (
-                                                                <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between gap-4">
-                                                                    <div className="min-w-0 flex-1">
-                                                                        <h4 className="text-[11px] font-black text-slate-800 leading-none uppercase tracking-tight truncate">{r.titolo}</h4>
-                                                                        <div className="flex items-center gap-2 mt-2">
-                                                                            <Badge className={`text-[8px] h-3.5 border-none font-black ${r.generation_status === 'done' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600 animate-pulse'}`}>
-                                                                                {r.generation_status === 'done' ? 'PRONTO' : 'GENERAZIONE...'}
-                                                                            </Badge>
-                                                                            {r.publish_status === 'published' && <Badge className="bg-indigo-600 text-white text-[8px] h-3.5 border-none font-black">LIVE</Badge>}
-                                                                        </div>
-                                                                    </div>
-                                                                    <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl hover:bg-slate-50">
-                                                                        <Eye className="w-4 h-4 text-slate-400" />
-                                                                    </Button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </ScrollArea>
-                                                </CardContent>
-                                            </Card>
-                                        </div>
-                                        
-                                        <div className="flex justify-start items-center bg-slate-50 p-4 rounded-2xl mt-6">
-                                            <Button variant="ghost" onClick={() => setWizardStep(3)}>
-                                                <ArrowLeft className="w-4 h-4 mr-2" /> Indietro
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-
-                    
-                </div>
-            )}
-
-            {/* Full Preview Modal */}
-            {fullPreview && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-                    <Card className="w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl border-none overflow-hidden rounded-3xl">
-                        <CardHeader className="bg-slate-900 text-white flex-shrink-0 py-5 px-8">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-2 bg-orange-500 rounded-xl">
-                                        <Globe className="w-5 h-5 text-white" />
-                                    </div>
-                                    <div>
-                                        <Badge className="bg-orange-500 hover:bg-orange-600 mb-1">Preview Live</Badge>
-                                        <CardTitle className="text-xl font-bold">{fullPreview.titolo}</CardTitle>
-                                    </div>
-                                </div>
-                                <Button variant="ghost" className="text-white hover:bg-slate-800 rounded-full h-10 w-10 p-0" onClick={() => setFullPreview(null)}>
-                                    <X className="w-6 h-6" />
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="flex-1 overflow-y-auto p-0 bg-slate-50">
-                            <div className="article-full-preview bg-white">
-                                <style dangerouslySetInnerHTML={{ __html: `
-                                    .article-full-preview .tldr-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 24px; border-radius: 16px; margin-bottom: 40px; }
-                                    .article-full-preview .tldr-box h4 { margin-top: 0; color: #0f172a; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
-                                    .article-full-preview .hero-block {
-                                        background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('${fullPreview.image_url || "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=2070"}');
-                                        background-size: cover;
-                                        background-position: center;
-                                        padding: 120px 40px;
-                                        text-align: center;
-                                        color: white;
-                                    }
-                                    .article-full-preview .hero-block h1 { font-size: 3.5rem; font-weight: 800; margin-bottom: 20px; line-height: 1.1; color: white !important; }
-                                    .article-full-preview .hero-block p { font-size: 1.25rem; opacity: 0.9; max-width: 800px; margin: 0 auto 30px; color: white !important; }
-                                    .article-full-preview .wp-block-buttons { display: flex; gap: 15px; justify-content: center; }
-                                    .article-full-preview .wp-block-button__link {
-                                        padding: 15px 35px; border-radius: 50px; background: #f97316; color: white; font-weight: bold; text-decoration: none;
-                                    }
-                                    .article-full-preview .wp-block-columns {
-                                        display: grid; grid-template-cols: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; padding: 60px 40px;
-                                    }
-                                    .article-full-preview .wp-block-column { padding: 30px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; }
-                                    .article-full-preview .wp-block-column h3 { font-size: 1.5rem; margin-bottom: 15px; }
-                                    .article-full-preview .faq-content { max-width: 800px; margin: 0 auto; padding: 60px 40px; }
-                                    .article-full-preview .faq-content h3 { margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-                                    .article-full-preview .final-cta { background: #f1f5f9; padding: 80px 40px; text-align: center; margin-top: 60px; }
-                                    .article-full-preview img { max-width: 100%; height: auto; border-radius: 8px; }
-                                    .article-full-preview a { color: #2563eb; text-decoration: underline; }
-                                `}} />
-                                <div className="prose prose-slate max-w-none px-8 py-12" dangerouslySetInnerHTML={{ __html: fullPreview.contenuto }} />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
-            {/* Confirmation Modal for Delete Plan */}
-            {showDeleteConfirm && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
-                    <Card className="w-full max-w-md shadow-2xl border-none overflow-hidden rounded-3xl animate-in zoom-in-95 duration-200">
-                        <CardHeader className="bg-red-50 text-red-600 py-6 text-center border-b border-red-100">
-                            <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                                <AlertTriangle className="w-8 h-8 text-red-600" />
-                            </div>
-                            <CardTitle className="text-xl font-black uppercase tracking-tight">Zona Pericolo</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-8 text-center bg-white">
-                            <p className="text-slate-600 mb-8 font-medium">
-                                Stai per eliminare definitivamente l'intero **Piano Editoriale** attuale. 
-                                <br/><span className="text-xs text-red-500 font-bold uppercase mt-2 block">Questa azione non è reversibile!</span>
-                            </p>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Button 
-                                    variant="outline" 
-                                    onClick={() => setShowDeleteConfirm(false)}
-                                    className="h-12 rounded-xl font-bold border-slate-200 hover:bg-slate-50"
-                                >
-                                    Annulla
-                                </Button>
-                                <Button 
-                                    disabled={deletingPlan}
-                                    onClick={confirmDeletePlan}
-                                    className="h-12 rounded-xl font-bold bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200"
-                                >
-                                    {deletingPlan ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                                    Sì, Elimina Piano
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
-{genMode === 'plan' && (
-                        <div className="space-y-6 animate-in fade-in duration-500">
-                        <div className="grid grid-cols-1 gap-6">
-                            <Card className="border-slate-200">
-                                <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between hover:bg-slate-50/50 cursor-pointer transition-colors" onClick={() => setShowPlanSettings(!showPlanSettings)}>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-                                            <Target className="w-4 h-4 text-indigo-600" />
-                                        </div>
-                                        <div>
-                                            <CardTitle className="text-sm font-black">Configurazione Hub</CardTitle>
-                                            <CardDescription className="text-[10px] uppercase tracking-wider font-bold opacity-60">Obiettivi e Quantità</CardDescription>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button size="xs" className="h-7 text-[10px] bg-white text-indigo-600 hover:bg-indigo-50 border border-indigo-100 shadow-sm px-3 rounded-lg"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if(!advancedPrompt) return;
-                                                setRefining(true);
-                                                // ... existing logic ...
-                                            }}
-                                            disabled={refining}
-                                        >
-                                            {refining ? <Loader2 className="w-3 h-3 animate-spin mr-1"/> : <Sparkles className="w-3 h-3 mr-1"/>} AI Refine
-                                        </Button>
-                                        {showPlanSettings ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-                                    </div>
-                                </CardHeader>
-                                {showPlanSettings && (
-                                    <CardContent className="pt-4 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                                        <div className="md:col-span-3 space-y-2">
-                                            <Label className="text-xs font-semibold text-slate-700">Prompt / Indicazioni Strategiche</Label>
-                                            <Textarea 
-                                                value={advancedPrompt} 
-                                                onChange={(e)=>setAdvancedPrompt(e.target.value)} 
-                                                placeholder="Scrivi l'obiettivo di questo piano (es. Focus su nuovi prodotti 2024)..." 
-                                                className="text-xs h-[80px]" 
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-xs font-semibold text-slate-700">Articoli (1-50)</Label>
-                                            <div className="flex items-center gap-2">
-                                                <Input 
-                                                    type="number" 
-                                                    min="1" max="50" 
-                                                    value={numArticles} 
-                                                    onChange={(e) => setNumArticles(parseInt(e.target.value))}
-                                                    className="h-9 text-xs"
-                                                />
-                                                <span className="text-[10px] text-slate-400 font-bold">QTY</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                                )}
                             </Card>
-                                                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/80 backdrop-blur-md p-5 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-100/50">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200/50">
-                                        <Sparkles className="w-6 h-6 text-white" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Editorial Hub</h2>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Pianificazione Strategica SEO</p>
-                                    </div>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    {/* View Toggle */}
-                                    {allPlanTopics.length > 0 && (
-                                        <div className="flex items-center bg-slate-100/80 rounded-xl p-1 border border-slate-200/50 mr-1">
-                                            <Button variant="ghost" size="sm" onClick={() => setPlanView('list')} className={`h-8 w-10 p-0 rounded-lg transition-all ${planView === 'list' ? 'bg-white shadow-sm text-indigo-600 border border-slate-100' : 'text-slate-400 opacity-60 hover:opacity-100'}`}><LayoutList className="w-4 h-4" /></Button>
-                                            <Button variant="ghost" size="sm" onClick={() => setPlanView('calendar')} className={`h-8 w-10 p-0 rounded-lg transition-all ${planView === 'calendar' ? 'bg-white shadow-sm text-indigo-600 border border-slate-100' : 'text-slate-400 opacity-60 hover:opacity-100'}`}><LayoutGrid className="w-4 h-4" /></Button>
-                                        </div>
-                                    )}
+                        )}
 
-                                    {/* Tool Actions */}
-                                    {allPlanTopics.length > 0 && (
-                                        <div className="flex items-center gap-1.5 mr-2 pr-3 border-r border-slate-100">
-                                            <Button variant="ghost" size="icon" onClick={handleSavePlan} disabled={saving || !plan} className="h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl" title="Salva Hub">
-                                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                            </Button>
-                                            <Button variant="ghost" size="icon" onClick={handleDeletePlan} disabled={deletingPlan} className="h-9 w-9 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl" title="Resetta Hub">
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    )}
-
-                                    <div className="flex items-center gap-2">
-                                        {allPlanTopics.length > 0 && (
-                                            <Button variant="ghost" size="sm" onClick={selectAllPlanTopics} className="h-9 px-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all">
-                                                {selectedPlanTopics.length === allPlanTopics.length ? 'Deseleziona' : 'Seleziona Tutto'}
-                                            </Button>
-                                        )}
-
-                                        <Button onClick={generateNewPlan} disabled={planGenerating} variant="outline" className="h-10 border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-widest px-5 rounded-xl hover:bg-slate-50 transition-all">
-                                            {planGenerating ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <RefreshCcw className="w-3 h-3 mr-2 opacity-40" />}
-                                            Aggiorna
-                                        </Button>
-                                        
-                                        {selectedPlanTopics.length > 0 && (
-                                            <Button 
-                                                onClick={handleBatchPlanGenerate}
-                                                disabled={generating}
-                                                className="h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-[0.15em] px-6 rounded-xl shadow-lg shadow-indigo-100 transition-all active:scale-95"
-                                            >
-                                                {generating ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Zap className="w-3 h-3 mr-2" />}
-                                                Pubblica ({selectedPlanTopics.length})
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-         </div>
-
-                            {generating && (
-                                <div className="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm animate-in slide-in-from-top-4 duration-500">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-xs font-bold text-indigo-600 flex items-center gap-2">
-                                            <Loader2 className="w-3 h-3 animate-spin" /> Elaborazione Piano Editoriale in corso...
-                                        </span>
-                                        <span className="text-xs font-black text-indigo-700">{progressPercent}%</span>
-                                    </div>
-                                    <Progress value={progressPercent} className="h-2 bg-indigo-50" />
-                                </div>
-                            )}
-
-                            {planLoading && (
-                                <div className="flex flex-col items-center justify-center py-32 space-y-4">
-                                    <div className="relative">
-                                        <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-500 rounded-full animate-spin"></div>
-                                        <BrainCircuit className="w-6 h-6 text-indigo-500 absolute inset-0 m-auto" />
-                                    </div>
-                                    <p className="text-slate-500 font-medium animate-pulse text-sm">L'AI sta analizzando i dati del sito...</p>
-                                </div>
-                            )}
-
-                             {allPlanTopics.length > 0 && planView === 'calendar' && (
-                                <EditorialCalendar 
-                                    topics={allPlanTopics} 
-                                    onArticleClick={(art) => handleUseTopicInGenerator(art)}
-                                />
-                            )}
-
-                            {allPlanTopics.length > 0 && planView === 'list' && (
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
-                                    {/* Sidebar Toggle Button (Sticky) */}
-                                    <Button 
-                                        variant="outline" 
-                                        size="icon" 
-                                        onClick={() => setRecentSidebarOpen(!recentSidebarOpen)}
-                                        className={`hidden lg:flex absolute -right-4 top-0 z-20 h-8 w-8 rounded-full border shadow-sm bg-white transition-transform duration-300 ${recentSidebarOpen ? '' : 'rotate-180'}`}
-                                        title={recentSidebarOpen ? "Chiudi Sidebar" : "Apri Sidebar"}
-                                    >
-                                        <ChevronRight className="w-4 h-4" />
+                        {step === 2 && (
+                            <Card className="border-slate-200 rounded-[3rem] p-10 shadow-xl">
+                                <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Search className="w-6 h-6 text-indigo-500" /> SERP Intelligence</h3>
+                                <div className="flex gap-4 mb-8">
+                                    <Input value={serpKeyword} onChange={(e) => setSerpKeyword(e.target.value)} placeholder="Tua keyword focus..." className="h-14 rounded-2xl text-lg px-6 bg-slate-50" />
+                                    <Button onClick={runSerpAnalysis} disabled={serpLoading} className="h-14 px-8 bg-indigo-600 text-white rounded-2xl font-bold">
+                                        {serpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Analizza SERP'}
                                     </Button>
-
-                                    <div className={`${recentSidebarOpen ? 'lg:col-span-9' : 'lg:col-span-12'} space-y-8 transition-all duration-500`}>
-                                        {/* Strategy Summary Stats */}
-                                        <div className="flex items-center justify-between gap-6 mb-6 px-4 py-3 bg-slate-50/50 rounded-2xl border border-slate-100 shadow-inner">
-                                            {[
-                                                { label: 'Piano AI', val: plan?.topics?.length || 0, icon: Sparkles, color: 'text-indigo-500' },
-                                                { label: 'Audit', val: client?.configuration?.editorial_queue?.length || 0, icon: ListPlus, color: 'text-emerald-500' },
-                                                { label: 'Selezionati', val: selectedPlanTopics.length, icon: MousePointerClick, color: 'text-orange-500' },
-                                                { label: 'Pubblicati', val: recentArticles.length, icon: CheckCircle2, color: 'text-slate-400' },
-                                            ].map((stat, i) => (
-                                                <div key={i} className="flex items-center gap-3">
-                                                    <div className={`p-2 rounded-lg bg-white shadow-sm border border-slate-100 ${stat.color}`}>
-                                                        <stat.icon className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest leading-none mb-1">{stat.label}</span>
-                                                        <p className="text-base font-black text-slate-900 leading-none">{stat.val}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <div className="flex items-center justify-between mb-4 px-1">
-                                            <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                                                <LayoutList className="w-4 h-4 text-indigo-500" /> Elenco Articoli
-                                            </h2>
-                                        </div>
-                                                                               {/* Gruppi per Topic */}
-                                        {Object.entries(
-                                            allPlanTopics.reduce((acc, t) => {
-                                                const topicGroup = t.topic || "Vari/Altri";
-                                                if (!acc[topicGroup]) acc[topicGroup] = [];
-                                                acc[topicGroup].push(t);
-                                                return acc;
-                                            }, {})
-                                        ).map(([topicName, topicItems], topicIdx) => (
-                                            <div key={topicName} className="space-y-4">
-                                                <div className="flex items-center gap-3 px-1">
-                                                    <div className={`w-2 h-6 rounded-full ${['bg-indigo-500', 'bg-emerald-500', 'bg-orange-500', 'bg-pink-500', 'bg-sky-500'][topicIdx % 5]}`} />
-                                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                                                        {topicName}
-                                                        <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-[10px] py-0 h-4 border-none font-black">
-                                                            {topicItems.length} {topicItems.length === 1 ? 'articolo' : 'articoli'}
-                                                        </Badge>
-                                                    </h3>
-                                                </div>
-                                                
-                                                <div className="grid grid-cols-1 gap-3">
-                                                    {topicItems.map((item, idx) => {
-                                                        const isSelected = !!selectedPlanTopics.find(t => t.titolo === item.titolo);
-                                                        const resultMatch = results.find(r => r.titolo?.toLowerCase() === item.titolo?.toLowerCase());
-                                                        const recentMatch = recentArticles.find(art => art.titolo?.toLowerCase() === item.titolo?.toLowerCase());
-                                                        const isPublished = !!recentMatch || resultMatch?.publish_status === 'success';
-                                                        const isDraft = recentMatch?.stato === 'draft';
-                                                        const isGenerating = resultMatch?.generation_status === 'running' || resultMatch?.publish_status === 'running';
-                                                        
-                                                        // Resolve global index for plan topics if not queue item
-                                                        const planIndex = !item.isQueueItem ? plan?.topics?.findIndex(t => t.titolo === item.titolo) : -1;
-
-                                                        return (
-                                                            <Card 
-                                                                key={idx} 
-                                                                className={`group transition-all duration-300 border-slate-100 hover:shadow-lg hover:shadow-indigo-500/5 ${isSelected ? 'border-indigo-400 ring-1 ring-indigo-400/20 bg-indigo-50/10' : 'hover:border-slate-200'} ${isPublished ? 'bg-slate-50/30' : ''}`}
-                                                            >
-                                                                <CardContent className="p-0 overflow-hidden">
-                                                                    <div className="flex items-stretch h-16">
-                                                                        {/* Select Area */}
-                                                                        <div 
-                                                                            onClick={() => !isPublished && togglePlanTopic(item)}
-                                                                            className={`w-12 flex items-center justify-center cursor-pointer transition-all border-r border-slate-50 ${isPublished ? 'cursor-not-allowed bg-emerald-50 text-emerald-500/40' : isSelected ? 'bg-indigo-500 text-white' : 'hover:bg-slate-50 text-slate-200'}`}
-                                                                        >
-                                                                            {isPublished ? (
-                                                                                <CheckCircle2 className="w-4 h-4" />
-                                                                            ) : isGenerating ? (
-                                                                                <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
-                                                                            ) : (
-                                                                                <Checkbox checked={isSelected} className={`h-4 w-4 border-slate-200 ${isSelected ? 'border-none accent-white mb-0' : ''}`} />
-                                                                            )}
-                                                                        </div>
-
-                                                                        {/* Mini Image */}
-                                                                        <div className="relative w-20 bg-slate-50 flex-shrink-0 overflow-hidden group/img">
-                                                                            {(item.image_url || resultMatch?.image_url || item.stock_image_url) ? (
-                                                                                <img 
-                                                                                    src={resultMatch?.image_url || item.image_url || item.stock_image_url} 
-                                                                                    alt="" 
-                                                                                    className="w-full h-full object-cover grayscale-[30%] group-hover/img:grayscale-0 transition-all duration-500 group-hover/img:scale-110" 
-                                                                                />
-                                                                            ) : (
-                                                                                <div className="w-full h-full flex items-center justify-center text-slate-200">
-                                                                                    <ImageIcon className="w-4 h-4" />
-                                                                                </div>
-                                                                            )}
-                                                                            {!isPublished && (
-                                                                                <div className="absolute inset-0 bg-indigo-900/60 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 bg-white/20 hover:bg-white text-white hover:text-indigo-900 rounded-lg p-0"
-                                                                                        onClick={(e) => { e.stopPropagation(); setActivePlanImageIndex(planIndex); setImgSearchQuery(item.keyword || item.titolo); handleImageSearch(30, item.keyword || item.titolo); }}>
-                                                                                        <Search className="w-3 h-3" />
-                                                                                    </Button>
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-
-                                                                        {/* Info */}
-                                                                        <div className="flex-1 min-w-0 flex items-center px-4 gap-4">
-                                                                            <div className="flex-1 min-w-0">
-                                                                                <div className="flex items-center gap-2 mb-0.5">
-                                                                                    <Badge className={`text-[8px] px-1 py-0 h-3.5 border-none font-black ${
-                                                                                        item.funnel === 'TOFU' ? 'bg-sky-50 text-sky-600' : 
-                                                                                        item.funnel === 'MOFU' ? 'bg-indigo-50 text-indigo-600' : 
-                                                                                        'bg-purple-50 text-purple-600'
-                                                                                    }`}>
-                                                                                        {item.funnel}
-                                                                                    </Badge>
-                                                                                    {item.keyword && <span className="text-[9px] font-mono font-bold text-slate-400 truncate tracking-tight uppercase">KW: {item.keyword}</span>}
-                                                                                </div>
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <h4 className={`text-xs font-bold leading-none truncate ${isPublished ? 'text-slate-400' : 'text-slate-800'}`}>
-                                                                                        {item.titolo}
-                                                                                    </h4>
-                                                                                    {item.isQueueItem && <Badge variant="outline" className="text-[7px] h-3 px-1 border-emerald-200 text-emerald-600 font-bold bg-emerald-50">AUDIT</Badge>}
-                                                                                </div>
-                                                                                <p className="text-[10px] text-slate-400 truncate mt-1 italic leading-none">{item.motivo}</p>
-                                                                            </div>
-
-                                                                            {/* Mini Actions */}
-                                                                            <div className="flex items-center gap-1 flex-shrink-0">
-                                                                                {isPublished ? (
-                                                                                     <Badge variant="outline" className={`text-[8px] font-black h-4 px-1 ${isDraft ? 'border-amber-200 text-amber-600' : 'border-emerald-200 text-emerald-600'}`}>
-                                                                                        {isDraft ? 'DRAFT' : 'LIVE'}
-                                                                                     </Badge>
-                                                                                ) : (
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100">
-                                                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Data:</span>
-                                                                                            <input
-                                                                                                type="date"
-                                                                                                className="h-6 text-[10px] w-28 bg-transparent border-none focus:ring-0 p-0 text-indigo-600 font-bold"
-                                                                                                value={item.scheduled_date ? item.scheduled_date.split('T')[0] : ''}
-                                                                                                onChange={(e) => {
-                                                                                                    const newDate = e.target.value ? new Date(e.target.value).toISOString() : null;
-                                                                                                    
-                                                                                                    // Update source
-                                                                                                    if (!item.isQueueItem) {
-                                                                                                        const newTopics = [...plan.topics];
-                                                                                                        newTopics[planIndex] = { ...newTopics[planIndex], scheduled_date: newDate };
-                                                                                                        setPlan({ ...plan, topics: newTopics });
-                                                                                                    } else {
-                                                                                                        // For queue items, we just update it in the local derived view if possible, 
-                                                                                                        // but it's better to update the selected list directly
-                                                                                                    }
-
-                                                                                                    // Update selected list if item is selected
-                                                                                                    if (isSelected) {
-                                                                                                        setSelectedPlanTopics(prev => prev.map(t => 
-                                                                                                            t.titolo === item.titolo ? { ...t, scheduled_date: newDate } : t
-                                                                                                        ));
-                                                                                                    }
-                                                                                                }}
-                                                                                            />
-                                                                                        </div>
-                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-indigo-600 rounded-lg hover:bg-slate-50" onClick={() => handleUseTopicInGenerator(item)}>
-                                                                                            <PenTool className="w-3.5 h-3.5" />
-                                                                                        </Button>
-                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-500 rounded-lg hover:bg-slate-50" onClick={() => item.isQueueItem ? handleRemoveFromQueue(item) : removeTopicFromPlan(planIndex)}>
-                                                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                                                        </Button>
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </CardContent>
-                                                            </Card>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div> {/* Fine lg:col-span-9/12 */}
-
-                                    {recentSidebarOpen && (
-                                        <div className="lg:col-span-3 space-y-6 animate-in slide-in-from-right-4 duration-500">
-                                            <Card className="border-slate-200 shadow-sm sticky top-6">
-                                                <CardHeader className="p-4 pb-2">
-                                                    <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                                        <TrendingUp className="w-4 h-4 text-emerald-500" /> Recentemente Live
-                                                    </CardTitle>
-                                                    <CardDescription className="text-[10px]">Ultimi contenuti pubblicati nel sito</CardDescription>
-                                                </CardHeader>
-                                                <CardContent className="p-4 pt-2">
-                                                    <ScrollArea className="h-[600px] pr-3">
-                                                        <div className="space-y-4">
-                                                            {recentArticles.length > 0 ? recentArticles.map((art) => (
-                                                                <div key={art.id} className="relative pl-3 border-l-2 border-slate-100 pb-1 group cursor-default">
-                                                                    <div className="absolute -left-[5px] top-0 w-2 h-2 rounded-full bg-slate-200 group-hover:bg-indigo-400 transition-colors" />
-                                                                    <h4 className="text-[11px] font-bold text-slate-800 line-clamp-2 leading-tight">{art.titolo}</h4>
-                                                                    <div className="flex items-center gap-2 mt-1">
-                                                                        <span className="text-[9px] font-medium text-slate-400">
-                                                                            {art.published_at ? new Date(art.published_at).toLocaleDateString() : 'Draft'}
-                                                                        </span>
-                                                                        <Badge className={`text-[8px] h-3.5 px-1 font-bold ${art.stato === 'published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-400'}`} variant="outline">
-                                                                            {art.stato}
-                                                                        </Badge>
-                                                                    </div>
-                                                                    {art.wordpress_link && (
-                                                                        <a href={art.wordpress_link} target="_blank" className="text-[9px] text-indigo-500 hover:underline flex items-center gap-0.5 mt-1">
-                                                                            Link Post <ExternalLink className="w-2 h-2" />
-                                                                        </a>
-                                                                    )}
-                                                                </div>
-                                                            )) : (
-                                                                <div className="flex flex-col items-center justify-center py-10 opacity-40">
-                                                                    <FileText className="w-8 h-8 mb-2" />
-                                                                    <p className="text-[10px] font-medium">Nessun articolo trovato</p>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </ScrollArea>
-                                                </CardContent>
-                                            </Card>
-
-                                            {activePlanImageIndex !== null && (
-                                                <Card className="border-orange-200 bg-orange-50/30 overflow-hidden shadow-lg animate-in slide-in-from-right-4 duration-300">
-                                                    <CardHeader className="p-3 border-b border-orange-100 bg-white">
-                                                        <div className="flex items-center justify-between">
-                                                            <CardTitle className="text-xs font-bold text-orange-700">Immagine Articolo</CardTitle>
-                                                            <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-orange-100 text-orange-400" onClick={() => setActivePlanImageIndex(null)}><X className="w-3.5 h-3.5" /></Button>
-                                                        </div>
-                                                    </CardHeader>
-                                                    <CardContent className="p-3 bg-white space-y-2">
-                                                        <div className="flex gap-1 mb-2">
-                                                            <Input 
-                                                                className="h-8 text-[11px] border-orange-100 focus-visible:ring-orange-500" 
-                                                                value={imgSearchQuery} 
-                                                                onChange={(e) => setImgSearchQuery(e.target.value)}
-                                                                onKeyDown={(e) => e.key === 'Enter' && handleImageSearch(12)}
-                                                                placeholder="Cerca foto..."
-                                                            />
-                                                            <Button size="icon" className="h-8 w-8 bg-orange-500 hover:bg-orange-600" onClick={() => handleImageSearch(12)}>
-                                                                {searchingImages ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                                                            </Button>
-                                                        </div>
-
-                                                        {imgSearchResults.length > 0 && (
-                                                            <p className="text-[9px] text-slate-400 mb-1">{imgSearchResults.length} trovate</p>
-                                                        )}
-                                                        <ScrollArea className="h-[300px]">
-                                                            <div className="grid grid-cols-2 gap-2">
-                                                                {imgSearchResults.map((img, i) => (
-                                                                    <div key={i} className="cursor-pointer group relative rounded-lg overflow-hidden border border-slate-100 shadow-sm" onClick={() => importExternalImage(img.image)}>
-                                                                        <img src={img.thumbnail} className="w-full aspect-square object-cover" loading="lazy" />
-                                                                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                                                                            <ImagePlus className="w-5 h-5 text-white" />
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </ScrollArea>
-                                                    </CardContent>
-                                                </Card>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {!recentSidebarOpen && activePlanImageIndex !== null && (
-                                        <div className="lg:col-span-3 space-y-6 animate-in slide-in-from-right-4 duration-500">
-                                             <Card className="border-orange-200 bg-orange-50/30 overflow-hidden shadow-lg sticky top-6">
-                                                <CardHeader className="p-3 border-b border-orange-100 bg-white">
-                                                    <div className="flex items-center justify-between">
-                                                        <CardTitle className="text-xs font-bold text-orange-700">Immagine Articolo</CardTitle>
-                                                        <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-orange-100 text-orange-400" onClick={() => setActivePlanImageIndex(null)}><X className="w-3.5 h-3.5" /></Button>
-                                                    </div>
-                                                </CardHeader>
-                                                <CardContent className="p-3 bg-white space-y-2">
-                                                    <div className="flex gap-1 mb-2">
-                                                        <Input 
-                                                            className="h-8 text-[11px] border-orange-100 focus-visible:ring-orange-500" 
-                                                            value={imgSearchQuery} 
-                                                            onChange={(e) => setImgSearchQuery(e.target.value)}
-                                                            onKeyDown={(e) => e.key === 'Enter' && handleImageSearch(12)}
-                                                            placeholder="Cerca foto..."
-                                                        />
-                                                        <Button size="icon" className="h-8 w-8 bg-orange-500 hover:bg-orange-600" onClick={() => handleImageSearch(12)}>
-                                                            {searchingImages ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                                                        </Button>
-                                                    </div>
-                                                    <ScrollArea className="h-[300px]">
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            {imgSearchResults.map((img, i) => (
-                                                                <div key={i} className="cursor-pointer group relative rounded-lg overflow-hidden border border-slate-100 shadow-sm" onClick={() => importExternalImage(img.image)}>
-                                                                    <img src={img.thumbnail} className="w-full aspect-square object-cover" loading="lazy" />
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </ScrollArea>
-                                                </CardContent>
-                                            </Card>
-                                        </div>
-                                    )}
                                 </div>
-                            )}
-
-                            {!planLoading && allPlanTopics.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-24 bg-white border border-slate-100 rounded-3xl shadow-sm">
-                                    <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center mb-6">
-                                        <Sparkles className="w-10 h-10 text-indigo-400 opacity-40" />
-                                    </div>
-                                    <h3 className="text-lg font-bold text-slate-900 mb-1">Inizia la tua Strategia</h3>
-                                    <p className="text-sm text-slate-500 max-w-sm text-center">
-                                        Fai clic sul pulsante in alto per analizzare i dati del sito e generare un piano d'attacco basato sui dati AI, oppure aggiungi articoli dalla Freshness.
-                                    </p>
+                                <div className="mt-10 flex justify-between">
+                                    <Button variant="ghost" onClick={() => setStep(1)}>Indietro</Button>
+                                    <Button onClick={() => setStep(gscConnected ? 3 : 4)} className="h-12 px-8 bg-slate-900 text-white rounded-xl font-bold">Avanti</Button>
                                 </div>
-                            )}
+                            </Card>
+                        )}
+
+                        {step === 5 && (
+                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                                <div className="lg:col-span-8">
+                                    <Card className="border-slate-200 rounded-[3.5rem] shadow-2xl p-12 space-y-8">
+                                        <div className="space-y-3">
+                                            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Titolo dell'Asset</Label>
+                                            <Input className="h-16 text-xl font-black bg-slate-50 border-slate-100 rounded-3xl" value={singleTitle} onChange={(e) => setSingleTitle(e.target.value)} />
+                                        </div>
+                                        <div className="space-y-3">
+                                            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Concept Strategico</Label>
+                                            <Textarea className="min-h-[160px] text-base p-8 bg-slate-50 border-slate-100 rounded-[2.5rem]" value={singleObjective} onChange={(e) => setSingleObjective(e.target.value)} />
+                                        </div>
+                                        <Button onClick={() => handleSingleGenerate()} disabled={singleGenerating} className="w-full h-20 bg-gradient-to-r from-slate-950 to-slate-800 text-white rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-2xl">
+                                            {singleGenerating ? <Loader2 className="w-7 h-7 animate-spin" /> : 'Lancia Generazione AI'}
+                                        </Button>
+                                    </Card>
+                                </div>
+                             </div>
+                        )}
+                    </div>
+                )}
+
+                {genMode === 'plan' && (
+                    <div className="space-y-8">
+                        <div className="flex justify-between items-center bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] border border-slate-200 shadow-2xl">
+                            <div className="flex items-center gap-5">
+                                <div className="w-16 h-16 rounded-3xl bg-indigo-600 flex items-center justify-center shadow-xl shadow-indigo-200"><Calendar className="w-8 h-8 text-white" /></div>
+                                <div><h2 className="text-2xl font-black text-slate-900 tracking-tight">Editorial Hub</h2><p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Strategy Control v4.0</p></div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="flex bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50">
+                                    <Button variant="ghost" size="sm" onClick={() => setPlanView('list')} className={`h-10 px-4 rounded-xl text-[10px] uppercase font-black ${planView === 'list' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-400'}`}>List</Button>
+                                    <Button variant="ghost" size="sm" onClick={() => setPlanView('calendar')} className={`h-10 px-4 rounded-xl text-[10px] uppercase font-black ${planView === 'calendar' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-400'}`}>Calendar</Button>
+                                </div>
+                                <Button onClick={generateNewPlan} disabled={planGenerating} className="h-12 bg-slate-950 text-white rounded-2xl font-black text-[10px] px-8">REFRESH STRATEGY</Button>
+                            </div>
                         </div>
-                    )}
+                        {allPlanTopics.length > 0 && planView === 'calendar' && (
+                            <div className="bg-white rounded-[3.5rem] border border-slate-200 p-10 shadow-2xl">
+                                <EditorialCalendar topics={allPlanTopics} onArticleClick={handleUseTopicInGenerator} />
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {genMode === 'programmatic' && (
+                     <div className="animate-in fade-in slide-in-from-right-12 duration-800">
+                         <div className="bg-white p-20 rounded-[4rem] border border-slate-200 shadow-2xl text-center space-y-10">
+                              <div className="w-24 h-24 rounded-[2.5rem] bg-purple-600 flex items-center justify-center mx-auto shadow-2xl rotate-6 hover:rotate-0 transition-transform"><Zap className="w-12 h-12 text-white" /></div>
+                              <div><h2 className="text-4xl font-black text-slate-950 tracking-tighter">Programmatica v3.0</h2><p className="text-slate-500 max-w-lg mx-auto font-medium italic">Generazione massiva SEO-friendly.</p></div>
+                              <Button onClick={() => setWizardStep(1)} className="h-16 px-12 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl">INIZIA WIZARD BULK</Button>
+                         </div>
+                     </div>
+                )}
+            </div>
+
+            {fullPreview && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl p-6">
+                     <Card className="w-full max-w-6xl h-[92vh] bg-white rounded-[3.5rem] overflow-hidden flex flex-col shadow-2xl relative border-none">
+                         <div className="p-10 bg-slate-950 text-white flex items-center justify-between">
+                             <div className="flex items-center gap-6">
+                                 <div className="w-14 h-14 rounded-2xl bg-orange-500 flex items-center justify-center shadow-lg"><Globe className="w-7 h-7" /></div>
+                                 <h2 className="text-2xl font-black truncate max-w-2xl">{fullPreview.titolo}</h2>
+                             </div>
+                             <Button variant="ghost" onClick={() => setFullPreview(null)} className="h-14 w-14 rounded-full text-white"><X className="w-8 h-8" /></Button>
+                         </div>
+                         <div className="flex-1 overflow-y-auto p-16 prose prose-slate max-w-none">
+                             <div dangerouslySetInnerHTML={{ __html: fullPreview.contenuto }} />
+                         </div>
+                     </Card>
+                </div>
+            )}
         </div>
     );
 }
-
-// End of AdminGenerator function
-
