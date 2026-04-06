@@ -24,7 +24,8 @@ import {
     Zap,
     ExternalLink,
     CheckCircle2,
-    FileText
+    FileText,
+    Plus
 } from 'lucide-react';
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
