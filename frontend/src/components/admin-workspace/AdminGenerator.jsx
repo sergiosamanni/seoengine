@@ -248,6 +248,48 @@ export function AdminGenerator({
     }, [keywords, wizardStep, programmaticTemplate, sidebarTemplate, ctaConfig, templateStyle, internalLinkingEnabled, globalImages, webCorrelates, activeJobId, totalInJob, effectiveClientId, genMode]);
 
     useEffect(() => {
+        if (effectiveClientId && gscConnected && !gscData && !gscLoading) {
+            loadGscData();
+        }
+    }, [effectiveClientId, gscConnected]);
+
+    const gscInsights = useMemo(() => {
+        if (!gscData || !gscData.keywords) return [];
+        const insights = [];
+        const keywords = gscData.keywords || [];
+
+        // 1. CTR Low Opportunity (High impressions, low CTR)
+        const lowCtr = keywords
+            .filter(k => k.impressions > 1000 && k.ctr < 0.02)
+            .sort((a,b) => b.impressions - a.impressions)
+            .slice(0, 3);
+        if (lowCtr.length > 0) {
+            insights.push({
+                type: 'opportunity',
+                title: 'Basso CTR in Impressioni',
+                desc: `Le keyword "${lowCtr.map(k=>k.query).join(', ')}" hanno molte impressioni ma pochi click. Ottimizza i meta titoli per aumentare il traffico.`,
+                icon: TrendingUp
+            });
+        }
+
+        // 2. Rising stars (Falling position but growing impressions)
+        const quickWins = keywords
+            .filter(k => k.position > 10 && k.position < 30)
+            .sort((a,b) => b.clicks - a.clicks)
+            .slice(0, 2);
+        if (quickWins.length > 0) {
+            insights.push({
+                type: 'quickwin',
+                title: 'Quick Wins Pagina 2',
+                desc: `"${quickWins.map(k=>k.query).join(', ')}" sono vicine alla prima pagina. Un articolo di supporto potrebbe spingerle in alto.`,
+                icon: Zap
+            });
+        }
+
+        return insights;
+    }, [gscData]);
+
+    useEffect(() => {
         if (!effectiveClientId) {
             navigate('/dashboard');
         }
@@ -1143,21 +1185,65 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
     return (
         
         <div className="space-y-8 animate-fade-in">
-            {/* Modalità (Sub-tabs) */}
-            <div className="flex gap-2 p-1.5 bg-slate-100/80 backdrop-blur-sm rounded-2xl w-fit shadow-sm border border-slate-200">
-                <button onClick={() => setGenMode('single')} className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold transition-all ${genMode === 'single' ? 'bg-white text-orange-600 shadow-md ring-1 ring-orange-100' : 'text-slate-500 hover:text-slate-800'}`}>
-                    <PenTool className="w-4 h-4" /> Articolo Singolo
-                </button>
-                <button onClick={() => setGenMode('pillar')} className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold transition-all ${genMode === 'pillar' ? 'bg-white text-emerald-600 shadow-md ring-1 ring-emerald-100' : 'text-slate-500 hover:text-slate-800'}`}>
-                    <FileText className="w-4 h-4" /> Pillar Page
-                </button>
-                <button onClick={() => setGenMode('plan')} className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold transition-all ${genMode === 'plan' ? 'bg-white text-indigo-600 shadow-md ring-1 ring-indigo-100' : 'text-slate-500 hover:text-slate-800'}`}>
-                    <Calendar className="w-4 h-4" /> Editorial Hub
-                </button>
+            {/* Unified Creative Workspace Selector */}
+            <div className="flex flex-col gap-5">
+                <div className="flex flex-wrap items-center justify-between gap-4 bg-white/40 backdrop-blur-2xl p-2 rounded-[2.5rem] border border-slate-200/60 shadow-2xl shadow-slate-200/20">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        {[
+                            { id: 'single', label: 'Articolo Singolo', icon: PenTool, color: 'orange' },
+                            { id: 'pillar', label: 'Pillar Page', icon: Layers, color: 'emerald' },
+                            { id: 'plan', label: 'Editorial Hub', icon: Calendar, color: 'indigo' },
+                            { id: 'programmatic', label: 'Programmatica', icon: Library, color: 'purple' }
+                        ].map((mode) => (
+                            <button 
+                                key={mode.id}
+                                onClick={() => setGenMode(mode.id)} 
+                                className={`group flex items-center gap-3 px-6 py-3.5 rounded-[1.8rem] text-[10px] uppercase tracking-[0.15em] font-black transition-all duration-500 relative overflow-hidden ${
+                                    genMode === mode.id ? 'bg-slate-900 border-none text-white shadow-2xl shadow-slate-400' : 'text-slate-500 hover:bg-white hover:text-slate-950 border border-transparent hover:border-slate-100 shadow-sm'
+                                }`}
+                            >
+                                <mode.icon className={`w-4 h-4 transition-transform duration-500 group-hover:scale-110 ${genMode === mode.id ? 'text-white' : `text-${mode.color}-300 opacity-60`}`} /> 
+                                {mode.label}
+                                {genMode === mode.id && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full translate-y-2 group-hover:translate-y-[-4px] transition-transform" />}
+                            </button>
+                        ))}
+                    </div>
+                    
+                    <div className="hidden md:flex items-center gap-4 pr-6">
+                        <div className="flex flex-col text-right">
+                            <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{client?.nome}</span>
+                            <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest opacity-60">Creative Workspace Active</span>
+                        </div>
+                        <div className="w-10 h-10 rounded-[1.2rem] bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                            <Sparkles className="w-5 h-5 text-indigo-500" />
+                        </div>
+                    </div>
+                </div>
 
-                <button onClick={() => setGenMode('programmatic')} className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[11px] uppercase tracking-widest font-bold transition-all ${genMode === 'programmatic' ? 'bg-white text-purple-600 shadow-md ring-1 ring-purple-100' : 'text-slate-500 hover:text-slate-800'}`}>
-                    <Sparkles className="w-4 h-4" /> Programmatica
-                </button>
+                {/* Proactive GSC Insights Bar */}
+                {gscInsights.length > 0 && genMode === 'plan' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-top-4 duration-500">
+                        {gscInsights.map((insight, idx) => (
+                            <Alert key={idx} className="bg-gradient-to-br from-indigo-500/5 to-purple-500/5 border-indigo-100/50 rounded-3xl p-5 shadow-sm group hover:shadow-md transition-all cursor-default relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-1 opacity-20">
+                                    <insight.icon className="w-12 h-12 text-indigo-500 -rotate-12 translate-x-4 -translate-y-4" />
+                                </div>
+                                <div className="flex items-start gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                        <insight.icon className="w-6 h-6 text-indigo-600" />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <h4 className="text-[11px] font-black text-indigo-950 uppercase tracking-widest mb-1 flex items-center gap-2">
+                                            {insight.title}
+                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                                        </h4>
+                                        <p className="text-xs text-slate-600 leading-relaxed font-medium">{insight.desc}</p>
+                                    </div>
+                                </div>
+                            </Alert>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Step Bar (Only for Single/Pillar) */}
