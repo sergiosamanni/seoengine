@@ -195,12 +195,6 @@ export const GeneratorPage = () => {
               )}
             </TabsList>
 
-            {isAdmin && (
-                <div className="flex items-center gap-3 px-5 py-2.5 bg-blue-50/50 border border-blue-100 rounded-2xl shadow-sm">
-                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-600">Administrative Control Active</span>
-                </div>
-            )}
         </div>
 
         <TabsContent value="config" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
