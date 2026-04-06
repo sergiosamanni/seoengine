@@ -1287,23 +1287,29 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
 
                 {/* GSC Insights - Visual High impact */}
                 {genMode === 'plan' && gscInsights.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {gscInsights.map((insight, idx) => (
-                            <div key={idx} className={`rounded-[2.5rem] p-6 shadow-sm border-none ${insight.bg} flex flex-col justify-between`}>
-                                <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center flex-shrink-0">
-                                        <Target className={`w-6 h-6 ${insight.color}`} />
-                                    </div>
-                                    <div>
-                                        <h4 className={`text-[11px] font-black uppercase tracking-widest mb-1 ${insight.color}`}>{insight.title}</h4>
-                                        <p className="text-[10px] text-slate-600 leading-relaxed font-semibold">{insight.desc}</p>
-                                    </div>
+                            <Card key={idx} className={`rounded-[2.5rem] p-8 shadow-2xl border-none transition-all hover:scale-[1.02] ${insight.bg} flex flex-col justify-between overflow-hidden relative group`}>
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <insight.icon className="w-20 h-20" />
                                 </div>
-                                <div className="mt-5 flex gap-2 pt-2">
-                                    <Button onClick={() => handleApproveInsight(insight)} className="h-9 px-5 bg-white/80 hover:bg-white text-slate-900 rounded-full text-[9px] font-black uppercase shadow-sm">Sì, Procedi</Button>
-                                    <Button onClick={() => handleDismissInsight(insight.id)} variant="ghost" className="h-9 px-5 text-slate-400 hover:text-red-500 rounded-full text-[9px] font-black uppercase">Ignora</Button>
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className={`w-12 h-12 rounded-2xl bg-white shadow-xl flex items-center justify-center flex-shrink-0 ${insight.color}`}>
+                                            <insight.icon className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h4 className={`text-[11px] font-black uppercase tracking-[0.2em] mb-1 ${insight.color}`}>{insight.title}</h4>
+                                            <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest border-current/20 opacity-60">Insight AI</Badge>
+                                        </div>
+                                    </div>
+                                    <p className="text-[11px] text-slate-700 leading-relaxed font-bold mb-6 italic opacity-80">"{insight.desc}"</p>
                                 </div>
-                            </div>
+                                <div className="mt-auto flex gap-3 pt-4 border-t border-black/5 relative z-10">
+                                    <Button onClick={() => handleApproveInsight(insight)} className="flex-1 h-12 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl">Sì, Procedi</Button>
+                                    <Button onClick={() => handleDismissInsight(insight.id)} variant="ghost" className="h-12 px-6 text-slate-500 hover:text-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-colors">Ignora</Button>
+                                </div>
+                            </Card>
                         ))}
                     </div>
                 )}
@@ -1407,11 +1413,143 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
 
                 {genMode === 'programmatic' && (
                      <div className="animate-in fade-in slide-in-from-right-12 duration-800">
-                         <div className="bg-white p-20 rounded-[4rem] border border-slate-200 shadow-2xl text-center space-y-10">
-                              <div className="w-24 h-24 rounded-[2.5rem] bg-purple-600 flex items-center justify-center mx-auto shadow-2xl rotate-6 hover:rotate-0 transition-transform"><Zap className="w-12 h-12 text-white" /></div>
-                              <div><h2 className="text-4xl font-black text-slate-950 tracking-tighter">Programmatica v3.0</h2><p className="text-slate-500 max-w-lg mx-auto font-medium italic">Generazione massiva SEO-friendly.</p></div>
-                              <Button onClick={() => setWizardStep(1)} className="h-16 px-12 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl">INIZIA WIZARD BULK</Button>
-                         </div>
+                        {wizardStep === 0 ? (
+                             <div className="bg-white p-24 rounded-[4.5rem] border border-slate-200 shadow-2xl text-center space-y-12 relative overflow-hidden">
+                                  <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 via-indigo-500 to-emerald-500" />
+                                  <div className="w-32 h-32 rounded-[3.5rem] bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center mx-auto shadow-2xl shadow-purple-200 rotate-6 hover:rotate-0 transition-all duration-700">
+                                      <Zap className="w-16 h-16 text-white" />
+                                  </div>
+                                  <div className="space-y-4">
+                                      <h2 className="text-5xl font-black text-slate-950 tracking-tighter leading-none">ARCHITETTO PROGRAMMATICO</h2>
+                                      <p className="text-slate-500 max-w-xl mx-auto text-lg font-medium">Genera centinaia di varianti geolocalizzate o per servizio con un singolo template intelligente v4.0.</p>
+                                  </div>
+                                  <Button onClick={() => setWizardStep(1)} className="h-20 px-16 bg-slate-950 hover:bg-slate-800 text-white rounded-[2rem] font-black text-sm uppercase tracking-[0.3em] shadow-2xl transition-all hover:scale-105 active:scale-95">
+                                      AVVIA PROCEDURA BULK
+                                  </Button>
+                             </div>
+                        ) : (
+                            <div className="space-y-10">
+                                {/* Header Wizard */}
+                                <div className="flex items-center justify-between bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-xl">
+                                    <div className="flex items-center gap-6 px-4">
+                                        {[
+                                            { step: 1, label: 'Parametri', icon: Settings },
+                                            { step: 2, label: 'Architetto', icon: Layers },
+                                            { step: 3, label: 'Combinazioni', icon: Grid },
+                                            { step: 4, label: 'Lancio', icon: Rocket }
+                                        ].map((s) => (
+                                            <div key={s.step} className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px] transition-all ${wizardStep === s.step ? 'bg-purple-600 text-white shadow-lg' : wizardStep > s.step ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                                                    {wizardStep > s.step ? <CheckCircle2 className="w-5 h-5" /> : s.step}
+                                                </div>
+                                                <span className={`text-[10px] font-black uppercase tracking-widest ${wizardStep === s.step ? 'text-slate-900' : 'text-slate-400'}`}>{s.label}</span>
+                                                {s.step < 4 && <ChevronRight className="w-4 h-4 text-slate-200" />}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <Button variant="ghost" onClick={() => setWizardStep(0)} className="text-slate-400 hover:text-red-500 font-bold uppercase text-[9px] tracking-widest px-6">Annulla</Button>
+                                </div>
+
+                                {/* Wizard Content */}
+                                <Card className="bg-white border-slate-200 rounded-[3.5rem] p-16 shadow-2xl min-h-[500px]">
+                                    {wizardStep === 1 && (
+                                        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                                <div className="space-y-4">
+                                                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Macro Topic / Servizio Master</Label>
+                                                    <Input className="h-16 rounded-2xl bg-slate-50 border-slate-100 text-lg font-bold" placeholder="es. Noleggio Auto" value={progTopic} onChange={(e) => setProgTopic(e.target.value)} />
+                                                </div>
+                                                <div className="space-y-4">
+                                                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Ambito Geografico / Varianti</Label>
+                                                    <Input className="h-16 rounded-2xl bg-slate-50 border-slate-100 text-lg font-bold" placeholder="es. Milano, Roma, Napoli" value={progCities} onChange={(e) => setProgCities(e.target.value)} />
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-end pt-8">
+                                                <Button onClick={runProgrammaticArchitect} disabled={!progTopic || !progCities || progArchitecting} className="h-16 px-12 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl">
+                                                    {progArchitecting ? <RefreshCcw className="w-5 h-5 animate-spin mr-3" /> : null}
+                                                    Estrai Intenti & Template
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {wizardStep === 2 && (
+                                        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8">
+                                            <div className="space-y-4">
+                                                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Template Spintax Master (AI Generated)</Label>
+                                                <Textarea className="min-h-[350px] p-8 bg-slate-50 border-slate-100 rounded-[2.5rem] text-base leading-relaxed font-medium" value={progMasterSpintax} onChange={(e) => setProgMasterSpintax(e.target.value)} />
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest px-2">Tag supportati: [[SERVIZIO]], [[CITTA]], [[TIPO]], {`{A|B|C}`}</p>
+                                            </div>
+                                            <div className="flex justify-between items-center pt-8">
+                                                <Button variant="ghost" onClick={() => setWizardStep(1)} className="font-black uppercase text-[10px] text-slate-400">Indietro</Button>
+                                                <Button onClick={generateCombinationsList} className="h-16 px-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest">
+                                                    Genera Combinazioni
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {wizardStep === 3 && (
+                                        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Coda Varianti ({selectedCombinations.length})</h3>
+                                                <Button variant="ghost" onClick={() => setSelectedCombinations(progCombinations)} className="text-[10px] font-black text-indigo-600 uppercase">Seleziona Tutto</Button>
+                                            </div>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
+                                                {progCombinations.map((combo, idx) => {
+                                                    const isSelected = selectedCombinations.some(c => c.keyword === combo.keyword);
+                                                    return (
+                                                        <div 
+                                                            key={idx}
+                                                            onClick={() => toggleCombination(combo)}
+                                                            className={`p-4 rounded-2xl border cursor-pointer transition-all ${isSelected ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 hover:border-slate-300'}`}
+                                                        >
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <div className={`w-3 h-3 rounded-full ${isSelected ? 'bg-indigo-500' : 'bg-slate-100'}`} />
+                                                                <Badge variant="outline" className="text-[7px] font-black uppercase text-slate-400 border-slate-100">{combo.tipo}</Badge>
+                                                            </div>
+                                                            <p className="text-[10px] font-black text-slate-900 truncate">{combo.keyword}</p>
+                                                            <p className="text-[8px] text-slate-400 font-bold uppercase mt-1">{combo.citta}</p>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            <div className="flex justify-between items-center pt-8 border-t border-slate-100">
+                                                <Button variant="ghost" onClick={() => setWizardStep(2)} className="font-black uppercase text-[10px] text-slate-400">Indietro</Button>
+                                                <Button onClick={() => setWizardStep(4)} disabled={selectedCombinations.length === 0} className="h-16 px-12 bg-slate-950 hover:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest">
+                                                    Procedura di Lancio
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {wizardStep === 4 && (
+                                        <div className="text-center space-y-10 animate-in fade-in slide-in-from-bottom-8 py-10">
+                                            <div className="w-24 h-24 bg-emerald-100 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-xl shadow-emerald-50 shadow-emerald-50 shadow-emerald-50">
+                                                <Rocket className="w-12 h-12 text-emerald-600" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-3xl font-black text-slate-950 uppercase tracking-tighter">PRONTO AL LANCIO BULK</h3>
+                                                <p className="text-slate-500 max-w-md mx-auto font-medium mt-3">
+                                                    Hai pianificato <span className="text-slate-900 font-black">{selectedCombinations.length}</span> articoli unici. 
+                                                    Il sistema creerà contenuti SEO-ready usando il template master raffinato.
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-col gap-4 max-w-xs mx-auto">
+                                                <Button 
+                                                    onClick={startMassGeneration} 
+                                                    disabled={generating}
+                                                    className="h-20 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-emerald-200"
+                                                >
+                                                    {generating ? <RefreshCcw className="w-6 h-6 animate-spin" /> : 'LANCIO GENERAZIONE'}
+                                                </Button>
+                                                <Button variant="ghost" onClick={() => setWizardStep(3)} className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rivedi Combinazioni</Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </Card>
+                            </div>
+                        )}
                      </div>
                 )}
             </div>

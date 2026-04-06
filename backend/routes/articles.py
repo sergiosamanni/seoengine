@@ -923,36 +923,26 @@ async def generate_editorial_plan(client_id: str, req: PlanRequest = None, curre
         objective=objective_with_context
     )
 
-    # Fetch stock images for the plan topics concurrently to improve UX
-    async def fetch_one_image(session, topic_obj):
-        kw = topic_obj.get("keyword") or topic_obj.get("titolo")
-        if not kw: return
-        try:
-            # Note: ddgs.images is synchronous, so we run in executor or just keep it simple if not many
-            results = list(session.images(keywords=kw, max_results=1, safesearch="moderate", region="it-it"))
-            if results:
-                topic_obj["stock_image_url"] = results[0]["image"]
-                topic_obj["stock_image_thumb"] = results[0]["thumbnail"]
-        except:
-            pass
-
-    # Process first 15 topics to avoid massive latency
-    from duckduckgo_search import DDGS
-    import asyncio
-    
-    # We use a single session for all requests
-    with DDGS() as ddgs:
-        # Since DDGS is sync, we run them sequentially but very fast for max_results=1
-        # Or we could use threads, but for 15 requests it's usually fast enough (< 5s)
-        for t in topics[:15]:
-            kw = t.get("keyword") or t.get("titolo")
-            if not kw: continue
-            try:
-                res = list(ddgs.images(keywords=kw, max_results=1, region="it-it"))
-                if res:
-                    t["stock_image_url"] = res[0]["image"]
-                    t["stock_image_thumb"] = res[0]["thumbnail"]
-            except: pass
+    # Fetch stock images for the plan topics
+    # We use a safer approach for DDG image search
+    try:
+        from duckduckgo_search import DDGS
+        with DDGS() as ddgs:
+            # Process a smaller batch carefully
+            for t in topics[:12]:
+                kw = t.get("keyword") or t.get("titolo")
+                if not kw: continue
+                try:
+                    # Robust search with standard params
+                    image_results = ddgs.images(keywords=kw, max_results=1)
+                    if image_results:
+                        res0 = list(image_results)[0]
+                        t["stock_image_url"] = res0.get("image")
+                        t["stock_image_thumb"] = res0.get("thumbnail")
+                except Exception as img_err:
+                    logger.warning(f"Image fetch failed for '{kw}': {img_err}")
+    except Exception as ddg_init_err:
+        logger.error(f"DDGS init failed: {ddg_init_err}")
     
     plan_doc = {
         "client_id": client_id,
