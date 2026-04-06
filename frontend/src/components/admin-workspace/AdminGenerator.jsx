@@ -444,9 +444,8 @@ export function AdminGenerator({
             setPlan(res.data);
             toast.success("Piano editoriale generato con successo!");
         } catch (error) {
-            const detail = error.response?.data?.detail;
-            const message = typeof detail === 'string' ? detail : JSON.stringify(detail) || "Errore sconosciuto";
-            toast.error(`Errore generazione: ${message}`);
+            const detail = error.response?.data?.detail || "Errore sconosciuto";
+            toast.error(`Errore generazione: ${detail}`);
             console.error(error);
         } finally {
             setPlanGenerating(false);
@@ -1255,9 +1254,9 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
 
     return (
         <div className="space-y-8 animate-fade-in min-h-screen pb-20">
-            const detail = error.response?.data?.detail;
-            const message = typeof detail === "string" ? detail : JSON.stringify(detail) || "Errore sconosciuto";
-            toast.error(`Errore generazione: ${message}`);
+            {/* 1. Header & Mode Selector */}
+            <div className="flex flex-col gap-6">
+                <div className="flex flex-wrap items-center justify-between gap-4 bg-white/60 backdrop-blur-3xl p-3 rounded-[3rem] border border-slate-200 shadow-2xl shadow-slate-200/20">
                     <div className="flex flex-wrap items-center gap-2">
                         {[
                             { id: 'single', label: 'Articolo', icon: PenTool, color: 'orange' },
