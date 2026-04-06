@@ -130,6 +130,7 @@ class ClientConfiguration(BaseModel):
     gsc: Optional[GSCConfig] = None
     autopilot: Optional[AutopilotConfig] = None
     gmb_url: Optional[str] = None
+    dismissed_insights: Optional[List[str]] = []
 
 
 class ClientResponse(BaseModel):

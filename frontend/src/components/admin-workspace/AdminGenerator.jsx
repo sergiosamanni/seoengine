@@ -257,6 +257,7 @@ export function AdminGenerator({
         if (!gscData?.keywords) return [];
         const insights = [];
         const keywords = gscData.keywords;
+        const dismissed = client?.configuration?.dismissed_insights || [];
 
         // 1. CTR Optimization Opportunity
         const lowCtr = keywords
@@ -264,14 +265,19 @@ export function AdminGenerator({
             .sort((a,b) => b.impressions - a.impressions)
             .slice(0, 2);
         if (lowCtr.length > 0) {
-            insights.push({
-                type: 'optimization',
-                title: 'CTR Optimization Support',
-                desc: `High visibility detected for "${lowCtr.map(k=>k.keyword).join(', ')}". Update Meta Titles to capture search intent.`,
-                icon: MousePointerClick,
-                color: 'text-amber-600',
-                bg: 'bg-amber-50'
-            });
+            const id = `ctr_opt_${lowCtr.map(k=>k.keyword).join('_')}`;
+            if (!dismissed.includes(id)) {
+                insights.push({
+                    id,
+                    type: 'optimization',
+                    title: 'CTR Optimization Support',
+                    desc: `High visibility detected for "${lowCtr.map(k=>k.keyword).join(', ')}". Update Meta Titles to capture search intent.`,
+                    icon: MousePointerClick,
+                    color: 'text-amber-600',
+                    bg: 'bg-amber-50',
+                    context: lowCtr
+                });
+            }
         }
 
         // 2. High-Potential Ranking Gains
@@ -280,14 +286,19 @@ export function AdminGenerator({
             .sort((a,b) => b.impressions - a.impressions)
             .slice(0, 2);
         if (pageTwo.length > 0) {
-            insights.push({
-                type: 'growth',
-                title: 'Semantic Expansion Required',
-                desc: `"${pageTwo.map(k=>k.keyword).join(', ')}" are ranking on page 2. Create supporting cluster content to push into Top 10.`,
-                icon: Target,
-                color: 'text-indigo-600',
-                bg: 'bg-indigo-50'
-            });
+            const id = `growth_${pageTwo.map(k=>k.keyword).join('_')}`;
+            if (!dismissed.includes(id)) {
+                insights.push({
+                    id,
+                    type: 'growth',
+                    title: 'Semantic Expansion Required',
+                    desc: `"${pageTwo.map(k=>k.keyword).join(', ')}" are ranking on page 2. Create supporting cluster content to push into Top 10.`,
+                    icon: Target,
+                    color: 'text-indigo-600',
+                    bg: 'bg-indigo-50',
+                    context: pageTwo
+                });
+            }
         }
 
         // 3. New Emerging Trends
@@ -296,18 +307,23 @@ export function AdminGenerator({
             .sort((a,b) => b.impressions - a.impressions)
             .slice(0, 1);
         if (emerging.length > 0) {
-            insights.push({
-                type: 'trend',
-                title: 'Market Trend Detected',
-                desc: `Growing interest in "${emerging[0].keyword}". Build an authoritative guide now to secure early market position.`,
-                icon: TrendingUp,
-                color: 'text-emerald-500',
-                bg: 'bg-emerald-50'
-            });
+            const id = `trend_${emerging[0].keyword}`;
+            if (!dismissed.includes(id)) {
+                insights.push({
+                    id,
+                    type: 'trend',
+                    title: 'Market Trend Detected',
+                    desc: `Growing interest in "${emerging[0].keyword}". Build an authoritative guide now to secure early market position.`,
+                    icon: TrendingUp,
+                    color: 'text-emerald-500',
+                    bg: 'bg-emerald-50',
+                    context: emerging
+                });
+            }
         }
 
         return insights;
-    }, [gscData]);
+    }, [gscData, client?.configuration?.dismissed_insights]);
 
     useEffect(() => {
         if (!effectiveClientId) {
@@ -1179,6 +1195,38 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
         }
     };
 
+    const handleDismissInsight = async (id) => {
+        const config = client?.configuration || {};
+        const currentDismissed = config.dismissed_insights || [];
+        if (currentDismissed.includes(id)) return;
+        
+        const newConfig = {
+            ...config,
+            dismissed_insights: [...currentDismissed, id]
+        };
+        
+        try {
+            await axios.put(`${API}/clients/${effectiveClientId}/configuration`, newConfig, { headers: getAuthHeaders() });
+            toast.success("Suggerimento archiviato.");
+        } catch (e) {
+            toast.error("Errore salvataggio scelta");
+        }
+    };
+
+    const handleApproveInsight = (insight) => {
+        if (insight.type === 'growth' || insight.type === 'trend') {
+            const firstKw = insight.context?.[0]?.keyword || "";
+            setGenMode('single');
+            setSingleKeywords(firstKw);
+            setSingleTitle(firstKw);
+            setSingleObjective(`Espansione semantica per keyword emergente: ${firstKw}`);
+            setStep(5);
+            toast.success(`Configurazione caricata per: ${firstKw}`);
+        } else if (insight.type === 'optimization') {
+             toast.info("Funzione ottimizzazione Meta Title in arrivo.");
+        }
+    };
+
     const getStatusIcon = (s) => {
         if (s === 'success') return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
         if (s === 'failed') return <XCircle className="w-4 h-4 text-red-500" />;
@@ -1241,7 +1289,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                 {genMode === 'plan' && gscInsights.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {gscInsights.map((insight, idx) => (
-                            <div key={idx} className={`rounded-[2.5rem] p-6 shadow-sm border-none ${insight.bg}`}>
+                            <div key={idx} className={`rounded-[2.5rem] p-6 shadow-sm border-none ${insight.bg} flex flex-col justify-between`}>
                                 <div className="flex items-start gap-4">
                                     <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center flex-shrink-0">
                                         <Target className={`w-6 h-6 ${insight.color}`} />
@@ -1250,6 +1298,10 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                         <h4 className={`text-[11px] font-black uppercase tracking-widest mb-1 ${insight.color}`}>{insight.title}</h4>
                                         <p className="text-[10px] text-slate-600 leading-relaxed font-semibold">{insight.desc}</p>
                                     </div>
+                                </div>
+                                <div className="mt-5 flex gap-2 pt-2">
+                                    <Button onClick={() => handleApproveInsight(insight)} className="h-9 px-5 bg-white/80 hover:bg-white text-slate-900 rounded-full text-[9px] font-black uppercase shadow-sm">Sì, Procedi</Button>
+                                    <Button onClick={() => handleDismissInsight(insight.id)} variant="ghost" className="h-9 px-5 text-slate-400 hover:text-red-500 rounded-full text-[9px] font-black uppercase">Ignora</Button>
                                 </div>
                             </div>
                         ))}
