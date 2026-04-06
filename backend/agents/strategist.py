@@ -92,6 +92,16 @@ Rispondi ESCLUSIVAMENTE con un JSON valido nel seguente formato:
                 json_str = json_match.group(0)
                 data = json.loads(json_str)
                 plan = data.get("plan", [])
+                
+                # Schedulazione automatica Topic (distribuzione 30gg)
+                import datetime
+                base_date = datetime.datetime.now(datetime.timezone.utc)
+                for i, t in enumerate(plan):
+                    if not t.get("scheduled_date"):
+                        day_offset = (i * (30 // max(len(plan), 1)))
+                        t["scheduled_date"] = (base_date + datetime.timedelta(days=day_offset)).isoformat()
+                    t["stato"] = t.get("stato", "planned")
+                
                 await self.log("success", {"topics_generated": len(plan)})
                 return plan
             else:

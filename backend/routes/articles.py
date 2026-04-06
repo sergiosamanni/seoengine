@@ -913,50 +913,53 @@ async def generate_editorial_plan(client_id: str, req: PlanRequest = None, curre
     global_settings = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
     global_g = global_settings.get("seo_geo_guidelines", []) if global_settings else []
     
-    topics = await strategist.generate_plan(
-        gsc_data=gsc_data, 
-        kb_data=kb_data, 
-        target_keywords=target_keywords, 
-        existing_topics=existing_topics,
-        num_topics=num_topics,
-        global_guidelines=global_g,
-        objective=objective_with_context
-    )
-
-    # Fetch stock images for the plan topics
-    # We use a safer approach for DDG image search
     try:
-        from duckduckgo_search import DDGS
-        with DDGS() as ddgs:
-            # Process a smaller batch carefully
-            for t in topics[:12]:
-                kw = t.get("keyword") or t.get("titolo")
-                if not kw: continue
-                try:
-                    # Robust search with standard params
-                    image_results = ddgs.images(keywords=kw, max_results=1)
-                    if image_results:
-                        res0 = list(image_results)[0]
-                        t["stock_image_url"] = res0.get("image")
-                        t["stock_image_thumb"] = res0.get("thumbnail")
-                except Exception as img_err:
-                    logger.warning(f"Image fetch failed for '{kw}': {img_err}")
-    except Exception as ddg_init_err:
-        logger.error(f"DDGS init failed: {ddg_init_err}")
-    
-    plan_doc = {
-        "client_id": client_id,
-        "topics": topics,
-        "updated_at": datetime.now(timezone.utc).isoformat()
-    }
-    
-    await db.editorial_plans.update_one(
-        {"client_id": client_id},
-        {"$set": plan_doc},
-        upsert=True
-    )
-    
-    return plan_doc
+        topics = await strategist.generate_plan(
+            gsc_data=gsc_data, 
+            kb_data=kb_data, 
+            target_keywords=target_keywords, 
+            existing_topics=existing_topics,
+            num_topics=num_topics,
+            global_guidelines=global_g,
+            objective=objective_with_context
+        )
+
+        # Fetch stock images for the plan topics
+        try:
+            from duckduckgo_search import DDGS
+            with DDGS() as ddgs:
+                for t in topics[:12]:
+                    kw = t.get("keyword") or t.get("titolo")
+                    if not kw: continue
+                    try:
+                        image_results = ddgs.images(keywords=kw, max_results=1)
+                        # Correct iterator handling for newer DDGS versions
+                        for res0 in image_results:
+                            t["stock_image_url"] = res0.get("image")
+                            t["stock_image_thumb"] = res0.get("thumbnail")
+                            break # Just first result
+                    except Exception as img_err:
+                        logger.warning(f"Image fetch failed for '{kw}': {img_err}")
+        except Exception as ddg_init_err:
+            logger.error(f"DDGS init failed: {ddg_init_err}")
+        
+        plan_doc = {
+            "client_id": client_id,
+            "topics": topics,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.editorial_plans.update_one(
+            {"client_id": client_id},
+            {"$set": plan_doc},
+            upsert=True
+        )
+        
+        return plan_doc
+    except Exception as e:
+        import traceback
+        logger.error(f"Plan generation crash: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Errore generazione: {str(e)}")
 
 
 
