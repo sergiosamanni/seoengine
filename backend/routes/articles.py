@@ -612,15 +612,14 @@ async def serp_images(request: dict, current_user: dict = Depends(get_current_us
         raise HTTPException(status_code=400, detail="Keyword obbligatoria")
     max_results = min(request.get("max_results", 12), 50)  # cap at 50
     
-    # Refine keyword for better search results
+    # Refine queries for maximum context and relevance
     context = request.get("context", "").strip()
-    search_keywords = keyword
-    
-    # Context-aware refinement
-    if len(keyword.split()) < 3 and context:
-        search_keywords = f"{keyword} fotografia professionale realistica"
-    elif len(keyword.split()) < 3:
-        search_keywords = f"{keyword} realistico fotografia stock"
+    # Build 3 variants of the query
+    queries = [
+        keyword, # Original
+        f"\"{keyword}\" fotografia reale", # Scene focus
+        f"fotografia professionale {keyword}" # High quality focus
+    ]
     
     try:
         from duckduckgo_search import DDGS
@@ -632,47 +631,64 @@ async def serp_images(request: dict, current_user: dict = Depends(get_current_us
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
         ]
         
-        results = []
+        all_raw = []
         try:
             with DDGS(headers={"User-Agent": _random.choice(ua_list)}) as ddgs:
-                raw_results = list(ddgs.images(
-                    keywords=search_keywords,
-                    region="it-it",
-                    safesearch="moderate",
-                    size="Large",
-                    max_results=max_results + 20
-                ))
-                
-                # Keywords for filtering
-                kw_shards = set([w.lower() for w in keyword.split() if len(w) > 3])
-                
-                for r in raw_results:
-                    title_low = r.get("title", "").lower()
-                    img_url = r.get("image", "").lower()
-                    
-                    # 1. Negative filters
-                    if any(x in title_low for x in ["logo", "icon", "vettore", "svg", "lettera", "grafica", "clipart"]):
-                        continue
-                    if any(x in img_url for x in ["logo", "icon", "placeholder", "default"]):
-                        continue
-                        
-                    # 2. Semantic filtering (if query is specific)
-                    if len(kw_shards) > 0:
-                        overlap = sum(1 for w in kw_shards if w in title_low)
-                        if overlap == 0 and len(results) > max_results:
-                            continue
-                            
-                    # 3. Source trust
-                    if "wikimedia" in img_url and len(title_low) < 12:
-                        continue
-                        
-                    results.append(r)
-                
-                # Sort by keyword relevance
-                results.sort(key=lambda x: sum(1 for w in kw_shards if w in x.get("title", "").lower()), reverse=True)
-                results = results[:max_results]
+                for q in queries:
+                    q_res = list(ddgs.images(
+                        keywords=q,
+                        region="it-it",
+                        safesearch="moderate",
+                        size="Large",
+                        type_image="photo", # Force photos!
+                        max_results=max_results + 10
+                    ))
+                    all_raw.extend(q_res)
         except Exception as ddg_err:
-            logger.warning(f"Primary DDG image search failed: {ddg_err}")
+            logger.warning(f"Multi-query DDG failed: {ddg_err}")
+
+        # Remove duplicates by URL
+        seen_urls = set()
+        unique_results = []
+        for r in all_raw:
+            u = r.get("image")
+            if u not in seen_urls:
+                seen_urls.add(u)
+                unique_results.append(r)
+
+        # Smart Semantic Scorer & Filter
+        results = []
+        kw_main = set([w.lower() for w in keyword.split() if len(w) > 3])
+        ctx_main = set([w.lower() for w in context.split() if len(w) > 4]) if context else set()
+        
+        for r in unique_results:
+            title_low = r.get("title", "").lower()
+            img_url = r.get("image", "").lower()
+            
+            # 1. Hard filters for non-photos
+            if any(x in title_low for x in ["logo", "icon", "vettore", "svg", "lettera", "grafica", "clipart", "disegno", "vettoriale", "illustrazione"]):
+                continue
+            if any(x in img_url for x in ["logo", "icon", "placeholder", "svg", ".png"]): # Prioritize jpg/webp for photos
+                if ".png" in img_url and "transparent" in title_low: continue
+            
+            # 2. Score based on context
+            score = 0
+            if any(w in title_low for w in kw_main): score += 10
+            if any(w in title_low for w in ctx_main): score += 5
+            if ".it" in img_url: score += 5 # Favor Italian sources!
+            if "fotografia" in title_low or "scena" in title_low: score += 3
+            
+            r["_score"] = score
+            if score >= 10 or (not results and score > 0): # Min threshold
+                results.append(r)
+        
+        # Final sort by score
+        results.sort(key=lambda x: x.get("_score", 0), reverse=True)
+        results = results[:max_results]
+        
+    except Exception as e:
+        logger.error(f"Image search system failure: {e}")
+        results = []
 
         if not results:
             logger.warning("No images found via DDG. Trying Wikimedia Commons fallback...")
