@@ -1189,3 +1189,72 @@ async def programmatic_preview(req: ProgrammaticPreviewRequest, current_user: di
     except Exception as e:
         logger.error(f"Preview error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/analyze-competitor-url")
+async def analyze_competitor_url(request: dict, current_user: dict = Depends(get_current_user)):
+    url = request.get("url")
+    client_id = request.get("client_id")
+    if not url or not client_id:
+        raise HTTPException(status_code=400, detail="url e client_id richiesti")
+    
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+
+    client_doc = await db.clients.find_one({"id": client_id})
+    if not client_doc:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    config = client_doc.get("configuration", {})
+    llm_config = config.get("llm", {}) or config.get("openai", {})
+    
+    try:
+        from helpers import scrape_url
+        content_data = await scrape_url(url)
+        if not content_data or not content_data.get("text"):
+            raise HTTPException(status_code=400, detail="Impossibile scaricare il contenuto")
+            
+        from agents.base import BaseAgent
+        agent = BaseAgent(client_id=client_id, llm_config=llm_config)
+        
+        system_prompt = """Sei un SEO Strategist Senior. Analizza il contenuto scaricato di un competitor.
+Estrai:
+1. Una sintesi strategica (2-3 frasi) sull'angolo di attacco e la qualità.
+2. Identifica il focus principale della pagina.
+3. Suggerisci come possiamo superare questo contenuto nell'hub editoriale (Gap Semantico).
+
+Rispondi in JSON:
+{
+  "title": "Titolo della pagina",
+  "summary": "Sintesi strategica per il gap semantico...",
+  "word_count": 0,
+  "headings": [{"type": "h1", "text": "..."}]
+}
+"""
+        user_prompt = f"URL: {url}\n\nCONTENT:\n{content_data['text'][:6000]}"
+        
+        raw_res = await agent.chat(system_prompt, user_prompt)
+        import re
+        import json as json_module
+        json_match = re.search(r'\{.*\}', raw_res, re.DOTALL)
+        if json_match:
+            analysis = json_module.loads(json_match.group(0))
+            analysis["url"] = url
+            analysis["word_count"] = len(content_data["text"].split())
+            analysis["headings"] = content_data.get("headings", [])
+            analysis["created_at"] = datetime.now(timezone.utc).isoformat()
+            return analysis
+        else:
+            return {
+                "url": url,
+                "title": content_data.get("title", "Competitor Page"),
+                "summary": "Analisi AI fallita, ma contenuto scaricato correttamente.",
+                "word_count": len(content_data["text"].split()),
+                "headings": content_data.get("headings", []),
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Competitor analysis error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

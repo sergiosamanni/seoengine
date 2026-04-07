@@ -2255,3 +2255,40 @@ def wrap_in_two_columns_premium(main_content: str, sidebar_content: str) -> str:
 </div>
 <!-- /wp:columns -->
 """
+
+
+async def scrape_url(url: str) -> dict:
+    """Scrape a single URL and extract text, title, and headings for competitor analysis."""
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True, headers=headers) as client_http:
+            resp = await client_http.get(url)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "lxml")
+
+            # Remove script/style noise
+            for tag in soup(["script", "style", "nav", "footer", "header"]):
+                tag.decompose()
+
+            title = soup.title.string.strip() if soup.title and soup.title.string else ""
+            
+            headings = []
+            for h in soup.find_all(["h1", "h2", "h3", "h4"]):
+                text = h.get_text(strip=True)
+                if text and len(text) > 2:
+                    headings.append({"type": h.name, "text": text})
+
+            text = soup.get_text(separator="\n", strip=True)
+            # Clean excessive whitespace
+            import re
+            text = re.sub(r'\n{3,}', '\n\n', text)
+
+            return {
+                "title": title,
+                "text": text[:15000],  # Cap text for LLM context window
+                "headings": headings[:30],
+                "url": url
+            }
+    except Exception as e:
+        logger.error(f"scrape_url error for {url}: {e}")
+        return None

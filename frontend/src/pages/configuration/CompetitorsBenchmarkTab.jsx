@@ -36,7 +36,7 @@ export function CompetitorsBenchmarkTab({ client, config, setConfig, getAuthHead
                 const updatedConfig = { ...config, competitor_benchmarks: updated };
                 
                 // Save immediately
-                await axios.post(`${API}/save-config/${client.id}`, { configuration: updatedConfig }, { headers: getAuthHeaders() });
+                await axios.put(`${API}/clients/${client.id}/configuration`, updatedConfig, { headers: getAuthHeaders() });
                 
                 setConfig(updatedConfig);
                 setNewUrl('');
@@ -55,7 +55,7 @@ export function CompetitorsBenchmarkTab({ client, config, setConfig, getAuthHead
         const updatedConfig = { ...config, competitor_benchmarks: updated };
         
         try {
-            await axios.post(`${API}/save-config/${client.id}`, { configuration: updatedConfig }, { headers: getAuthHeaders() });
+            await axios.put(`${API}/clients/${client.id}/configuration`, updatedConfig, { headers: getAuthHeaders() });
             setConfig(updatedConfig);
             toast.success("Benchmark rimosso");
         } catch (e) {
