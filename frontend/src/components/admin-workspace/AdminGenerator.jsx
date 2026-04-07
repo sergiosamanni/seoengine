@@ -539,29 +539,30 @@ export function AdminGenerator({
     const promptDone = String(advancedPrompt || "").trim().length > 20;
 
     // Auto-fill Strategic Objective based on Step 1, 4 and KB
+    // Only run when strictly crossing into step 5
     useEffect(() => {
         if (step === 5 && genMode === 'single') {
             const kb = client?.configuration?.knowledge_base || {};
             const strategy = contentStrategy || {};
             
-            let autoObjective = "";
-            
-            if (advancedPrompt && advancedPrompt.length > 50) {
-                // Use the advanced prompt as the master objective if it's substantial
-                autoObjective = advancedPrompt;
-            } else {
-                autoObjective = `Obiettivo: Generare un contenuto ${strategy.funnel_stage || 'TOFU'} seguendo il modello ${strategy.modello_copywriting || 'PAS'}. 
+            // If it's the first time entering step 5, or if it's still default, try to sync
+            const isDefault = !singleObjective || 
+                             singleObjective.includes("Obiettivo: Generare un contenuto") || 
+                             singleObjective === "";
+
+            if (isDefault) {
+                if (advancedPrompt && advancedPrompt.length > 50) {
+                    setSingleObjective(advancedPrompt);
+                } else {
+                    const defaultObj = `Obiettivo: Generare un contenuto ${strategy.funnel_stage || 'TOFU'} seguendo il modello ${strategy.modello_copywriting || 'PAS'}. 
 Target: ${kb.pubblico_target_primario || 'Audience generale'}.
 Focus: ${singleTitle || singleKeywords || 'Keyword principale'}.
 Direttive: Ottimizzazione standard SEO premium.`;
-            }
-            
-            // Only auto-fill if it's empty or contains default text
-            if (!singleObjective || singleObjective.includes("Obiettivo: Generare un contenuto")) {
-                setSingleObjective(autoObjective);
+                    setSingleObjective(defaultObj);
+                }
             }
         }
-    }, [step, genMode, contentStrategy, advancedPrompt, client]);
+    }, [step]); // Only depend on 'step' to avoid infinite loops or constant overwrites
 
     async function handleImproveObjective() {
         if (!effectiveClientId) return;
@@ -1538,13 +1539,39 @@ Direttive: Ottimizzazione standard SEO premium.`;
                                         </div>
                                         <div className="space-y-4">
                                             <div className="flex items-center justify-between px-1">
-                                                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Concept Strategico</Label>
+                                                <div className="flex items-center gap-3">
+                                                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Concept Strategico</Label>
+                                                    {singleObjective === advancedPrompt && advancedPrompt ? (
+                                                        <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] font-black uppercase tracking-tighter flex gap-1 h-5 items-center">
+                                                            <Check className="w-2 h-2" /> Sincronizzato con Step 4
+                                                        </Badge>
+                                                    ) : (
+                                                        <div className="flex gap-2 items-center">
+                                                            <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-100 text-[8px] font-black uppercase tracking-tighter flex gap-1 h-5 items-center">
+                                                                Personalizzato
+                                                            </Badge>
+                                                            <Button onClick={() => setSingleObjective(advancedPrompt)} variant="ghost" className="h-5 p-0 px-2 text-[8px] font-black uppercase text-indigo-600 hover:text-indigo-800 tracking-widest flex gap-1 items-center">
+                                                                <RotateCcw className="w-2 h-2" /> Ripristina da Step 4
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <Button onClick={handleImproveObjective} disabled={refiningObjective} variant="ghost" className="h-8 gap-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 font-black text-[9px] uppercase tracking-widest rounded-full">
-                                                    {refiningObjective ? <Loader2 className="w-3 h-3 animate-spin" /> : <BrainCircuit className="w-3 h-3" />}
+                                                    {refiningObjective ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                                                     Migliora con AI
                                                 </Button>
                                             </div>
-                                            <Textarea className="min-h-[160px] text-base p-8 bg-slate-50 border-slate-100 rounded-[2.5rem] focus:ring-2 focus:ring-slate-900 transition-all font-medium" value={singleObjective} onChange={(e) => setSingleObjective(e.target.value)} />
+                                            <div className="relative group/concept">
+                                                <Textarea 
+                                                    className="min-h-[220px] text-base p-8 bg-slate-50 border-slate-100 rounded-[2.5rem] focus:ring-2 focus:ring-slate-900 transition-all font-medium leading-relaxed" 
+                                                    value={singleObjective} 
+                                                    onChange={(e) => setSingleObjective(e.target.value)} 
+                                                    placeholder="Definisci qui l'obiettivo strategico..."
+                                                />
+                                                <div className="absolute top-4 right-4 opacity-0 group-hover/concept:opacity-100 transition-opacity">
+                                                    <BrainCircuit className="w-5 h-5 text-indigo-500/20" />
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {/* Image Section */}
