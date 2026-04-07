@@ -21,7 +21,7 @@ import {
     PenTool, ChevronRight, Sparkles, ImagePlus, X, Camera, Image as ImageIcon,
     Calendar, BrainCircuit, RefreshCcw, Info, AlertTriangle, Plus,
     ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, Save, History, ListPlus, MousePointerClick, FileCode,
-    Library, Check, Layers, ArrowRight, ArrowLeft, RotateCcw, LayoutList, LayoutGrid, Play
+    Library, Check, Layers, ArrowRight, ArrowLeft, RotateCcw, LayoutList, LayoutGrid, Play, Edit2
 } from 'lucide-react';
 import { EditorialCalendar } from './EditorialCalendar';
 import { toast } from 'sonner';
@@ -1126,22 +1126,72 @@ Direttive: Ottimizzazione standard SEO premium.`;
         }
     };
 
+    const handleDeleteSelectedTopics = async () => {
+        if (selectedPlanTopics.length === 0) return;
+        if (!confirm(`Sei sicuro di voler eliminare ${selectedPlanTopics.length} contenuti dal piano?`)) return;
+        
+        setPlanLoading(true);
+        try {
+            // Se sono queue items, li togliamo dalla coda manuale nel config
+            const queueTitles = selectedPlanTopics.filter(t => t.isQueueItem).map(t => t.originalText || t.titolo);
+            if (queueTitles.length > 0) {
+                const currentConfig = client?.configuration || {};
+                const currentQueue = currentConfig.editorial_queue || [];
+                const newQueue = currentQueue.filter(k => !queueTitles.includes(k));
+                await axios.put(`${API}/clients/${effectiveClientId}/configuration`, { ...currentConfig, editorial_queue: newQueue }, { headers: getAuthHeaders() });
+            }
+
+            // Se sono dal piano generato, li passiamo al backend per l'eliminazione
+            const planTitles = selectedPlanTopics.filter(t => !t.isQueueItem).map(t => t.titolo);
+            if (planTitles.length > 0) {
+                await axios.post(`${API}/editorial-plan/${effectiveClientId}/delete-topics`, { titles: planTitles }, { headers: getAuthHeaders() });
+            }
+
+            toast.success("Contenuti rimossi con successo");
+            setSelectedPlanTopics([]);
+            fetchPlan();
+            fetchClient(); // Refresh for the queue
+        } catch (error) {
+            toast.error("Errore durante l'eliminazione");
+        } finally {
+            setPlanLoading(false);
+        }
+    };
+
+    const toggleTopicSelection = (topic) => {
+        const isSelected = selectedPlanTopics.some(t => t.titolo === topic.titolo);
+        if (isSelected) {
+            setSelectedPlanTopics(selectedPlanTopics.filter(t => t.titolo !== topic.titolo));
+        } else {
+            setSelectedPlanTopics([...selectedPlanTopics, topic]);
+        }
+    };
+
+    const isTopicSelected = (topic) => selectedPlanTopics.some(t => t.titolo === topic.titolo);
+
     async function handleBatchPlanGenerate() {
         if (selectedPlanTopics.length === 0) { toast.error('Seleziona almeno un articolo'); return; }
         setGenerating(true); setResults([]); setProgressPercent(0);
 
         await saveConfig();
         try {
+            // Pre-process topics to include image information
+            const topicsToProcess = selectedPlanTopics.map(t => ({
+                ...t,
+                // Ensure image_ids is initialized if we have a stock URL
+                featured_image_url: t.featured_image || t.stock_image_url
+            }));
+
             const res = await axios.post(`${API}/articles/batch-plan`, {
                 client_id: effectiveClientId,
-                topics: selectedPlanTopics,
+                topics: topicsToProcess,
                 publish_to_wordpress: publishToWp,
                 content_type: contentType,
-                generate_cover: true
+                generate_cover: true // Fallback to search if no image present
             }, { headers: getAuthHeaders() });
 
             // Se abbiamo generato elementi della coda manuale, rimuoviamoli dal config
-            const queueItemsInBatch = selectedPlanTopics.filter(t => t.isQueueItem).map(t => t.titolo);
+            const queueItemsInBatch = selectedPlanTopics.filter(t => t.isQueueItem).map(t => t.originalText || t.titolo);
             if (queueItemsInBatch.length > 0) {
                 const currentConfig = client?.configuration || {};
                 const currentQueue = currentConfig.editorial_queue || [];
@@ -1280,16 +1330,15 @@ Direttive: Ottimizzazione standard SEO premium.`;
     const steps = [
         { num: 1, label: 'Strategia', icon: Target, done: strategyDone },
         { num: 2, label: 'Analisi SERP', icon: Search, done: serpDone },
-        { num: 3, label: gscConnected ? 'GSC' : 'GSC (N/C)', icon: BarChart3, done: !!gscData, optional: !gscConnected, connected: gscConnected },
-        { num: 4, label: 'Prompt', icon: Lock, done: promptDone },
-        { num: 5, label: 'Genera', icon: Zap, done: false },
+        { num: 3, label: 'Prompt', icon: Lock, done: promptDone },
+        { num: 4, label: 'Genera', icon: Zap, done: false },
     ];
 
     useEffect(() => {
-        if (step === 3 && gscConnected && !gscData && !gscLoading) {
+        if (gscConnected && !gscData && !gscLoading) {
             loadGscData();
         }
-    }, [step]);
+    }, [effectiveClientId, gscConnected]);
 
     if (!effectiveClientId) return null;
 
@@ -1374,6 +1423,9 @@ Direttive: Ottimizzazione standard SEO premium.`;
                                                 {done ? <CheckCircle2 className="w-3.5 h-3.5" /> : s.num}
                                             </div>
                                             {s.label}
+                                            {s.label === 'Strategia' && gscConnected && (
+                                                <Badge className="ml-1 px-1 h-3.5 bg-emerald-500 hover:bg-emerald-600 border-none animate-pulse">GSC</Badge>
+                                            )}
                                         </button>
                                         {i < steps.length - 1 && <div className="w-3 h-px bg-slate-100 flex-shrink-0" />}
                                     </Fragment>
@@ -1382,32 +1434,34 @@ Direttive: Ottimizzazione standard SEO premium.`;
                         </div>
 
                         {step === 1 && (
-                            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <Card className="md:col-span-8 border-slate-200 rounded-2xl p-8 bg-white shadow-sm">
-                                    <div className="mb-8">
-                                        <h3 className="text-lg font-black text-slate-900 tracking-tight">Content Strategy Selection</h3>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Define the strategic baseline for this asset</p>
+                            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <Card className="border-slate-200 rounded-2xl bg-white shadow-sm overflow-hidden">
+                                    <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                                        <div>
+                                            <h3 className="text-lg font-black text-slate-900 tracking-tight">Content Strategy Selection</h3>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Define the strategic baseline for this asset</p>
+                                        </div>
+                                        <div className="hidden md:flex items-center gap-3">
+                                            <div className="text-right">
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Expert Tip</p>
+                                                <p className="text-[10px] font-bold text-slate-600">PAS per Landing, AIDA per Blog</p>
+                                            </div>
+                                            <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center">
+                                                <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <Suspense fallback={<div className="h-64 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-200" /></div>}>
-                                        <ContentStrategyTab strategy={contentStrategy} setStrategy={setContentStrategy} />
-                                    </Suspense>
-                                    <div className="mt-8 pt-8 border-t border-slate-100 flex justify-end">
-                                        <Button onClick={() => setStep(2)} className="h-12 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md">
+                                    <div className="p-8">
+                                        <Suspense fallback={<div className="h-64 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-200" /></div>}>
+                                            <ContentStrategyTab strategy={contentStrategy} setStrategy={setContentStrategy} />
+                                        </Suspense>
+                                    </div>
+                                    <div className="px-8 py-6 bg-slate-50/50 border-t border-slate-100 flex justify-end">
+                                        <Button onClick={() => setStep(2)} className="h-11 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all">
                                             Analisi SERP <ChevronRight className="w-4 h-4 ml-2" />
                                         </Button>
                                     </div>
                                 </Card>
-                                <div className="md:col-span-4 space-y-4">
-                                    <div className="p-6 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
-                                        <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center mb-4"><Sparkles className="w-5 h-5 text-indigo-500" /></div>
-                                        <h4 className="text-[10px] font-black uppercase text-indigo-900 mb-2">Perché questo step?</h4>
-                                        <p className="text-[11px] text-indigo-700 leading-relaxed font-medium">La strategia definisce il tono, il funnel e il posizionamento. Senza questo, l'IA scriverà contenuti generici.</p>
-                                    </div>
-                                    <div className="p-6 bg-slate-900 rounded-2xl text-white">
-                                        <p className="text-[10px] font-black uppercase text-slate-500 mb-4 tracking-widest">Expert Tip</p>
-                                        <p className="text-xs font-bold leading-relaxed">Usa il modello PAS per landing page aggressive o AIDA per blog post informativi.</p>
-                                    </div>
-                                </div>
                             </div>
                         )}
 
@@ -1466,71 +1520,44 @@ Direttive: Ottimizzazione standard SEO premium.`;
 
                                 <div className="mt-8 pt-8 border-t border-slate-100 flex justify-between">
                                     <Button variant="ghost" onClick={() => setStep(1)} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-950 transition-colors">Indietro</Button>
-                                    <Button onClick={() => setStep(gscConnected ? 3 : 4)} className="h-12 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md">
+                                    <Button onClick={() => setStep(3)} className="h-12 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md">
                                         Prosegui <ChevronRight className="w-4 h-4 ml-2" />
                                     </Button>
                                 </div>
                             </Card>
                         )}
 
+                        {/* Step 3 & 4 logic merged in Stepper reduction */}
                         {step === 3 && (
                             <Card className="border-slate-200 rounded-2xl p-8 shadow-sm bg-white animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <div className="flex items-center gap-4 mb-8">
-                                    <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-100">
-                                        <BarChart3 className="w-6 h-6 text-white" />
+                                    <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center shadow-md">
+                                        <Lock className="w-6 h-6 text-white" />
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-black text-slate-900 tracking-tight">Search Branding Intelligence</h3>
-                                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Step 03: GSC Contextual data</p>
+                                        <h3 className="text-lg font-black text-slate-900 tracking-tight">AI Strategy Master Prompt</h3>
+                                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Step 03: Final logic control</p>
                                     </div>
                                 </div>
 
-                                {gscLoading ? (
-                                    <div className="py-12 flex flex-col items-center justify-center space-y-3">
-                                        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-                                        <p className="text-slate-400 font-black uppercase text-[9px] tracking-widest">Aggregazione GSC in corso...</p>
-                                    </div>
-                                ) : gscData ? (
-                                    <div className="space-y-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <div className="p-5 rounded-xl bg-slate-50 border border-slate-100">
-                                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Keywords</p>
-                                                <p className="text-2xl font-black text-slate-900">{gscData.keywords?.length || 0}</p>
-                                            </div>
-                                            <div className="p-5 rounded-xl bg-slate-50 border border-slate-100">
-                                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Impressions</p>
-                                                <p className="text-2xl font-black text-slate-900">{Math.round(gscData.totals?.impressions || 0).toLocaleString()}</p>
-                                            </div>
-                                            <div className="p-5 rounded-xl bg-slate-50 border border-slate-100">
-                                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">CTR</p>
-                                                <p className="text-2xl font-black text-slate-900">{((gscData.totals?.ctr || 0) * 100).toFixed(1)}%</p>
-                                            </div>
-                                        </div>
+                                <div className="relative group">
+                                    <div className="absolute -inset-0.5 bg-slate-900 rounded-2xl blur opacity-5 group-hover:opacity-10 transition duration-500"></div>
+                                    <Textarea
+                                        className="min-h-[400px] relative bg-slate-50 border-slate-100 p-8 text-sm font-medium leading-relaxed rounded-2xl shadow-inner focus:ring-1 focus:ring-slate-900 transition-all font-mono shadow-inner"
+                                        value={advancedPrompt}
+                                        onChange={(e) => setAdvancedPrompt(e.target.value)}
+                                        placeholder="Generating strategy..."
+                                    />
+                                </div>
 
-                                        <div className="bg-slate-950 rounded-xl p-6 text-white relative overflow-hidden">
-                                            <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-6 border-b border-white/5 pb-2">Top Contextual Keywords</h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3">
-                                                {gscData.keywords?.slice(0, 8).map((k, i) => (
-                                                    <div key={i} className="flex items-center justify-between py-1 border-b border-white/5 last:border-0">
-                                                        <p className="font-bold text-slate-400 text-[11px]">{k.keyword}</p>
-                                                        <div className="flex gap-4">
-                                                            <span className="text-[10px] font-black text-indigo-400">P{k.position.toFixed(0)}</span>
-                                                            <span className="text-[10px] font-black text-emerald-400">{(k.ctr * 100).toFixed(0)}%</span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="p-10 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                                        <p className="text-slate-400 font-bold text-xs">Nessun dato GSC disponibile.</p>
-                                    </div>
-                                )}
-
-                                <div className="mt-8 pt-8 border-t border-slate-100 flex justify-between">
+                                <div className="mt-8 pt-8 border-t border-slate-100 flex justify-between items-center">
                                     <Button variant="ghost" onClick={() => setStep(2)} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-950 transition-colors">Indietro</Button>
-                                    <Button onClick={() => setStep(4)} className="h-12 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md">Configura Prompt <ChevronRight className="w-4 h-4 ml-2" /></Button>
+                                    <div className="flex gap-3">
+                                        <Button variant="outline" onClick={() => buildDefaultPrompt(serpData, gscData)} className="h-12 px-6 rounded-xl border-slate-200 text-slate-600 font-black text-[9px] uppercase tracking-widest flex gap-2">
+                                            <RefreshCcw className="w-3 h-3" /> Re-build
+                                        </Button>
+                                        <Button onClick={() => setStep(4)} className="h-12 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md">Configura Asset <ChevronRight className="w-4 h-4 ml-2" /></Button>
+                                    </div>
                                 </div>
                             </Card>
                         )}
@@ -1570,96 +1597,137 @@ Direttive: Ottimizzazione standard SEO premium.`;
                         )}
 
                         {step === 5 && (
-                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <div className="lg:col-span-12">
-                                    <Card className="border-slate-200 rounded-2xl p-8 bg-white shadow-sm space-y-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            {/* Column 1: Core Config */}
-                                            <div className="space-y-6">
-                                                <div className="space-y-2">
-                                                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Titolo dell'Asset</Label>
-                                                    <Input className="h-12 text-lg font-black bg-slate-50 border-slate-100 rounded-xl" value={singleTitle} onChange={(e) => setSingleTitle(e.target.value)} />
-                                                </div>
-                                                <div className="space-y-3">
-                                                    <div className="flex items-center justify-between">
-                                                        <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Concept Strategico</Label>
-                                                        <Button onClick={handleImproveObjective} disabled={refiningObjective} variant="ghost" className="h-6 gap-1.5 text-indigo-600 hover:bg-slate-50 font-black text-[8px] uppercase tracking-widest rounded-lg">
-                                                            {refiningObjective ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                                                            AI Refine
-                                                        </Button>
-                                                    </div>
-                                                    <Textarea 
-                                                        className="min-h-[280px] text-xs p-5 bg-slate-50 border-slate-100 rounded-xl focus:ring-1 focus:ring-slate-900 transition-all font-medium leading-relaxed custom-scrollbar" 
-                                                        value={singleObjective} 
-                                                        onChange={(e) => setSingleObjective(e.target.value)} 
-                                                        placeholder="Strategic concept..."
-                                                    />
-                                                </div>
+                             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <Card className="border-slate-200 rounded-2xl bg-white shadow-sm overflow-hidden flex flex-col">
+                                    <div className="p-8 border-b border-slate-100 bg-slate-50/30">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h3 className="text-lg font-black text-slate-900 tracking-tight">Final Asset Configuration</h3>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Global Article Studio</p>
                                             </div>
+                                            <div className="flex gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200/50">
+                                                <Button variant="ghost" size="sm" onClick={() => setImageSource('ai')} className={`h-8 px-5 rounded-lg text-[9px] font-black uppercase transition-all ${imageSource === 'ai' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>Gen IA</Button>
+                                                <Button variant="ghost" size="sm" onClick={() => setImageSource('search')} className={`h-8 px-5 rounded-lg text-[9px] font-black uppercase transition-all ${imageSource === 'search' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>Search</Button>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                            {/* Column 2: Visual Intelligence */}
-                                            <div className="space-y-6">
+                                    <div className="p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+                                        {/* Column 1: Core Config */}
+                                        <div className="lg:col-span-7 space-y-6">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.15em] px-1">Titolo dell'Asset</Label>
+                                                <Input 
+                                                    className="h-12 text-lg font-black bg-slate-50 border-slate-100 rounded-xl focus:ring-2 focus:ring-slate-900/5 transition-all" 
+                                                    value={singleTitle} 
+                                                    onChange={(e) => setSingleTitle(e.target.value)} 
+                                                    placeholder="Inserisci il titolo..."
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
                                                 <div className="flex items-center justify-between">
-                                                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Visual Intelligence</Label>
-                                                    <div className="flex bg-slate-100 p-1 rounded-xl">
-                                                        <Button variant="ghost" size="sm" onClick={() => setImageSource('ai')} className={`h-8 px-4 rounded-lg text-[9px] font-black uppercase transition-all ${imageSource === 'ai' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>Gen IA</Button>
-                                                        <Button variant="ghost" size="sm" onClick={() => setImageSource('search')} className={`h-8 px-4 rounded-lg text-[9px] font-black uppercase transition-all ${imageSource === 'search' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>Search</Button>
-                                                    </div>
+                                                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.15em] px-1">Concept Strategico</Label>
+                                                    <Button onClick={handleImproveObjective} disabled={refiningObjective} variant="outline" className="h-7 px-3 gap-1.5 border-indigo-100 text-indigo-600 hover:bg-indigo-50 font-black text-[8px] uppercase tracking-widest rounded-lg transition-colors">
+                                                        {refiningObjective ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                                        AI Refine
+                                                    </Button>
                                                 </div>
-
-                                                {imageSource === 'ai' ? (
-                                                    <div className="aspect-square flex flex-col items-center justify-center bg-slate-50 border border-dashed border-slate-100 rounded-2xl p-10 text-center">
-                                                        <Sparkles className="w-10 h-10 text-indigo-200 mb-4" />
-                                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Generazione automatica <br/> contestuale</p>
-                                                    </div>
-                                                ) : (
-                                                    <div className="space-y-3">
-                                                        <div className="flex gap-2">
-                                                            <div className="relative flex-1">
-                                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
-                                                                <Input 
-                                                                    value={imgSearchQuery} 
-                                                                    onChange={(e) => setImgSearchQuery(e.target.value)} 
-                                                                    placeholder="Search photos..." 
-                                                                    className="h-10 pl-9 rounded-xl bg-slate-50 border-none text-xs font-bold" 
-                                                                    onKeyDown={(e) => e.key === 'Enter' && handleImageSearch(12)}
-                                                                />
-                                                            </div>
-                                                            <Button onClick={() => handleImageSearch(12)} disabled={searchingImages} className="h-10 w-10 bg-slate-950 text-white rounded-xl">
-                                                                {searchingImages ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                                                            </Button>
-                                                        </div>
-                                                        <div className="grid grid-cols-3 gap-2 h-[200px] overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-100 custom-scrollbar">
-                                                            {imgSearchResults.map((img, i) => (
-                                                                <div key={i} onClick={() => importExternalImage(img.image)} className="group relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-slate-900 transition-all bg-white shadow-sm">
-                                                                    <img src={img.thumbnail || img.image} className="w-full h-full object-cover" />
-                                                                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                                        <Plus className="w-5 h-5 text-white" />
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {singleSelectedImage && (
-                                                    <div className="relative group rounded-xl overflow-hidden border-2 border-emerald-500 shadow-xl">
-                                                        <img src={singleSelectedImage.url} className="w-full h-32 object-cover" />
-                                                        <Button size="sm" onClick={() => setSingleSelectedImage(null)} variant="destructive" className="absolute top-2 right-2 h-7 w-7 p-0 rounded-lg"><X className="w-4 h-4" /></Button>
-                                                    </div>
-                                                )}
+                                                <Textarea 
+                                                    className="min-h-[220px] max-h-[350px] text-[11px] p-5 bg-slate-50 border-slate-100 rounded-xl focus:ring-2 focus:ring-slate-900/5 transition-all font-bold leading-relaxed custom-scrollbar shadow-inner" 
+                                                    value={singleObjective} 
+                                                    onChange={(e) => setSingleObjective(e.target.value)} 
+                                                    placeholder="Describe the strategic goal..."
+                                                />
                                             </div>
                                         </div>
-                                        <div className="pt-8 border-t border-slate-100 flex justify-between items-center bg-white sticky bottom-0">
-                                            <Button variant="ghost" onClick={() => setStep(4)} className="text-[10px] font-black uppercase text-slate-400">Back</Button>
-                                            <Button onClick={handleSingleGenerate} disabled={singleGenerating} className="flex-1 ml-4 h-14 bg-slate-950 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all">
-                                                {singleGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                                                    <span className="flex items-center gap-3">EXECUTE STRATEGY <Zap className="w-4 h-4" /></span>
-                                                )}
-                                            </Button>
+
+                                        {/* Column 2: Visual Intelligence */}
+                                        <div className="lg:col-span-5 space-y-6">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.15em] px-1">Visual Intelligence</Label>
+                                                
+                                                <div className="relative group overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/50 min-h-[300px] flex flex-col">
+                                                    {imageSource === 'ai' ? (
+                                                        <div className="flex-1 flex flex-col items-center justify-center p-10 text-center space-y-4">
+                                                            <div className="w-20 h-20 rounded-[2rem] bg-white shadow-xl shadow-indigo-100/50 flex items-center justify-center border border-indigo-50">
+                                                                <Sparkles className="w-8 h-8 text-indigo-300" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[11px] font-black text-slate-900 uppercase tracking-widest">Generazione IA</p>
+                                                                <p className="text-[10px] text-slate-400 font-bold leading-relaxed mt-1">L'immagine verrà creata in base <br/>al concept strategico.</p>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex-1 p-4 space-y-4">
+                                                            <div className="flex gap-2">
+                                                                <div className="relative flex-1">
+                                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
+                                                                    <Input 
+                                                                        value={imgSearchQuery} 
+                                                                        onChange={(e) => setImgSearchQuery(e.target.value)} 
+                                                                        placeholder="Search..." 
+                                                                        className="h-9 pl-9 rounded-xl border-slate-200 bg-white text-[11px] font-bold" 
+                                                                        onKeyDown={(e) => e.key === 'Enter' && handleImageSearch(12)}
+                                                                    />
+                                                                </div>
+                                                                <Button onClick={() => handleImageSearch(12)} disabled={searchingImages} className="h-9 w-9 bg-slate-900 text-white rounded-xl shadow-lg shadow-slate-200">
+                                                                    {searchingImages ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                                                                </Button>
+                                                            </div>
+                                                            <div className="grid grid-cols-3 gap-3 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                                                                {imgSearchResults.map((img, i) => (
+                                                                    <div key={i} onClick={() => importExternalImage(img.image)} className="group relative aspect-square rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-slate-900 transition-all bg-white border border-slate-100">
+                                                                        <img src={img.thumbnail || img.image} className="w-full h-full object-cover" />
+                                                                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                            <Plus className="w-4 h-4 text-white" />
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                                {imgSearchResults.length === 0 && !searchingImages && (
+                                                                    <div className="col-span-3 py-10 flex flex-col items-center justify-center opacity-30">
+                                                                        <ImageIcon className="w-8 h-8 mb-2" />
+                                                                        <p className="text-[8px] font-black uppercase">Fai una ricerca</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {singleSelectedImage && (
+                                                        <div className="absolute inset-0 bg-white z-10 p-2 animate-in fade-in zoom-in-95 duration-200">
+                                                            <div className="relative h-full rounded-xl overflow-hidden border-2 border-emerald-500/30 group">
+                                                                <img src={singleSelectedImage.url} className="w-full h-full object-cover" />
+                                                                <div className="absolute top-2 right-2 flex gap-2">
+                                                                    <Button size="icon" onClick={() => setSingleSelectedImage(null)} variant="destructive" className="h-8 w-8 rounded-lg shadow-lg"><X className="w-4 h-4" /></Button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </Card>
-                                </div>
+                                    </div>
+
+                                    <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                                        <Button variant="ghost" onClick={() => setStep(3)} className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-900 tracking-widest pl-0">
+                                            <ArrowLeft className="w-3.5 h-3.5 mr-2" /> Indietro
+                                        </Button>
+                                        <Button 
+                                            onClick={handleSingleGenerate} 
+                                            disabled={singleGenerating} 
+                                            className="h-14 px-12 bg-slate-950 text-white rounded-xl font-black text-xs uppercase tracking-[0.25em] shadow-2xl shadow-slate-200 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                        >
+                                            {singleGenerating ? (
+                                                <div className="flex items-center gap-3">
+                                                    <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                                                    <span>PROCESSING ENGINE...</span>
+                                                </div>
+                                            ) : (
+                                                <span className="flex items-center gap-3">EXECUTE STRATEGY <Zap className="w-4 h-4 text-amber-400" /></span>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </Card>
                             </div>
                         )}
                     </div>
@@ -1667,19 +1735,43 @@ Direttive: Ottimizzazione standard SEO premium.`;
 
                 {genMode === 'plan' && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-600">
-                        <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm sticky top-0 z-30">
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 rounded-xl bg-slate-950 flex items-center justify-center shadow-md"><Calendar className="w-5 h-5 text-white" /></div>
-                                <div><h2 className="text-lg font-black text-slate-900 tracking-tight">Editorial Hub</h2><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Client Strategy Control</p></div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="flex bg-slate-100 p-1 rounded-xl">
-                                    <Button variant="ghost" size="sm" onClick={() => setPlanView('list')} className={`h-8 px-4 rounded-lg text-[9px] uppercase font-black ${planView === 'list' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>List</Button>
-                                    <Button variant="ghost" size="sm" onClick={() => setPlanView('calendar')} className={`h-8 px-4 rounded-lg text-[9px] uppercase font-black ${planView === 'calendar' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>Calendar</Button>
+                                <div>
+                                    <h2 className="text-lg font-black text-slate-900 tracking-tight">Editorial Hub</h2>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{client?.nome || 'Studio'} Strategy</p>
+                                        {selectedPlanTopics.length > 0 && (
+                                            <Badge className="bg-indigo-600 border-none text-[8px] font-black">{selectedPlanTopics.length} SELEZIONATI</Badge>
+                                        )}
+                                    </div>
                                 </div>
-                                <Button onClick={generateNewPlan} disabled={planGenerating} className="h-10 bg-slate-950 text-white rounded-xl font-black text-[9px] px-6">REFRESH HUB</Button>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                {selectedPlanTopics.length > 0 ? (
+                                    <div className="flex items-center gap-2 animate-in zoom-in-95 duration-200">
+                                         <Button onClick={handleBatchPlanGenerate} disabled={generating} className="h-10 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase px-6 tracking-widest shadow-lg shadow-indigo-100 flex gap-2">
+                                            {generating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                                            GENERA SELEZIONATI
+                                         </Button>
+                                         <Button onClick={handleDeleteSelectedTopics} variant="outline" className="h-10 border-red-100 text-red-500 hover:bg-red-50 rounded-xl font-black text-[9px] uppercase px-4 flex gap-2">
+                                            <Trash2 className="w-3 h-3" />
+                                         </Button>
+                                         <Button onClick={() => setSelectedPlanTopics([])} variant="ghost" className="h-10 text-slate-400 hover:text-slate-900 rounded-xl font-black text-[9px] uppercase">Annulla</Button>
+                                    </div>
+                                ) : (
+                                    <div className="flex bg-slate-100 p-1 rounded-xl">
+                                        <Button variant="ghost" size="sm" onClick={() => setPlanView('list')} className={`h-8 px-4 rounded-lg text-[9px] uppercase font-black ${planView === 'list' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>List</Button>
+                                        <Button variant="ghost" size="sm" onClick={() => setPlanView('calendar')} className={`h-8 px-4 rounded-lg text-[9px] uppercase font-black ${planView === 'calendar' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>Calendar</Button>
+                                    </div>
+                                )}
+                                <Button onClick={generateNewPlan} disabled={planGenerating} className="h-10 bg-slate-950 text-white rounded-xl font-black text-[9px] px-6 uppercase tracking-widest">
+                                    {planGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Refresh Hub'}
+                                </Button>
                             </div>
                         </div>
+
                         {allPlanTopics.length > 0 && planView === 'calendar' && (
                             <div className="bg-white rounded-[3.5rem] border border-slate-200 p-10 shadow-2xl">
                                 <EditorialCalendar topics={allPlanTopics} onArticleClick={handleUseTopicInGenerator} />
@@ -1688,31 +1780,89 @@ Direttive: Ottimizzazione standard SEO premium.`;
 
                         {allPlanTopics.length > 0 && planView === 'list' && (
                             <div className="space-y-3">
-                                {allPlanTopics.map((item, idx) => (
-                                    <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group" onClick={() => handleUseTopicInGenerator(item)}>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all">
-                                                    <Play className="w-4 h-4" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-black text-slate-900 group-hover:text-slate-950 uppercase text-[11px] tracking-tight">{item.titolo}</h4>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <Badge variant="outline" className="text-[7px] font-black uppercase px-2 h-4 border-slate-100 text-slate-400">{item.topic || 'Custom'}</Badge>
-                                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{item.funnel || 'Awareness'}</span>
+                                <div className="flex items-center justify-between px-6 py-2">
+                                     <div className="flex items-center gap-2">
+                                         <button 
+                                            onClick={() => {
+                                                if (selectedPlanTopics.length === allPlanTopics.length) setSelectedPlanTopics([]);
+                                                else setSelectedPlanTopics(allPlanTopics);
+                                            }}
+                                            className="w-4 h-4 rounded border border-slate-300 flex items-center justify-center hover:border-slate-900 transition-colors"
+                                         >
+                                             {selectedPlanTopics.length === allPlanTopics.length && <div className="w-2.5 h-2.5 bg-slate-900 rounded-[2px]" />}
+                                         </button>
+                                         <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">SELEZIONA TUTTI ({allPlanTopics.length})</span>
+                                     </div>
+                                     <div className="text-[9px] font-black uppercase text-slate-400 tracking-widest">STATUS / AZIONE</div>
+                                </div>
+
+                                {allPlanTopics.map((item, idx) => {
+                                    const isSelected = isTopicSelected(item);
+                                    return (
+                                        <div key={idx} className={`bg-white p-4 rounded-2xl border transition-all relative overflow-hidden group ${isSelected ? 'border-indigo-600 ring-1 ring-indigo-50 shadow-md' : 'border-slate-100 hover:border-slate-300 shadow-sm'}`}>
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex items-center gap-5 flex-1 min-w-0">
+                                                    <button 
+                                                        onClick={() => toggleTopicSelection(item)}
+                                                        className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all flex-shrink-0 ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-200 hover:border-slate-400'}`}
+                                                    >
+                                                        {isSelected && <Check className="w-3 h-3 text-white" />}
+                                                    </button>
+
+                                                    <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 overflow-hidden flex-shrink-0 relative group/img cursor-pointer" onClick={() => handleUseTopicInGenerator(item)}>
+                                                        {(item.featured_image || item.stock_image_url) ? (
+                                                            <img src={item.featured_image || item.stock_image_url} className="w-full h-full object-cover transition-transform group-hover/img:scale-110" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center bg-slate-100/50">
+                                                                <ImageIcon className="w-5 h-5 text-slate-200" />
+                                                            </div>
+                                                        )}
+                                                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <Edit2 className="w-3 h-3 text-white" />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-2 mb-1.5 focus-within:z-10">
+                                                             <h4 className="font-black text-slate-900 uppercase text-[11px] tracking-tight truncate leading-none">{item.titolo}</h4>
+                                                             <Badge variant="outline" className={`text-[7px] font-black uppercase px-2 h-3.5 border-none shadow-none ${item.isQueueItem ? 'bg-indigo-50 text-indigo-500' : 'bg-slate-50 text-slate-400'}`}>
+                                                                {item.isQueueItem ? 'SUGGESTED' : 'PLAN'}
+                                                             </Badge>
+                                                        </div>
+                                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                                            <div className="flex items-center gap-1.5 opacity-60">
+                                                                <span className="w-1 h-1 rounded-full bg-slate-400" />
+                                                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{item.funnel || 'Awareness'}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Search className="w-2.5 h-2.5 text-slate-300" />
+                                                                <span className="text-[9px] text-slate-500 font-black tracking-tight">{item.keyword || '-'}</span>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center gap-6">
-                                                <div className="text-right hidden sm:block">
-                                                    <p className="text-[8px] font-black text-slate-300 uppercase">KW Focus</p>
-                                                    <p className="font-bold text-slate-600 text-[10px]">{item.keyword || '-'}</p>
+
+                                                <div className="flex items-center gap-3">
+                                                    <div className="hidden sm:flex flex-col items-end px-4 border-r border-slate-100">
+                                                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-0.5">ESTIMATED</p>
+                                                        <p className="font-bold text-slate-600 text-[10px] tabular-nums">~1,500 words</p>
+                                                    </div>
+                                                    <Button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedPlanTopics([item]);
+                                                            setTimeout(handleBatchPlanGenerate, 100);
+                                                        }}
+                                                        disabled={generating}
+                                                        className="h-10 w-10 p-0 bg-slate-50 hover:bg-slate-900 text-slate-400 hover:text-white rounded-xl transition-all shadow-none group/play"
+                                                    >
+                                                        <Play className="w-4 h-4 fill-current group-hover/play:scale-110" />
+                                                    </Button>
                                                 </div>
-                                                <ChevronRight className="w-4 h-4 text-slate-200 group-hover:text-slate-900 transition-colors" />
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

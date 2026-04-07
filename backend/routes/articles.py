@@ -907,6 +907,29 @@ async def delete_editorial_plan(client_id: str, current_user: dict = Depends(get
     await db.editorial_plans.delete_one({"client_id": client_id})
     return {"message": "Piano editoriale eliminato"}
 
+@router.post("/editorial-plan/{client_id}/delete-topics")
+async def delete_plan_topics(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    titles_to_delete = request.get("titles", [])
+    if not titles_to_delete:
+        return {"message": "Nessun titolo fornito"}
+    
+    plan = await db.editorial_plans.find_one({"client_id": client_id})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Piano non trovato")
+    
+    topics = plan.get("topics", [])
+    new_topics = [t for t in topics if t.get("titolo") not in titles_to_delete]
+    
+    await db.editorial_plans.update_one(
+        {"client_id": client_id},
+        {"$set": {"topics": new_topics, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": f"Eliminati {len(topics) - len(new_topics)} contenuti dal piano", "remaining": len(new_topics)}
+
 @router.post("/save-plan/{client_id}")
 async def save_editorial_plan(client_id: str, plan: dict, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):

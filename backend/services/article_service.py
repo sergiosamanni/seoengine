@@ -259,6 +259,19 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                 image_ids = []
                 if is_topic_based:
                     image_ids = item.get("image_ids", [])
+                    featured_url = item.get("featured_image_url")
+                    
+                    if not image_ids and featured_url:
+                        try:
+                            # Try to import the already selected/proposed image
+                            from helpers import import_external_image
+                            img_res = await import_external_image(featured_url, client_id, titolo)
+                            if img_res and img_res.get("id"):
+                                image_ids = [img_res["id"]]
+                                await log_activity(client_id, "image_import", "success", {"titolo": titolo, "image_id": img_res["id"]})
+                        except Exception as e:
+                            logger.warning(f"Failed to import proposed image {featured_url}: {e}")
+
                     if generate_cover and not image_ids:
                         try:
                             from helpers import generate_image_from_web
