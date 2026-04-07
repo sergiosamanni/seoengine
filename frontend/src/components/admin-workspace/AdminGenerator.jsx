@@ -26,6 +26,7 @@ import {
 import { EditorialCalendar } from './EditorialCalendar';
 import { toast } from 'sonner';
 import { Switch } from '../ui/switch';
+import { Dialog, DialogContent } from '../ui/dialog';
 
 const ContentStrategyTab = lazy(() => import('../../pages/configuration/ContentStrategyTab').then(m => ({ default: m.ContentStrategyTab })));
 const KeywordsTab = lazy(() => import('../../pages/configuration/KeywordsTab').then(m => ({ default: m.KeywordsTab })));
