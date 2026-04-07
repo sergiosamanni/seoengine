@@ -611,91 +611,89 @@ async def serp_images(request: dict, current_user: dict = Depends(get_current_us
     keyword = request.get("keyword", "").strip()
     context = request.get("context", "").strip()
     
-    # Block junk searches (partial types like 'd', 'di')
     if len(keyword) < 3:
-        logger.warning(f"Blocking junk image search for partial keyword: '{keyword}'")
         return {"keyword": keyword, "results": [], "total": 0}
     
-    # Use context to enrich short or generic keywords
+    # Enrich search query
     search_query = keyword
     if len(keyword.split()) < 3 and context:
-        # Avoid circular expansion
         clean_context = context.split("-")[0].strip()[:60]
         search_query = f"{keyword} {clean_context}"
     
-    max_results = min(request.get("max_results", 12), 40)
+    max_results = min(request.get("max_results", 12), 30)
     
     try:
-        from duckduckgo_search import DDGS
         import httpx as _httpx
         import random as _random
         import asyncio as _asyncio
+        import re as _re
         from bs4 import BeautifulSoup
+        from duckduckgo_search import DDGS
         
         ua_list = [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         ]
         
         results = []
         
-        # --- PRO SOURCE 1: DuckDuckGo (Optimized) ---
+        # Helper for direct scrapes
+        async def direct_scrape_source(engine: str, query: str):
+            try:
+                headers = {"User-Agent": _random.choice(ua_list)}
+                if engine == "google":
+                    url = f"https://www.google.it/search?q={query.replace(' ', '+')}&tbm=isch&num=20&hl=it"
+                    async with _httpx.AsyncClient(timeout=10, headers=headers) as client:
+                        resp = await client.get(url)
+                        if resp.status_code == 200:
+                            # Google Images HTML is tricky, look for thumbnail patterns or raw urls
+                            # This is a basic pattern match for the 'AF_initDataCallback' block
+                            matches = _re.findall(r'\["(https://[^"]+)",\d+,\d+\]', resp.text)
+                            for m in matches:
+                                if "google" not in m and (".jpg" in m or ".png" in m):
+                                    results.append({"image": m, "thumbnail": m, "title": f"Google: {keyword}", "source": "Google"})
+                elif engine == "bing":
+                    url = f"https://www.bing.com/images/search?q={query.replace(' ', '+')}&form=HDRSC2&first=1"
+                    async with _httpx.AsyncClient(timeout=10, headers=headers) as client:
+                        resp = await client.get(url)
+                        if resp.status_code == 200:
+                            # Bing uses murl in JSON data inside a tag
+                            matches = _re.findall(r'murl&quot;:&quot;(https://[^&]+)&quot;', resp.text)
+                            for m in matches:
+                                results.append({"image": m, "thumbnail": m, "title": f"Bing: {keyword}", "source": "Bing"})
+            except Exception as e:
+                logger.warning(f"Engine {engine} scrape failed: {e}")
+
+        # --- MULTI-ENGINE EXECUTION ---
+        # 1. DuckDuckGo (Primary Library)
         try:
             with DDGS(headers={"User-Agent": _random.choice(ua_list)}) as ddgs:
-                ddg_q = f"\"{search_query}\" professional photography realistic"
-                raw = list(ddgs.images(
-                    keywords=ddg_q,
-                    region="it-it",
-                    safesearch="moderate",
-                    size="Large",
-                    type_image="photo",
-                    max_results=max_results + 10
-                ))
+                ddg_q = f"fotografia professionale {search_query}"
+                raw = list(ddgs.images(keywords=ddg_q, region="it-it", size="Large", type_image="photo", max_results=20))
                 for r in raw:
-                    results.append({
-                        "image": r["image"], "thumbnail": r["thumbnail"],
-                        "title": r["title"], "source": "DDG",
-                        "width": r.get("width"), "height": r.get("height")
-                    })
+                    results.append({"image": r["image"], "thumbnail": r["thumbnail"], "title": r["title"], "source": "DDG"})
         except Exception as e:
-            logger.warning(f"DDG primary failed: {e}")
+            logger.warning(f"DDG failed (ratelimit?): {e}")
 
-        # --- PRO SOURCE 2: Unsplash (Scraping - High Quality) ---
-        if len(results) < 4:
-            logger.info(f"Trying Unsplash fallback for: {search_query}")
+        # 2. Bing & Google Emergencies
+        if len(results) < 10:
+            await asyncio.gather(direct_scrape_source("bing", search_query), direct_scrape_source("google", search_query))
+
+        # 3. Unsplash (Professional Backup)
+        if len(results) < 6:
             try:
                 uns_url = f"https://unsplash.com/s/photos/{search_query.replace(' ', '-')}"
-                async with _httpx.AsyncClient(timeout=10, headers={"User-Agent": _random.choice(ua_list)}) as client:
+                async with _httpx.AsyncClient(timeout=8, headers={"User-Agent": _random.choice(ua_list)}) as client:
                     resp = await client.get(uns_url)
                     if resp.status_code == 200:
                         soup = BeautifulSoup(resp.text, "lxml")
-                        # Unsplash uses specific figure/img tags
-                        img_tags = soup.find_all("img", attrs={"srcset": True})
-                        for img in img_tags:
+                        for img in soup.find_all("img", attrs={"srcset": True}):
                             if "photo-" in img["src"] and "profile-" not in img["src"]:
                                 src = img["src"].split("?")[0] + "?auto=format&fit=crop&q=80&w=1200"
-                                thumb = img["src"].split("?")[0] + "?auto=format&fit=crop&q=60&w=400"
-                                results.append({
-                                    "image": src, "thumbnail": thumb,
-                                    "title": f"Professional Photo for {keyword}",
-                                    "source": "Unsplash", "width": 1200, "height": 800
-                                })
-                            if len(results) >= max_results + 10: break
-            except Exception as ue:
-                logger.warning(f"Unsplash fallback failed: {ue}")
-
-        # --- PRO SOURCE 3: Wikimedia (Final Backup) ---
-        if len(results) < 4:
-            logger.info("Trying Wikimedia final fallback...")
-            from helpers import web_search_images_wikimedia
-            wiki_res = await web_search_images_wikimedia(keyword, 10)
-            for wr in wiki_res:
-                results.append({
-                    "image": wr["image"], "thumbnail": wr["thumbnail"],
-                    "title": wr["title"], "source": "Wikimedia",
-                    "width": wr.get("width"), "height": wr.get("height")
-                })
+                                results.append({"image": src, "thumbnail": src, "title": f"Unsplash: {keyword}", "source": "Unsplash"})
+                            if len(results) >= 40: break
+            except: pass
 
         # --- RANKING & DEDUPLICATION ---
         seen = set()
@@ -707,16 +705,15 @@ async def serp_images(request: dict, current_user: dict = Depends(get_current_us
             if url in seen: continue
             seen.add(url)
             
-            # Filter non-professional titles (icons, logos)
             t_low = r["title"].lower()
             if any(x in t_low for x in ["logo", "icon", "vector", "illustration", "disegno", "vettoriale"]):
                 continue
                 
-            # Score
             score = 0
-            if r["source"] == "Unsplash": score += 20 # BEST QUALITY
+            if r["source"] == "Unsplash": score += 20
+            if r["source"] == "Google": score += 15
+            if r["source"] == "Bing": score += 15
             if r["source"] == "DDG": score += 10
-            if r["source"] == "Wikimedia": score += 5
             
             overlap = sum(3 for w in kw_shards if w in t_low)
             score += overlap
