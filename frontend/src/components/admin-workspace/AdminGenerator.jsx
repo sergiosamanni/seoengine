@@ -1856,45 +1856,46 @@ Direttive: Ottimizzazione standard SEO premium.`;
             )}
             {/* --- IMAGE CHANGE MODAL --- */}
             <Dialog open={showImgChangeModal} onOpenChange={setShowImgChangeModal}>
-                <DialogContent className="max-w-xl p-0 overflow-hidden border-none shadow-2xl rounded-[2rem]">
-                    <div className="p-6 bg-slate-950 text-white">
-                        <h3 className="text-sm font-black uppercase tracking-tight flex items-center gap-2">
-                             <ImageIcon className="w-4 h-4 text-indigo-400" />
+                <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl rounded-[2.5rem]">
+                    <div className="p-5 bg-slate-950 text-white">
+                        <h3 className="text-[11px] font-black uppercase tracking-tight flex items-center gap-2">
+                             <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
                              Cambia Immagine
                         </h3>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Seleziona una nuova cover per: {editingTopic?.titolo}</p>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase mt-1 line-clamp-1">{editingTopic?.titolo}</p>
                     </div>
-                    <div className="p-6 bg-slate-50 min-h-[300px]">
-                        {searchingImages ? (
-                            <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-                                <Loader2 className="w-8 h-8 animate-spin text-slate-200" />
-                                <p className="text-[9px] font-black uppercase text-slate-400 mt-4 tracking-widest">Ricerca immagini...</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-3 gap-4">
-                                {imgSearchResults.map((img, i) => (
-                                    <div 
-                                        key={i} 
-                                        onClick={async () => {
-                                            const updatedTopic = { ...editingTopic, featured_image: img.image };
-                                            // Persist to backend plan
-                                            const updatedPlanTopics = allPlanTopics.map(t => t.titolo === editingTopic.titolo ? updatedTopic : t);
-                                            await axios.post(`${API}/save-plan/${effectiveClientId}`, { topics: updatedPlanTopics }, { headers: getAuthHeaders() });
-                                            fetchPlan();
-                                            setShowImgChangeModal(false);
-                                            toast.success("Immagine aggiornata");
-                                        }}
-                                        className="group relative aspect-square rounded-2xl overflow-hidden bg-white border border-slate-100 cursor-pointer hover:ring-2 hover:ring-slate-900 transition-all shadow-sm"
-                                    >
-                                        <img src={img.thumbnail || img.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                        <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <Check className="w-6 h-6 text-white" />
+                    <ScrollArea className="max-h-[60vh] bg-slate-50">
+                        <div className="p-4">
+                            {searchingImages ? (
+                                <div className="flex flex-col items-center justify-center py-16 animate-pulse">
+                                    <Loader2 className="w-6 h-6 animate-spin text-slate-200" />
+                                    <p className="text-[8px] font-black uppercase text-slate-400 mt-4 tracking-widest">Searching...</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-4 gap-2">
+                                    {imgSearchResults.map((img, i) => (
+                                        <div 
+                                            key={i} 
+                                            onClick={async () => {
+                                                const updatedTopic = { ...editingTopic, featured_image: img.image };
+                                                const updatedPlanTopics = allPlanTopics.map(t => t.titolo === editingTopic.titolo ? updatedTopic : t);
+                                                await axios.post(`${API}/save-plan/${effectiveClientId}`, { topics: updatedPlanTopics }, { headers: getAuthHeaders() });
+                                                fetchPlan();
+                                                setShowImgChangeModal(false);
+                                                toast.success("Immagine aggiornata");
+                                            }}
+                                            className="group relative aspect-square rounded-2xl overflow-hidden bg-white border border-slate-100 cursor-pointer hover:ring-2 hover:ring-slate-900 transition-all shadow-sm"
+                                        >
+                                            <img src={img.thumbnail || img.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                            <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <Check className="w-6 h-6 text-white" />
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </ScrollArea>
                 </DialogContent>
             </Dialog>
 
