@@ -1703,14 +1703,7 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
     logger.info(f"✓ SERP found {len(search_urls)} results. Starting content extraction...")
     
     # Process found URLs to extract content
-    async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
-        "User-Agent": user_agents[0]
-    }) as client_http:
-        # Results processing remains the same...
-        processed_results = []
-        logger.warning(f"All SERP search attempts failed for '{keyword}'")
-        return []
-
+    processed_results = []
     async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
         "User-Agent": user_agents[0]
     }) as client_http:
