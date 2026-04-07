@@ -333,7 +333,10 @@ export function AdminGenerator({
 
     useEffect(() => {
         if (clientConfig.content_strategy) setContentStrategy(prev => ({ ...prev, ...clientConfig.content_strategy }));
-        if (clientConfig.advanced_prompt) setAdvancedPrompt(clientConfig.advanced_prompt);
+        if (clientConfig.advanced_prompt) {
+            const promptVal = clientConfig.advanced_prompt;
+            setAdvancedPrompt(typeof promptVal === 'string' ? promptVal : (promptVal.secondo_livello_prompt || JSON.stringify(promptVal)));
+        }
         if (clientConfig.keywords) setKeywords(clientConfig.keywords);
         if (clientConfig.automation) setAutomation(clientConfig.automation);
         if (clientConfig.gsc?.site_url) setGscSite(clientConfig.gsc.site_url);
@@ -436,7 +439,7 @@ export function AdminGenerator({
         setResults([]); 
         try {
             const res = await axios.post(`${API}/generate-plan/${effectiveClientId}`, {
-                objective: advancedPrompt,
+                objective: typeof advancedPrompt === 'string' ? advancedPrompt : (advancedPrompt?.secondo_livello_prompt || JSON.stringify(advancedPrompt)),
                 num_topics: numArticles
             }, {
                 headers: getAuthHeaders()
