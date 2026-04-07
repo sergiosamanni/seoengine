@@ -1214,7 +1214,7 @@ async def analyze_competitor_url(request: dict, current_user: dict = Depends(get
             raise HTTPException(status_code=400, detail="Impossibile scaricare il contenuto")
             
         from agents.base import BaseAgent
-        agent = BaseAgent(client_id=client_id, llm_config=llm_config)
+        agent = BaseAgent(name="CompetitorAgent", client_id=client_id, llm_config=llm_config)
         
         system_prompt = """Sei un SEO Strategist Senior. Analizza il contenuto scaricato di un competitor.
 Estrai:
