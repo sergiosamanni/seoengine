@@ -505,9 +505,10 @@ export function AdminGenerator({
     const removeTargetKeyword = (kw) => {
         setTargetKeywords(targetKeywords.filter(k => k !== kw));
     };
+
     const handleUseTopicInGenerator = (topic) => {
         // Fill the stepper with this topic
-        setGenMode('single'); setStep(1);
+        setGenMode('single'); 
         setSelectedTopic(topic);
         setStrategistSelection(topic.keyword || topic.titolo);
         setSingleTitle(topic.titolo);
@@ -525,13 +526,21 @@ export function AdminGenerator({
         }
         setSerpKeyword(topic.keyword || '');
         if (topic.scheduled_date) {
-            // Convert to YYYY-MM-DD for input type date
             setSingleScheduledDate(topic.scheduled_date.split('T')[0]);
         } else {
             setSingleScheduledDate('');
         }
+        
+        // Se abbiamo già tutto, saltiamo direttamente allo step finale o al prompt
+        if (topic.master_prompt) {
+            setStep(4);
+        } else if (topic.serp_summary) {
+            setStep(3);
+        } else {
+            setStep(1);
+        }
+
         toast.info(`Contesto caricato: ${topic.titolo}`);
-        // Restiamo qui nello step 5 (Genera) ma in modalità 'single'.
     };
 
     useEffect(() => {
@@ -1480,20 +1489,32 @@ Direttive: Ottimizzazione standard SEO premium.`;
 
                                 {serpData && (
                                     <div className="space-y-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                            {serpData.competitors?.map((comp, idx) => (
-                                                <div key={idx} className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between hover:bg-slate-100 transition-colors">
-                                                    <div>
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <Badge className="bg-slate-900 text-white text-[8px] font-black px-2 h-4">TOP {idx + 1}</Badge>
-                                                            <a href={comp.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="w-2.5 h-2.5 text-slate-400 hover:text-slate-900" /></a>
+                                        {serpData.summary && (
+                                            <div className="p-6 bg-slate-900 rounded-2xl text-white relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 p-4 opacity-5"><BrainCircuit className="w-16 h-16" /></div>
+                                                <h4 className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2">
+                                                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                                                    Pre-computed SERP Summary
+                                                </h4>
+                                                <p className="text-xs font-medium leading-relaxed opacity-90">{serpData.summary}</p>
+                                            </div>
+                                        )}
+                                        {serpData.competitors && (
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                {serpData.competitors.map((comp, idx) => (
+                                                    <div key={idx} className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between hover:bg-slate-100 transition-colors">
+                                                        <div>
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <Badge className="bg-slate-900 text-white text-[8px] font-black px-2 h-4">TOP {idx + 1}</Badge>
+                                                                <a href={comp.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="w-2.5 h-2.5 text-slate-400 hover:text-slate-900" /></a>
+                                                            </div>
+                                                            <h4 className="font-bold text-slate-900 mb-1 line-clamp-2 leading-tight text-[11px]">{comp.title}</h4>
+                                                            <p className="text-[9px] text-slate-400 truncate opacity-60">{comp.url}</p>
                                                         </div>
-                                                        <h4 className="font-bold text-slate-900 mb-1 line-clamp-2 leading-tight text-[11px]">{comp.title}</h4>
-                                                        <p className="text-[9px] text-slate-400 truncate opacity-60">{comp.url}</p>
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
