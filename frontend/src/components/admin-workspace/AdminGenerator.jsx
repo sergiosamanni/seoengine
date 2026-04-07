@@ -31,7 +31,6 @@ import { Dialog, DialogContent } from '../ui/dialog';
 const ContentStrategyTab = lazy(() => import('../../pages/configuration/ContentStrategyTab').then(m => ({ default: m.ContentStrategyTab })));
 const KeywordsTab = lazy(() => import('../../pages/configuration/KeywordsTab').then(m => ({ default: m.KeywordsTab })));
 
-import { EditorialCalendar } from './EditorialCalendar';
 import { CompetitorsBenchmarkTab } from '../../pages/configuration/CompetitorsBenchmarkTab';
 
 export function AdminGenerator({
@@ -1716,30 +1715,27 @@ Direttive: Ottimizzazione standard SEO premium.`;
                     </div>
                 )}
 
-                {genMode === 'plan' && (
-                    <EditorialCalendar 
-                        client={client} 
-                        effectiveClientId={effectiveClientId} 
-                        getAuthHeaders={getAuthHeaders} 
-                        API={API} 
-                        onEditTopic={handleUseTopicInGenerator}
-                    />
-                )}
-
                 {genMode === 'competitors' && (
                     <CompetitorsBenchmarkTab
                         client={client}
                         config={client?.configuration || {}}
                         setConfig={(newConfig) => {
-                             // Assuming we want to update the client doc locally too
-                             client.configuration = newConfig;
+                             // Update locally
+                             if (client) client.configuration = newConfig;
                         }}
                         getAuthHeaders={getAuthHeaders}
                         API={API}
                     />
                 )}
 
-                {genMode === 'plan' && (
+                {genMode === 'plan' && planLoading && (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4">
+                        <Loader2 className="w-10 h-10 animate-spin text-slate-900" />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Hub caricamento...</p>
+                    </div>
+                )}
+
+                {genMode === 'plan' && !planLoading && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-600">
                         <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm sticky top-0 z-30">
                             <div className="flex items-center gap-4">
