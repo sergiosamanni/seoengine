@@ -90,7 +90,13 @@ Rispondi ESCLUSIVAMENTE con un JSON valido nel seguente formato:
             json_match = re.search(r'\{.*\}', raw_response, re.DOTALL)
             if json_match:
                 json_str = json_match.group(0)
-                data = json.loads(json_str)
+                try:
+                    data = json.loads(json_str)
+                except json.JSONDecodeError:
+                    from json_repair import repair_json
+                    repaired = repair_json(json_str)
+                    data = json.loads(repaired)
+                
                 plan = data.get("plan", [])
                 
                 # Schedulazione automatica Topic (distribuzione 30gg)
@@ -153,7 +159,13 @@ GSC TOP QUERIES (Context):
             json_match = re.search(r'\{.*\}', raw_response, re.DOTALL)
             if json_match:
                 json_str = json_match.group(0)
-                data = json.loads(json_str)
+                try:
+                    data = json.loads(json_str)
+                except json.JSONDecodeError:
+                    from json_repair import repair_json
+                    repaired = repair_json(json_str)
+                    data = json.loads(repaired)
+                
                 clusters = data.get("clusters", [])[:5]
                 await self.log("success", {"clusters_generated": len(clusters)})
                 return clusters
