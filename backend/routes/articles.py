@@ -612,9 +612,14 @@ async def serp_images(request: dict, current_user: dict = Depends(get_current_us
         raise HTTPException(status_code=400, detail="Keyword obbligatoria")
     max_results = min(request.get("max_results", 12), 50)  # cap at 50
     
-    # Refine keyword for better search results (avoid logos/icons)
+    # Refine keyword for better search results
+    context = request.get("context", "").strip()
     search_keywords = keyword
-    if len(keyword.split()) < 3:
+    
+    # Context-aware refinement
+    if len(keyword.split()) < 3 and context:
+        search_keywords = f"{keyword} fotografia professionale realistica"
+    elif len(keyword.split()) < 3:
         search_keywords = f"{keyword} realistico fotografia stock"
     
     try:
@@ -635,17 +640,36 @@ async def serp_images(request: dict, current_user: dict = Depends(get_current_us
                     region="it-it",
                     safesearch="moderate",
                     size="Large",
-                    max_results=max_results + 10
+                    max_results=max_results + 20
                 ))
-                # Filter out obvious icons/logos or tiny images
+                
+                # Keywords for filtering
+                kw_shards = set([w.lower() for w in keyword.split() if len(w) > 3])
+                
                 for r in raw_results:
                     title_low = r.get("title", "").lower()
-                    if any(x in title_low for x in ["logo", "icon", "vettore", "svg", "lettera"]):
+                    img_url = r.get("image", "").lower()
+                    
+                    # 1. Negative filters
+                    if any(x in title_low for x in ["logo", "icon", "vettore", "svg", "lettera", "grafica", "clipart"]):
                         continue
-                    if "wikimedia" in r.get("image", "") and len(r.get("title", "")) < 10: # Likely categories or single letters
+                    if any(x in img_url for x in ["logo", "icon", "placeholder", "default"]):
                         continue
+                        
+                    # 2. Semantic filtering (if query is specific)
+                    if len(kw_shards) > 0:
+                        overlap = sum(1 for w in kw_shards if w in title_low)
+                        if overlap == 0 and len(results) > max_results:
+                            continue
+                            
+                    # 3. Source trust
+                    if "wikimedia" in img_url and len(title_low) < 12:
+                        continue
+                        
                     results.append(r)
                 
+                # Sort by keyword relevance
+                results.sort(key=lambda x: sum(1 for w in kw_shards if w in x.get("title", "").lower()), reverse=True)
                 results = results[:max_results]
         except Exception as ddg_err:
             logger.warning(f"Primary DDG image search failed: {ddg_err}")

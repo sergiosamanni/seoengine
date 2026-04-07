@@ -652,6 +652,7 @@ Direttive: Ottimizzazione standard SEO premium.`;
         try {
             const res = await axios.post(`${API}/serp/images`, { 
                 keyword: searchQ,
+                context: `${singleTitle} - ${singleObjective?.slice(0, 200)}`,
                 max_results: isFreshSearch ? 12 : count
             }, { headers: getAuthHeaders() });
             const newResults = res.data.results || [];
@@ -1611,9 +1612,29 @@ Direttive: Ottimizzazione standard SEO premium.`;
                                                                 value={imgSearchQuery} 
                                                                 onChange={(e) => setImgSearchQuery(e.target.value)} 
                                                                 placeholder="Cerca un'immagine professionale..." 
-                                                                className="h-14 pl-12 rounded-2xl bg-slate-50 border-slate-100 focus:bg-white transition-all text-sm font-medium" 
+                                                                className="h-14 pl-12 pr-32 rounded-2xl bg-slate-50 border-slate-100 focus:bg-white transition-all text-sm font-medium" 
                                                                 onKeyDown={(e) => e.key === 'Enter' && handleImageSearch(12)}
                                                             />
+                                                            <Button 
+                                                                onClick={async () => {
+                                                                    const prompt = `Genera una query di ricerca immagini (3-5 parole in italiano) estremamente professionale e d'impatto per questo contenuto: "${singleTitle}". Focus: realismo, fotografia, stock. Solo la query, niente altro.`;
+                                                                    try {
+                                                                        const res = await axios.post(`${API}/chat/strategic-advice`, { 
+                                                                            client_id: effectiveClientId, 
+                                                                            prompt 
+                                                                        }, { headers: getAuthHeaders() });
+                                                                        const suggested = res.data.advice?.replace(/"/g, '').trim();
+                                                                        if (suggested) {
+                                                                            setImgSearchQuery(suggested);
+                                                                            handleImageSearch(12, suggested);
+                                                                        }
+                                                                    } catch (e) { toast.error("Errore suggerimento AI"); }
+                                                                }}
+                                                                variant="ghost" 
+                                                                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-3 text-[9px] font-black uppercase text-indigo-600 hover:bg-indigo-50 rounded-xl flex gap-1 items-center"
+                                                            >
+                                                                <Sparkles className="w-3 h-3" /> Suggerisci AI
+                                                            </Button>
                                                         </div>
                                                         <Button 
                                                             onClick={() => handleImageSearch(12)} 
