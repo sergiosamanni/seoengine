@@ -481,6 +481,33 @@ async def _process_internal_links_post_publish(client_id: str, provider: str, ap
 
 # ============== JOBS ==============
 
+@router.get("/jobs/active")
+async def get_active_jobs(client_id: str = None, current_user: dict = Depends(get_current_user)):
+    """List ongoing and recently completed background jobs."""
+    seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    
+    # Show running + jobs completed in last hour
+    query = {
+        "$or": [
+            {"status": "running"},
+            {"status": "completed", "completed_at": {"$gte": hour_ago}}
+        ]
+    }
+    
+    if current_user["role"] != "admin":
+        query["client_id"] = {"$in": current_user.get("client_ids", [])}
+    elif client_id:
+        query["client_id"] = client_id
+        
+    cursor = db.jobs.find(query).sort("created_at", -1).limit(10)
+    jobs = []
+    async for j in cursor:
+        j["_id"] = str(j["_id"])
+        jobs.append(j)
+    return {"jobs": jobs}
+
+
 @router.get("/jobs/{job_id}")
 async def get_job_status(job_id: str, current_user: dict = Depends(get_current_user)):
     job = await db.jobs.find_one({"id": job_id}, {"_id": 0})

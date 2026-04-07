@@ -1202,25 +1202,15 @@ Direttive: Ottimizzazione standard SEO premium.`;
 
             const jobId = res.data.job_id;
             const total = res.data.total;
-            toast.info(`Job Piano avviato: ${total} articoli in coda...`);
+            toast.success(`Job avviato con successo: ${total} articoli in elaborazione in background.`, {
+                description: "Puoi monitorare lo stato nel Centro Task in alto a destra.",
+                duration: 6000
+            });
 
-            const poll = async () => {
-                try {
-                    const jr = await axios.get(`${API}/jobs/${jobId}`, { headers: getAuthHeaders() });
-                    setResults(jr.data.results || []);
-                    setProgressPercent(Math.round((jr.data.completed / total) * 100));
-                    if (jr.data.status === 'completed') {
-                        const s = jr.data.summary || {};
-                        toast.success(`Piano completato: ${s.generated_ok || 0} generati`);
-                        setSelectedPlanTopics([]); 
-                        setGenerating(false); 
-                        fetchRecentArticles(); // Refresh list after completion
-                        return;
-                    }
-                    setTimeout(poll, 4000);
-                } catch (e) { setTimeout(poll, 5000); }
-            };
-            setTimeout(poll, 5000);
+            // We no longer poll locally here to keep the UI free.
+            // The TaskCenter will handle the global job monitoring.
+            setGenerating(false);
+            setSelectedPlanTopics([]);
         } catch (error) {
             toast.error(error.response?.data?.detail || 'Errore generazione batch');
             setGenerating(false);

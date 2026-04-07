@@ -9,6 +9,7 @@ import {
 import axios from 'axios';
 import { API_URL as API } from '../config';
 import { Badge } from './ui/badge';
+import { TaskCenter } from './TaskCenter';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter 
 } from './ui/dialog';
@@ -259,19 +260,39 @@ export const DashboardLayout = ({ children }) => {
       
       {/* Main Content Area */}
       <main className="flex-1 overflow-auto bg-[#f8fafc]">
-        {/* Mobile Navbar */}
-        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100/60 px-5 py-3 flex items-center justify-between lg:hidden">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="p-2.5 rounded-xl bg-slate-900 text-white shadow-lg shadow-slate-200 active:scale-95 transition-all">
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="flex flex-col leading-none">
-                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-400">SEO</span>
-                <span className="text-lg font-black tracking-tighter text-slate-900">Antigravity</span>
+        {/* Persistent Top Header (Desktop & Mobile) */}
+        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100/60 transition-all">
+          <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
+            {/* Mobile Menu Button + Title (Mobile only) */}
+            <div className="flex items-center gap-3 lg:hidden">
+              <button 
+                onClick={() => setSidebarOpen(true)} 
+                className="p-2.5 rounded-xl bg-slate-900 text-white shadow-lg shadow-slate-200 active:scale-95 transition-all"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div className="flex flex-col leading-none">
+                  <span className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-400">SEO</span>
+                  <span className="text-lg font-black tracking-tighter text-slate-900">Antigravity</span>
+              </div>
             </div>
-          </div>
-          <div className="w-8 h-8 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center">
-             <Globe className="w-4 h-4 text-emerald-500/60" />
+
+            {/* Desktop Spacer (Hidden on Mobile) */}
+            <div className="hidden lg:block">
+               {/* Left side empty or can be used for breadcrumbs */}
+               <div className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                  <Globe className="w-3.5 h-3.5 opacity-50" />
+                  <span>Sistema Operativo AI / {isAdmin ? 'Admin' : 'Workspace'}</span>
+               </div>
+            </div>
+
+            {/* Global Actions (Task Manager) */}
+            <div className="flex items-center gap-3">
+              <TaskCenter getAuthHeaders={getAuthHeaders} isAdmin={isAdmin} />
+              <div className="hidden sm:flex w-8 h-8 rounded-full bg-slate-50 border border-slate-100 items-center justify-center">
+                 <Globe className="w-4 h-4 text-emerald-500/60" />
+              </div>
+            </div>
           </div>
         </div>
 
