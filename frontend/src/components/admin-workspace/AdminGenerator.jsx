@@ -509,7 +509,6 @@ export function AdminGenerator({
     const handleUseTopicInGenerator = (topic) => {
         // Fill the stepper with this topic
         setGenMode('single'); 
-        setSelectedTopic(topic);
         setStrategistSelection(topic.keyword || topic.titolo);
         setSingleTitle(topic.titolo);
         setSingleObjective(topic.final_objective || topic.outline?.map(h => h.text).join('\n') || '');
