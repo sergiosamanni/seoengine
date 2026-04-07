@@ -607,113 +607,131 @@ async def update_advanced_prompt(client_id: str, request: UpdateAdvancedPromptRe
 
 @router.post("/serp/images")
 async def serp_images(request: dict, current_user: dict = Depends(get_current_user)):
+    # 1. Validation & Keyword Expansion
     keyword = request.get("keyword", "").strip()
-    if not keyword:
-        raise HTTPException(status_code=400, detail="Keyword obbligatoria")
-    max_results = min(request.get("max_results", 12), 50)  # cap at 50
-    
-    # Refine queries (reduced to 2 to avoid rate-limiting)
     context = request.get("context", "").strip()
-    queries = [
-        f"\"{keyword}\" fotografia professionale", 
-        f"scena reale {keyword}"
-    ]
+    
+    # Block junk searches (partial types like 'd', 'di')
+    if len(keyword) < 3:
+        logger.warning(f"Blocking junk image search for partial keyword: '{keyword}'")
+        return {"keyword": keyword, "results": [], "total": 0}
+    
+    # Use context to enrich short or generic keywords
+    search_query = keyword
+    if len(keyword.split()) < 3 and context:
+        # Avoid circular expansion
+        clean_context = context.split("-")[0].strip()[:60]
+        search_query = f"{keyword} {clean_context}"
+    
+    max_results = min(request.get("max_results", 12), 40)
     
     try:
         from duckduckgo_search import DDGS
         import httpx as _httpx
         import random as _random
         import asyncio as _asyncio
+        from bs4 import BeautifulSoup
         
         ua_list = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
         ]
         
-        all_raw = []
+        results = []
+        
+        # --- PRO SOURCE 1: DuckDuckGo (Optimized) ---
         try:
             with DDGS(headers={"User-Agent": _random.choice(ua_list)}) as ddgs:
-                for idx, q in enumerate(queries):
-                    if idx > 0: await _asyncio.sleep(0.8) # Anti-ratelimit delay
-                    q_res = list(ddgs.images(
-                        keywords=q,
-                        region="it-it",
-                        safesearch="moderate",
-                        size="Large",
-                        type_image="photo",
-                        max_results=max_results + 5
-                    ))
-                    all_raw.extend(q_res)
-        except Exception as ddg_err:
-            logger.warning(f"DDG search failed (possibly ratelimited): {ddg_err}")
+                ddg_q = f"\"{search_query}\" professional photography realistic"
+                raw = list(ddgs.images(
+                    keywords=ddg_q,
+                    region="it-it",
+                    safesearch="moderate",
+                    size="Large",
+                    type_image="photo",
+                    max_results=max_results + 10
+                ))
+                for r in raw:
+                    results.append({
+                        "image": r["image"], "thumbnail": r["thumbnail"],
+                        "title": r["title"], "source": "DDG",
+                        "width": r.get("width"), "height": r.get("height")
+                    })
+        except Exception as e:
+            logger.warning(f"DDG primary failed: {e}")
 
-        # Fallback to Wikimedia if DDG produced nothing
-        if not all_raw:
-            logger.info("DDG failed/ratelimited. Falling back to Wikimedia...")
+        # --- PRO SOURCE 2: Unsplash (Scraping - High Quality) ---
+        if len(results) < 4:
+            logger.info(f"Trying Unsplash fallback for: {search_query}")
+            try:
+                uns_url = f"https://unsplash.com/s/photos/{search_query.replace(' ', '-')}"
+                async with _httpx.AsyncClient(timeout=10, headers={"User-Agent": _random.choice(ua_list)}) as client:
+                    resp = await client.get(uns_url)
+                    if resp.status_code == 200:
+                        soup = BeautifulSoup(resp.text, "lxml")
+                        # Unsplash uses specific figure/img tags
+                        img_tags = soup.find_all("img", attrs={"srcset": True})
+                        for img in img_tags:
+                            if "photo-" in img["src"] and "profile-" not in img["src"]:
+                                src = img["src"].split("?")[0] + "?auto=format&fit=crop&q=80&w=1200"
+                                thumb = img["src"].split("?")[0] + "?auto=format&fit=crop&q=60&w=400"
+                                results.append({
+                                    "image": src, "thumbnail": thumb,
+                                    "title": f"Professional Photo for {keyword}",
+                                    "source": "Unsplash", "width": 1200, "height": 800
+                                })
+                            if len(results) >= max_results + 10: break
+            except Exception as ue:
+                logger.warning(f"Unsplash fallback failed: {ue}")
+
+        # --- PRO SOURCE 3: Wikimedia (Final Backup) ---
+        if len(results) < 4:
+            logger.info("Trying Wikimedia final fallback...")
             from helpers import web_search_images_wikimedia
-            wiki_results = await web_search_images_wikimedia(keyword, max_results)
-            # Adapt wiki results to DDG format for the grader
-            for wr in wiki_results:
-                all_raw.append({
-                    "image": wr["image"],
-                    "thumbnail": wr["thumbnail"],
-                    "title": wr["title"],
-                    "source": "Wikimedia"
+            wiki_res = await web_search_images_wikimedia(keyword, 10)
+            for wr in wiki_res:
+                results.append({
+                    "image": wr["image"], "thumbnail": wr["thumbnail"],
+                    "title": wr["title"], "source": "Wikimedia",
+                    "width": wr.get("width"), "height": wr.get("height")
                 })
 
-        # Remove duplicates
-        seen_urls = set()
-        unique_results = []
-        for r in all_raw:
-            u = r.get("image")
-            if u and u not in seen_urls:
-                seen_urls.add(u)
-                unique_results.append(r)
-
-        # Grader & Filters
-        results = []
-        kw_main = set([w.lower() for w in keyword.split() if len(w) > 3])
+        # --- RANKING & DEDUPLICATION ---
+        seen = set()
+        final_results = []
+        kw_shards = set([w.lower() for w in keyword.split() if len(w) > 3])
         
-        for r in unique_results:
-            title_low = r.get("title", "").lower()
-            img_url = r.get("image", "").lower()
+        for r in results:
+            url = r["image"]
+            if url in seen: continue
+            seen.add(url)
             
-            if any(x in title_low for x in ["logo", "icon", "vettore", "svg", "lettera", "grafica", "clipart", "disegno", "vettoriale", "illustrazione"]):
+            # Filter non-professional titles (icons, logos)
+            t_low = r["title"].lower()
+            if any(x in t_low for x in ["logo", "icon", "vector", "illustration", "disegno", "vettoriale"]):
                 continue
-            
+                
+            # Score
             score = 0
-            if any(w in title_low for w in kw_main): score += 10
-            if ".it" in img_url: score += 5
-            if r.get("source") == "Wikimedia": score -= 2 # Favor DDG if available
+            if r["source"] == "Unsplash": score += 20 # BEST QUALITY
+            if r["source"] == "DDG": score += 10
+            if r["source"] == "Wikimedia": score += 5
+            
+            overlap = sum(3 for w in kw_shards if w in t_low)
+            score += overlap
             
             r["_score"] = score
-            if score >= 5 or not results:
-                results.append(r)
+            final_results.append(r)
+            
+        final_results.sort(key=lambda x: x["_score"], reverse=True)
+        results = final_results[:max_results]
         
-        results.sort(key=lambda x: x.get("_score", 0), reverse=True)
-        results = results[:max_results]
-        
-    except Exception as e:
-        logger.error(f"Image search system failure: {e}")
-        results = []
-
-    # Final emergency fallback if still empty
+    except Exception as outer_e:
+        logger.error(f"Global image search failure: {outer_e}")
+        return {"keyword": keyword, "results": [], "total": 0}
+    
     if not results:
-        logger.warning("No images found via DDG/Multi. Trying Wikimedia Commons final fallback...")
-        from helpers import web_search_images_wikimedia
-        wiki_results = await web_search_images_wikimedia(keyword, max_results)
-        for r in wiki_results:
-            results.append({
-                "image": r["image"],
-                "thumbnail": r["thumbnail"],
-                "title": r["title"],
-                "source": "Wikimedia",
-                "width": r.get("width"),
-                "height": r.get("height")
-            })
-
-    if not results:
-        logger.warning("No images found via any provider. Returning empty list.")
         return {"keyword": keyword, "results": [], "total": 0}
     
     async def get_file_size(url: str, w: int, h: int) -> int:
