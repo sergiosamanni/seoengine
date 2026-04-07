@@ -1617,67 +1617,97 @@ Scrivi il paragrafo HTML con il link interno seguendo le REGOLE PADRE.
 # ============== SERP SCRAPING ==============
 
 async def scrape_google_serp(keyword: str, country: str = "it", num_results: int = 5) -> list:
-    """Search SERP using DuckDuckGo Lite with retry + scrape page content."""
+    """Search SERP using DuckDuckGo Lite with fast fail + multi-layered fallback."""
     import asyncio
     from urllib.parse import unquote, urlparse, parse_qs
+    import random
 
-    results = []
     search_urls = []
-
     user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     ]
 
-    for attempt in range(3):
+    # Layer 1: DuckDuckGo Lite (Fast & HTML based)
+    for attempt in range(2): # Reduced to 2 fast attempts
         try:
-            ua = user_agents[attempt % len(user_agents)]
-            async with httpx.AsyncClient(timeout=20, follow_redirects=True, headers={"User-Agent": ua}) as http:
+            ua = random.choice(user_agents)
+            async with httpx.AsyncClient(timeout=12, follow_redirects=True, headers={"User-Agent": ua}) as http:
                 resp = await http.get("https://lite.duckduckgo.com/lite/",
                     params={"q": keyword, "kl": f"{country}-{country}"})
-                if resp.status_code != 200:
-                    logger.warning(f"DDG attempt {attempt+1}: status {resp.status_code}")
-                    await asyncio.sleep(2 * (attempt + 1))
-                    continue
-                soup = BeautifulSoup(resp.text, "lxml")
-                snippets = [td.get_text(strip=True) for td in soup.find_all("td", class_="result-snippet")]
-                idx = 0
-                for a in soup.find_all("a", class_="result-link"):
-                    if len(search_urls) >= num_results:
-                        break
-                    raw_href = a.get("href", "")
-                    title = a.get_text(strip=True)
-                    if "uddg=" in raw_href:
-                        parsed = parse_qs(urlparse(raw_href).query)
-                        real_url = unquote(parsed.get("uddg", [raw_href])[0])
-                    else:
-                        real_url = raw_href
-                    if real_url and title and "duckduckgo.com" not in real_url:
-                        desc = snippets[idx] if idx < len(snippets) else ""
-                        search_urls.append({"url": real_url, "title": title, "description": desc})
-                        idx += 1
-                if search_urls:
-                    break
-                logger.warning(f"DDG attempt {attempt+1}: 0 results, retrying...")
-                await asyncio.sleep(2 * (attempt + 1))
+                
+                if resp.status_code == 200:
+                    soup = BeautifulSoup(resp.text, "lxml")
+                    snippets = [td.get_text(strip=True) for td in soup.find_all("td", class_="result-snippet")]
+                    idx = 0
+                    for a in soup.find_all("a", class_="result-link"):
+                        if len(search_urls) >= num_results: break
+                        raw_href = a.get("href", "")
+                        title = a.get_text(strip=True)
+                        if "uddg=" in raw_href:
+                            parsed = parse_qs(urlparse(raw_href).query)
+                            real_url = unquote(parsed.get("uddg", [raw_href])[0])
+                        else: real_url = raw_href
+                        if real_url and title and "duckduckgo.com" not in real_url:
+                            desc = snippets[idx] if idx < len(snippets) else ""
+                            search_urls.append({"url": real_url, "title": title, "description": desc})
+                            idx += 1
+                    if search_urls: break
+                else:
+                    logger.warning(f"DDG Lite attempt {attempt+1} status: {resp.status_code}")
         except Exception as e:
-            logger.warning(f"DDG attempt {attempt+1} error: {e}")
-            await asyncio.sleep(2 * (attempt + 1))
+            logger.warning(f"DDG Lite attempt {attempt+1} error: {str(e) or 'Connection Timeout'}")
+        
+        if not search_urls:
+            await asyncio.sleep(1)
 
+    # Layer 2: DDGS Library Fallback
     if not search_urls:
-        logger.warning(f"SERP search (Lite) failed after 3 attempts for '{keyword}'. Attempting fallback...")
+        logger.info(f"Attempting DDGS library fallback for '{keyword}'...")
         try:
-            # Try our other search helper which uses the DDGS library (different API)
             fallback_res = await web_search_text(keyword, max_results=num_results)
             if fallback_res:
                 for r in fallback_res:
                     search_urls.append({"url": r["url"], "title": r["title"], "description": r["body"]})
-                logger.info(f"✓ Fallback SERP search succeeded with {len(search_urls)} results.")
         except Exception as fe:
-            logger.error(f"Fallback search also failed: {fe}")
+            logger.warning(f"DDGS fallback failed: {fe}")
+
+    # Layer 3: Direct Google Search (Minimal Scrape) - ONLY if others failed
+    if not search_urls:
+        logger.info(f"Attempting emergency Google scrape for '{keyword}'...")
+        try:
+            ua = random.choice(user_agents)
+            async with httpx.AsyncClient(timeout=15, headers={"User-Agent": ua}) as client:
+                # Use google.it for Italian context
+                google_url = f"https://www.google.it/search?q={keyword.replace(' ', '+')}&num={num_results + 5}&hl=it"
+                resp = await client.get(google_url)
+                if resp.status_code == 200:
+                    gsoup = BeautifulSoup(resp.text, "lxml")
+                    for g in gsoup.find_all('div', class_='g'):
+                        anchors = g.find_all('a')
+                        if anchors:
+                            link = anchors[0]['href']
+                            title_tag = g.find('h3')
+                            title = title_tag.get_text() if title_tag else "Risultato Google"
+                            if link.startswith('http') and 'google.com' not in link:
+                                search_urls.append({"url": link, "title": title, "description": ""})
+                        if len(search_urls) >= num_results: break
+        except Exception as ge:
+            logger.warning(f"Emergency Google search failed: {ge}")
 
     if not search_urls:
+        logger.error(f"❌ ALL SERP providers failed for '{keyword}'")
+        return []
+
+    logger.info(f"✓ SERP found {len(search_urls)} results. Starting content extraction...")
+    
+    # Process found URLs to extract content
+    async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
+        "User-Agent": user_agents[0]
+    }) as client_http:
+        # Results processing remains the same...
+        processed_results = []
         logger.warning(f"All SERP search attempts failed for '{keyword}'")
         return []
 
