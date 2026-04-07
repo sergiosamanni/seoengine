@@ -1416,6 +1416,33 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                 <EditorialCalendar topics={allPlanTopics} onArticleClick={handleUseTopicInGenerator} />
                             </div>
                         )}
+
+                        {allPlanTopics.length > 0 && planView === 'list' && (
+                            <div className="space-y-4">
+                                {allPlanTopics.map((item, idx) => (
+                                    <div key={idx} className="bg-white/80 p-6 rounded-[2rem] border border-white shadow-lg hover:shadow-2xl transition-all cursor-pointer group" onClick={() => handleUseTopicInGenerator(item)}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                                                    <Play className="w-4 h-4" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-black text-slate-900 group-hover:text-indigo-600 transition-colors uppercase">{item.titolo}</h4>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest">{item.topic || 'Custom'}</Badge>
+                                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.funnel || 'Awareness'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Badge className="bg-emerald-500/10 text-emerald-600 font-black text-[9px] uppercase border-none">Pronto</Badge>
+                                                <ChevronRight className="w-5 h-5 text-slate-300" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
