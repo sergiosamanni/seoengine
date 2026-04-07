@@ -612,44 +612,43 @@ async def serp_images(request: dict, current_user: dict = Depends(get_current_us
         raise HTTPException(status_code=400, detail="Keyword obbligatoria")
     max_results = min(request.get("max_results", 12), 50)  # cap at 50
     
+    # Refine keyword for better search results (avoid logos/icons)
+    search_keywords = keyword
+    if len(keyword.split()) < 3:
+        search_keywords = f"{keyword} realistico fotografia stock"
+    
     try:
         from duckduckgo_search import DDGS
         import httpx as _httpx
         import random as _random
         
-        # List of User-Agents to rotate
         ua_list = [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
         ]
         
         results = []
         try:
             with DDGS(headers={"User-Agent": _random.choice(ua_list)}) as ddgs:
-                # Primary search using it-it to get more relevant local results
-                results = list(ddgs.images(
-                    keywords=keyword,
+                raw_results = list(ddgs.images(
+                    keywords=search_keywords,
                     region="it-it",
                     safesearch="moderate",
                     size="Large",
-                    max_results=max_results + 5
+                    max_results=max_results + 10
                 ))
+                # Filter out obvious icons/logos or tiny images
+                for r in raw_results:
+                    title_low = r.get("title", "").lower()
+                    if any(x in title_low for x in ["logo", "icon", "vettore", "svg", "lettera"]):
+                        continue
+                    if "wikimedia" in r.get("image", "") and len(r.get("title", "")) < 10: # Likely categories or single letters
+                        continue
+                    results.append(r)
+                
+                results = results[:max_results]
         except Exception as ddg_err:
-            logger.warning(f"Primary DDG image search failed (it-it): {ddg_err}. Trying global (wt-wt)...")
-            try:
-                # Global fallback
-                with DDGS(headers={"User-Agent": _random.choice(ua_list)}) as ddgs:
-                    results = list(ddgs.images(
-                        keywords=keyword,
-                        region="wt-wt",
-                        safesearch="moderate",
-                        max_results=max_results + 5
-                    ))
-            except Exception as e2:
-                logger.error(f"Global DDG image search also failed: {e2}")
-                results = []
-                results = []
+            logger.warning(f"Primary DDG image search failed: {ddg_err}")
 
         if not results:
             logger.warning("No images found via DDG. Trying Wikimedia Commons fallback...")

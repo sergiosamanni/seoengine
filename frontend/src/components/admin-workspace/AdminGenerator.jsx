@@ -1604,17 +1604,46 @@ Direttive: Ottimizzazione standard SEO premium.`;
                                                 </div>
                                             ) : (
                                                 <div className="space-y-4">
-                                                    <div className="flex gap-2">
-                                                        <Input value={imgSearchQuery} onChange={(e) => setImgSearchQuery(e.target.value)} placeholder="Cerca immagine..." className="h-14 rounded-2xl bg-slate-50 border-slate-100" />
-                                                        <Button onClick={() => handleImageSearch(12)} disabled={searchingImages} className="h-14 w-14 bg-slate-900 text-white rounded-2xl">
+                                                    <div className="flex gap-3">
+                                                        <div className="relative flex-1">
+                                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                                            <Input 
+                                                                value={imgSearchQuery} 
+                                                                onChange={(e) => setImgSearchQuery(e.target.value)} 
+                                                                placeholder="Cerca un'immagine professionale..." 
+                                                                className="h-14 pl-12 rounded-2xl bg-slate-50 border-slate-100 focus:bg-white transition-all text-sm font-medium" 
+                                                                onKeyDown={(e) => e.key === 'Enter' && handleImageSearch(12)}
+                                                            />
+                                                        </div>
+                                                        <Button 
+                                                            onClick={() => handleImageSearch(12)} 
+                                                            disabled={searchingImages} 
+                                                            className="h-14 w-14 bg-slate-950 text-white rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all"
+                                                        >
                                                             {searchingImages ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
                                                         </Button>
                                                     </div>
+                                                    
                                                     {imgSearchResults.length > 0 && (
-                                                        <div className="grid grid-cols-3 gap-3 h-[240px] overflow-y-auto p-2 scrollbar-hide">
+                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-[360px] overflow-y-auto p-4 bg-slate-50/50 rounded-[2rem] border border-slate-100 custom-scrollbar">
                                                             {imgSearchResults.map((img, i) => (
-                                                                <div key={i} onClick={() => importExternalImage(img.image)} className="aspect-[4/3] rounded-xl overflow-hidden cursor-pointer border-2 border-transparent hover:border-indigo-500 transition-all shadow-sm">
-                                                                    <img src={img.image} alt="" className="w-full h-full object-cover" />
+                                                                <div 
+                                                                    key={i} 
+                                                                    onClick={() => importExternalImage(img.image)} 
+                                                                    className="group relative aspect-[4/3] rounded-[1.5rem] overflow-hidden cursor-pointer border-2 border-transparent hover:border-indigo-600 transition-all shadow-md bg-white"
+                                                                >
+                                                                    <img 
+                                                                        src={img.thumbnail || img.image} 
+                                                                        alt={img.title} 
+                                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                                                                        onError={(e) => e.target.src = 'https://placehold.co/600x400?text=Immagine+Non+Disponibile'}
+                                                                    />
+                                                                    <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/20 transition-colors" />
+                                                                    <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg">
+                                                                            <Plus className="w-3 h-3" />
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             ))}
                                                         </div>
