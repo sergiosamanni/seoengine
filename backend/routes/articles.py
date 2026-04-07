@@ -697,60 +697,64 @@ async def serp_images(request: dict, current_user: dict = Depends(get_current_us
         logger.error(f"Image search system failure: {e}")
         results = []
 
-        if not results:
-            logger.warning("No images found via DDG. Trying Wikimedia Commons fallback...")
-            from helpers import web_search_images_wikimedia
-            results = await web_search_images_wikimedia(keyword, max_results)
+    # Final emergency fallback if still empty
+    if not results:
+        logger.warning("No images found via DDG/Multi. Trying Wikimedia Commons final fallback...")
+        from helpers import web_search_images_wikimedia
+        wiki_results = await web_search_images_wikimedia(keyword, max_results)
+        for r in wiki_results:
+            results.append({
+                "image": r["image"],
+                "thumbnail": r["thumbnail"],
+                "title": r["title"],
+                "source": "Wikimedia",
+                "width": r.get("width"),
+                "height": r.get("height")
+            })
 
-        if not results:
-            logger.warning("No images found via any provider. Returning empty list.")
-            return {"keyword": keyword, "results": [], "total": 0}
-        
-        async def get_file_size(url: str, w: int, h: int) -> int:
-            """Try to get real file size via HEAD request, fallback to dimension estimate."""
-            try:
-                async with _httpx.AsyncClient(timeout=3.0, follow_redirects=True) as c:
-                    r = await c.head(url, headers={"User-Agent": "Mozilla/5.0"})
-                    cl = r.headers.get("content-length")
-                    if cl and cl.isdigit():
-                        return max(1, int(cl) // 1024)
-            except Exception:
-                pass
-            return max(10, int(w * h * 0.0002))  # dimension-based estimate
-        
-        # Fetch sizes concurrently for all results
-        import asyncio as _asyncio
-        formatted_results = []
-        for r in results[:max_results]:
-            w = r.get("width", 800)
-            h = r.get("height", 600)
-            img_url = r.get("image", "")
-            if img_url:
-                formatted_results.append({
-                    "image": img_url,
-                    "url": img_url,
-                    "thumbnail": r.get("thumbnail"),
-                    "title": r.get("title", ""),
-                    "source": r.get("source", ""),
-                    "width": int(w) if w else 0,
-                    "height": int(h) if h else 0,
-                    "weight_kb": None  # Will be filled below
-                })
-        
-        # Concurrent size fetching (up to 8 at a time)
-        sem = _asyncio.Semaphore(8)
-        async def fetch_with_sem(item):
-            async with sem:
-                kb = await get_file_size(item["image"], item["width"], item["height"])
-                item["weight_kb"] = kb
-        
-        await _asyncio.gather(*[fetch_with_sem(item) for item in formatted_results])
-        
-        return {"keyword": keyword, "results": formatted_results, "total": len(formatted_results)}
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Image search failed: {e}")
-        return {"keyword": keyword, "results": [], "error": str(e)}
+    if not results:
+        logger.warning("No images found via any provider. Returning empty list.")
+        return {"keyword": keyword, "results": [], "total": 0}
+    
+    async def get_file_size(url: str, w: int, h: int) -> int:
+        """Try to get real file size via HEAD request, fallback to dimension estimate."""
+        try:
+            async with _httpx.AsyncClient(timeout=3.0, follow_redirects=True) as c:
+                r = await c.head(url, headers={"User-Agent": "Mozilla/5.0"})
+                cl = r.headers.get("content-length")
+                if cl and cl.isdigit():
+                    return max(1, int(cl) // 1024)
+        except Exception:
+            pass
+        return max(10, int(w * h * 0.0002))  # dimension-based estimate
+    
+    # Fetch sizes concurrently for all results
+    import asyncio as _asyncio
+    formatted_results = []
+    for r in results[:max_results]:
+        w = r.get("width", 800)
+        h = r.get("height", 600)
+        img_url = r.get("image", "")
+        if img_url:
+            formatted_results.append({
+                "image": img_url,
+                "url": img_url,
+                "thumbnail": r.get("thumbnail"),
+                "title": r.get("title", ""),
+                "source": r.get("source", ""),
+                "width": int(w) if w else 0,
+                "height": int(h) if h else 0,
+                "weight_kb": None
+            })
+    
+    sem = _asyncio.Semaphore(8)
+    async def fetch_with_sem(item):
+        async with sem:
+            kb = await get_file_size(item["image"], item["width"], item["height"])
+            item["weight_kb"] = kb
+    
+    await _asyncio.gather(*[fetch_with_sem(item) for item in formatted_results])
+    return {"keyword": keyword, "results": formatted_results, "total": len(formatted_results)}
 
 
 
