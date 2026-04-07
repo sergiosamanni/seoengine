@@ -31,7 +31,8 @@ import { Dialog, DialogContent } from '../ui/dialog';
 const ContentStrategyTab = lazy(() => import('../../pages/configuration/ContentStrategyTab').then(m => ({ default: m.ContentStrategyTab })));
 const KeywordsTab = lazy(() => import('../../pages/configuration/KeywordsTab').then(m => ({ default: m.KeywordsTab })));
 
-
+import { EditorialCalendar } from './EditorialCalendar';
+import { CompetitorsBenchmarkTab } from '../../pages/configuration/CompetitorsBenchmarkTab';
 
 export function AdminGenerator({
     client, effectiveClientId, getAuthHeaders, navigate, externalMode, initialData, onDataUsed
@@ -1383,7 +1384,8 @@ Direttive: Ottimizzazione standard SEO premium.`;
                             { id: 'single', label: 'Studio Articoli', icon: PenTool },
                             { id: 'pillar', label: 'Pillar Hub', icon: Layers },
                             { id: 'plan', label: 'Editorial Plan', icon: Calendar },
-                            { id: 'programmatic', label: 'Bulk SEO', icon: Library }
+                            { id: 'programmatic', label: 'Bulk SEO', icon: Library },
+                            { id: 'competitors', label: 'Competitor Study', icon: Target }
                         ].map((mode) => (
                             <button 
                                 key={mode.id}
@@ -1712,6 +1714,29 @@ Direttive: Ottimizzazione standard SEO premium.`;
                             </div>
                         )}
                     </div>
+                )}
+
+                {genMode === 'plan' && (
+                    <EditorialCalendar 
+                        client={client} 
+                        effectiveClientId={effectiveClientId} 
+                        getAuthHeaders={getAuthHeaders} 
+                        API={API} 
+                        onEditTopic={handleUseTopicInGenerator}
+                    />
+                )}
+
+                {genMode === 'competitors' && (
+                    <CompetitorsBenchmarkTab
+                        client={client}
+                        config={client?.configuration || {}}
+                        setConfig={(newConfig) => {
+                             // Assuming we want to update the client doc locally too
+                             client.configuration = newConfig;
+                        }}
+                        getAuthHeaders={getAuthHeaders}
+                        API={API}
+                    />
                 )}
 
                 {genMode === 'plan' && (

@@ -1165,16 +1165,14 @@ async def programmatic_architect(req: ProgrammaticArchitectRequest, current_user
 @router.post("/articles/programmatic/preview")
 async def programmatic_preview(req: ProgrammaticPreviewRequest, current_user: dict = Depends(get_current_user)):
     try:
-        # Simple spintax resolver for preview
-        import re
-        import random
-        
         def resolve_spintax(text):
+            import re
+            import random
             while "{" in text:
                 match = re.search(r"\{([^{}]+)\}", text)
                 if not match: break
-                parts = match.group(1).split("|")
-                text = text.replace(match.group(0), random.choice(parts), 1)
+                options = match.group(1).split('|')
+                text = text.replace(match.group(0), random.choice(options), 1)
             return text
             
         content = resolve_spintax(req.template)
