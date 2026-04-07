@@ -115,6 +115,8 @@ export function AdminGenerator({
     const [expandedOutlines, setExpandedOutlines] = useState({});
     const [deletingPlan, setDeletingPlan] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [serpDone, setSerpDone] = useState(false);
+    const [promptDone, setPromptDone] = useState(false);
 
     // Diagnostics
     console.log("[AdminGenerator] Render:", { effectiveClientId, genMode, clientName: client?.nome });
@@ -509,8 +511,8 @@ export function AdminGenerator({
     const handleUseTopicInGenerator = (topic) => {
         // Fill the stepper with this topic
         setGenMode('single'); 
-        setStrategistSelection(topic.keyword || topic.titolo);
         setSingleTitle(topic.titolo);
+        setSingleKeywords(topic.keyword || '');
         setSingleObjective(topic.final_objective || topic.outline?.map(h => h.text).join('\n') || '');
         setSerpDone(!!topic.serp_summary);
         setSerpData(topic.serp_summary ? { summary: topic.serp_summary } : null);
