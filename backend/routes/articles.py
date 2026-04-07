@@ -1051,10 +1051,14 @@ async def generate_editorial_plan(client_id: str, req: PlanRequest = None, curre
                     try:
                         time.sleep(random.uniform(1.2, 2.8)) # Prevent 403
                         image_results = ddgs.images(keywords=kw, max_results=1)
-                        if image_results:
-                            t["stock_image_url"] = image_results[0]["image"]
+                        # Correct iterator handling for newer DDGS versions
+                        for res0 in image_results:
+                            if res0.get("image"):
+                                t["stock_image_url"] = res0.get("image")
+                                t["stock_image_thumb"] = res0.get("thumbnail") or res0.get("image")
+                            break # Just first result
                     except Exception as e:
-                        logger.warning(f"Image fetch failed (likely Ratelimit) for '{kw}': {e}")
+                        logger.warning(f"Image fetch failed (likely Ratelimit or Syntax) for '{kw}': {e}")
                         continue
         except Exception as e:
             logger.warning(f"DDGS search not available or failed: {e}")
