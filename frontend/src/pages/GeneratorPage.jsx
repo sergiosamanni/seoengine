@@ -272,7 +272,7 @@ export const GeneratorPage = () => {
         <TabsContent value="autopilot" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
            <ErrorBoundary>
                 <Suspense fallback={<div className="p-4 text-xs animate-pulse">Loading Autopilot...</div>}>
-                    <AutopilotTab effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} addToQueueFromContext={addToQueueFromContext} />
+                    <AutopilotTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} addToQueueFromContext={addToQueueFromContext} autopilot={autopilot} setAutopilot={setAutopilot} />
                 </Suspense>
            </ErrorBoundary>
         </TabsContent>
