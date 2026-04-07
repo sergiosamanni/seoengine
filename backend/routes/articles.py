@@ -1040,24 +1040,29 @@ async def generate_editorial_plan(client_id: str, req: PlanRequest = None, curre
         )
 
         # Fetch stock images for the plan topics
+        import time
+        import random
         try:
-            from duckduckgo_search import DDGS
+            from ddgs import DDGS
             with DDGS() as ddgs:
                 for t in topics[:12]:
                     kw = t.get("keyword") or t.get("titolo")
                     if not kw: continue
                     try:
+                        time.sleep(random.uniform(1.2, 2.8)) # Prevent 403
                         image_results = ddgs.images(keywords=kw, max_results=1)
-                        # Correct iterator handling for newer DDGS versions
-                        for res0 in image_results:
-                            t["stock_image_url"] = res0.get("image")
-                            t["stock_image_thumb"] = res0.get("thumbnail")
-                            break # Just first result
-                    except Exception as img_err:
-                        logger.warning(f"Image fetch failed for '{kw}': {img_err}")
-        except Exception as ddg_init_err:
-            logger.error(f"DDGS init failed: {ddg_init_err}")
+                        if image_results:
+                            t["stock_image_url"] = image_results[0]["image"]
+                    except Exception as e:
+                        logger.warning(f"Image fetch failed (likely Ratelimit) for '{kw}': {e}")
+                        continue
+        except Exception as e:
+            logger.warning(f"DDGS search not available or failed: {e}")
         
+        if topics:
+             logger.info(f"[STRATEGY DEBUG] First Topic Keys: {list(topics[0].keys())}")
+             logger.info(f"[STRATEGY DEBUG] Serp Summary: {topics[0].get('serp_summary', 'N/A')[:100]}...")
+
         plan_doc = {
             "client_id": client_id,
             "topics": topics,

@@ -549,8 +549,26 @@ export function AdminGenerator({
             setGenMode('single');
             setSingleTitle(String(initialData.titolo || ''));
             setSingleKeywords(String(initialData.keyword || ''));
-            setSingleObjective(String(initialData.funnel || 'TOFU'));
-            if (initialData.keyword) setSerpKeyword(String(initialData.keyword));
+            setSerpKeyword(String(initialData.keyword || ''));
+            
+            // Map pre-computed article data
+            if (initialData.serp_summary) {
+                setSerpDone(true);
+                setSerpData({ summary: initialData.serp_summary });
+            }
+            if (initialData.master_prompt) {
+                setAdvancedPrompt(initialData.master_prompt);
+                setPromptDone(true);
+            }
+            if (initialData.final_objective) {
+                setSingleObjective(initialData.final_objective);
+            }
+            if (initialData.featured_image) {
+                setSingleSelectedImage({ 
+                    url: initialData.featured_image, 
+                    thumb: initialData.featured_image 
+                });
+            }
 
             // Notify that data was consumed
             if (onDataUsed) onDataUsed();
@@ -559,8 +577,6 @@ export function AdminGenerator({
 
     // Step checks
     const strategyDone = contentStrategy.funnel_stage && contentStrategy.modello_copywriting;
-    const serpDone = serpData && serpData.competitors?.length > 0;
-    const promptDone = String(advancedPrompt || "").trim().length > 20;
 
     // Auto-fill Strategic Objective based on Step 1, 4 and KB
     // Only run when strictly crossing into step 5
