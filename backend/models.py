@@ -131,6 +131,7 @@ class ClientConfiguration(BaseModel):
     autopilot: Optional[AutopilotConfig] = None
     gmb_url: Optional[str] = None
     dismissed_insights: Optional[List[str]] = []
+    competitor_benchmarks: Optional[List[Dict[str, Any]]] = None
 
 
 class ClientResponse(BaseModel):
