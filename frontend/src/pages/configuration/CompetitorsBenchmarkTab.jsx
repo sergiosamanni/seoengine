@@ -31,13 +31,17 @@ export function CompetitorsBenchmarkTab({ client, config, setConfig, getAuthHead
             }, { headers: getAuthHeaders() });
 
             if (res.data) {
+                console.log("[BENCHMARK DEBUG] Analysis result:", res.data);
                 const newBenchmark = res.data;
                 const updated = [...benchmarks, newBenchmark];
                 const updatedConfig = { ...config, competitor_benchmarks: updated };
                 
+                console.log("[BENCHMARK DEBUG] Saving updated config:", updatedConfig);
+                
                 // Save immediately
                 await axios.put(`${API}/clients/${client.id}/configuration`, updatedConfig, { headers: getAuthHeaders() });
                 
+                console.log("[BENCHMARK DEBUG] Save successful. Updating state.");
                 setConfig(updatedConfig);
                 setNewUrl('');
                 toast.success("Benchmark aggiunto con successo (AI Analizzata)");

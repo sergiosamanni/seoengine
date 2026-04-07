@@ -110,9 +110,14 @@ export function useGeneratorState({ client, effectiveClientId, externalMode, ini
     const [recentSidebarOpen, setRecentSidebarOpen] = useState(true);
     const [showImgChangeModal, setShowImgChangeModal] = useState(false);
     const [editingTopic, setEditingTopic] = useState(null);
+    const [competitorBenchmarks, setCompetitorBenchmarks] = useState([]);
 
     // --- Derived Constants ---
-    const clientConfig = client?.configuration || {};
+    const clientConfig = useMemo(() => ({
+        ...(client?.configuration || {}),
+        competitor_benchmarks: competitorBenchmarks
+    }), [client?.configuration, competitorBenchmarks]);
+
     const llmConfig = clientConfig.llm || clientConfig.openai || {};
     const hasApiKey = !!(llmConfig.api_key || llmConfig.apiKey);
     const wpConfig = clientConfig.wordpress || {};
@@ -220,6 +225,12 @@ export function useGeneratorState({ client, effectiveClientId, externalMode, ini
             setSidebarTemplate(clientConfig.programmatic.sidebar_template || '');
             if (clientConfig.programmatic.cta) setCtaConfig(prev => ({ ...prev, ...clientConfig.programmatic.cta }));
         }
+        
+        // Initial load of benchmarks from prop, then let state take over
+        const incomingBenchmarks = client?.configuration?.competitor_benchmarks || [];
+        if (incomingBenchmarks.length > 0 && competitorBenchmarks.length === 0) {
+            setCompetitorBenchmarks(incomingBenchmarks);
+        }
     }, [client, effectiveClientId]);
 
     // Handle initial data from external sources (e.g. edit button)
@@ -320,6 +331,7 @@ Direttive: Ottimizzazione standard SEO premium.`);
         refining, setRefining, recentArticles, setRecentArticles,
         recentSidebarOpen, setRecentSidebarOpen,
         showImgChangeModal, setShowImgChangeModal, editingTopic, setEditingTopic,
+        competitorBenchmarks, setCompetitorBenchmarks,
         // Derived
         clientConfig, llmConfig, hasApiKey, wpConfig, hasWpConfig,
         gscConnected, strategyDone, allPlanTopics,

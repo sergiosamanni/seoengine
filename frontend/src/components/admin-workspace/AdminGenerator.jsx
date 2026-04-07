@@ -474,8 +474,12 @@ export function AdminGenerator({
                 {state.genMode === 'competitors' && (
                     <CompetitorsBenchmarkTab
                         client={client}
-                        config={client?.configuration || {}}
-                        setConfig={(newConfig) => { if (client) client.configuration = newConfig; }}
+                        config={{ ...state.clientConfig, competitor_benchmarks: state.competitorBenchmarks }}
+                        setConfig={(newConfig) => {
+                            if (newConfig.competitor_benchmarks) {
+                                state.setCompetitorBenchmarks(newConfig.competitor_benchmarks);
+                            }
+                        }}
                         getAuthHeaders={getAuthHeaders}
                         API={API}
                     />
