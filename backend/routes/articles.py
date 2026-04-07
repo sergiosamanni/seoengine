@@ -1043,7 +1043,7 @@ async def generate_editorial_plan(client_id: str, req: PlanRequest = None, curre
         import time
         import random
         try:
-            from ddgs import DDGS
+            from duckduckgo_search import DDGS
             with DDGS() as ddgs:
                 for t in topics[:12]:
                     kw = t.get("keyword") or t.get("titolo")

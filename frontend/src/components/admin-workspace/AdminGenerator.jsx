@@ -531,14 +531,13 @@ export function AdminGenerator({
             setSingleScheduledDate('');
         }
         
-        // Se abbiamo già tutto, saltiamo direttamente allo step finale o al prompt
-        if (topic.master_prompt) {
-            setStep(4);
-        } else if (topic.serp_summary) {
-            setStep(3);
-        } else {
-            setStep(1);
-        }
+        // DEBUG: Verifica se i dati arrivano al frontend
+        console.log("[GENERATOR DEBUG] Loading topic context:", {
+            titolo: topic.titolo,
+            serp_summary: !!topic.serp_summary,
+            master_prompt: !!topic.master_prompt,
+            final_objective: !!topic.final_objective
+        });
 
         toast.info(`Contesto caricato: ${topic.titolo}`);
     };
