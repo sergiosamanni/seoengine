@@ -96,7 +96,8 @@ export function AdminGenerator({
     const [activeJobId, setActiveJobId] = useState(null);
     const [totalInJob, setTotalInJob] = useState(0);
     const [plan, setPlan] = useState(null);
-    const [planLoading, setPlanLoading] = useState(false);
+    const [planLoading, setPlanLoading] = useState(false);    const [showImgChangeModal, setShowImgChangeModal] = useState(false);
+    const [editingTopic, setEditingTopic] = useState(null);
     const [planGenerating, setPlanGenerating] = useState(false);
     const [newPlanKeyword, setNewPlanKeyword] = useState("");
     const [numArticles, setNumArticles] = useState(10);
@@ -504,10 +505,23 @@ export function AdminGenerator({
         setTargetKeywords(targetKeywords.filter(k => k !== kw));
     };
     const handleUseTopicInGenerator = (topic) => {
-        setGenMode('single');
-        setSingleTitle(topic.titolo || '');
-        setSingleKeywords(topic.keyword || '');
-        setSingleObjective(topic.funnel || 'TOFU');
+        // Fill the stepper with this topic
+        setGenMode('single'); setStep(1);
+        setSelectedTopic(topic);
+        setStrategistSelection(topic.keyword || topic.titolo);
+        setSingleTitle(topic.titolo);
+        setSingleObjective(topic.final_objective || topic.outline?.map(h => h.text).join('\n') || '');
+        setSerpDone(!!topic.serp_summary);
+        setSerpData(topic.serp_summary ? { summary: topic.serp_summary } : null);
+        setAdvancedPrompt(topic.master_prompt || '');
+        setPromptDone(!!topic.master_prompt);
+        
+        if (topic.featured_image || topic.stock_image_url) {
+            setSingleSelectedImage({ 
+                url: topic.featured_image || topic.stock_image_url, 
+                thumb: topic.featured_image || topic.stock_image_thumb 
+            });
+        }
         setSerpKeyword(topic.keyword || '');
         if (topic.scheduled_date) {
             // Convert to YYYY-MM-DD for input type date
@@ -1318,10 +1332,10 @@ Direttive: Ottimizzazione standard SEO premium.`;
     };
 
     const steps = [
-        { num: 1, label: 'Strategia', icon: Target, done: strategyDone },
-        { num: 2, label: 'Analisi SERP', icon: Search, done: serpDone },
-        { num: 3, label: 'Prompt', icon: Lock, done: promptDone },
-        { num: 4, label: 'Genera', icon: Zap, done: false },
+        { num: 1, label: 'Strategia', icon: Target },
+        { num: 2, label: 'Analisi SERP', icon: Search },
+        { num: 3, label: 'Configurazione', icon: Lock },
+        { num: 4, label: 'Generazione', icon: Zap },
     ];
 
     useEffect(() => {
@@ -1400,22 +1414,18 @@ Direttive: Ottimizzazione standard SEO premium.`;
                         <div className="bg-white rounded-2xl border border-slate-200 p-1.5 flex items-center gap-1 shadow-sm overflow-x-auto overflow-y-hidden custom-scrollbar">
                             {steps.map((s, i) => {
                                 const active = step === s.num;
-                                const done = s.done && !active;
                                 return (
                                     <Fragment key={s.num}>
                                         <button 
                                             onClick={() => setStep(s.num)} 
                                             className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all flex-shrink-0 ${
-                                                active ? 'bg-slate-900 text-white shadow-md' : done ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'
+                                                active ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'
                                             }`}
                                         >
                                             <div className={`w-5 h-5 flex items-center justify-center rounded-lg font-black text-[9px] ${active ? 'bg-white/10 border-white/20' : 'border-slate-100 bg-slate-50'}`}>
-                                                {done ? <CheckCircle2 className="w-3.5 h-3.5" /> : s.num}
+                                                {s.num}
                                             </div>
                                             {s.label}
-                                            {s.label === 'Strategia' && gscConnected && (
-                                                <Badge className="ml-1 px-1 h-3.5 bg-emerald-500 hover:bg-emerald-600 border-none animate-pulse">GSC</Badge>
-                                            )}
                                         </button>
                                         {i < steps.length - 1 && <div className="w-3 h-px bg-slate-100 flex-shrink-0" />}
                                     </Fragment>
@@ -1430,15 +1440,6 @@ Direttive: Ottimizzazione standard SEO premium.`;
                                         <div>
                                             <h3 className="text-lg font-black text-slate-900 tracking-tight">Content Strategy Selection</h3>
                                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Define the strategic baseline for this asset</p>
-                                        </div>
-                                        <div className="hidden md:flex items-center gap-3">
-                                            <div className="text-right">
-                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Expert Tip</p>
-                                                <p className="text-[10px] font-bold text-slate-600">PAS per Landing, AIDA per Blog</p>
-                                            </div>
-                                            <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center">
-                                                <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-                                            </div>
                                         </div>
                                     </div>
                                     <div className="p-8">
@@ -1492,19 +1493,6 @@ Direttive: Ottimizzazione standard SEO premium.`;
                                                 </div>
                                             ))}
                                         </div>
-
-                                        <div className="bg-slate-900 rounded-xl p-6 text-white relative overflow-hidden">
-                                            <div className="absolute top-0 right-0 p-4 opacity-5"><BrainCircuit className="w-16 h-16" /></div>
-                                            <div className="flex items-center gap-2 mb-4">
-                                                <Sparkles className="w-4 h-4 text-indigo-400" />
-                                                <h4 className="text-[9px] font-black uppercase tracking-widest">Semantic Core AI</h4>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {serpData.extracted?.topics?.slice(0, 15).map((t, i) => (
-                                                    <Badge key={i} variant="outline" className="border-white/10 text-white bg-white/5 text-[9px] font-bold px-3 py-1">{t}</Badge>
-                                                ))}
-                                            </div>
-                                        </div>
                                     </div>
                                 )}
 
@@ -1517,7 +1505,6 @@ Direttive: Ottimizzazione standard SEO premium.`;
                             </Card>
                         )}
 
-                        {/* Step 3 & 4 logic merged in Stepper reduction */}
                         {step === 3 && (
                             <Card className="border-slate-200 rounded-2xl p-8 shadow-sm bg-white animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <div className="flex items-center gap-4 mb-8">
@@ -1553,40 +1540,6 @@ Direttive: Ottimizzazione standard SEO premium.`;
                         )}
 
                         {step === 4 && (
-                            <Card className="border-slate-200 rounded-2xl p-8 shadow-sm bg-white animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <div className="flex items-center gap-4 mb-8">
-                                    <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center shadow-md">
-                                        <Lock className="w-6 h-6 text-white" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-black text-slate-900 tracking-tight">AI Strategy Master Prompt</h3>
-                                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Step 04: Final logic control</p>
-                                    </div>
-                                </div>
-
-                                <div className="relative group">
-                                    <div className="absolute -inset-0.5 bg-slate-900 rounded-2xl blur opacity-5 group-hover:opacity-10 transition duration-500"></div>
-                                    <Textarea
-                                        className="min-h-[400px] relative bg-slate-50 border-slate-100 p-8 text-sm font-medium leading-relaxed rounded-2xl shadow-inner focus:ring-1 focus:ring-slate-900 transition-all font-mono"
-                                        value={advancedPrompt}
-                                        onChange={(e) => setAdvancedPrompt(e.target.value)}
-                                        placeholder="Generating strategy..."
-                                    />
-                                </div>
-
-                                <div className="mt-8 pt-8 border-t border-slate-100 flex justify-between items-center">
-                                    <Button variant="ghost" onClick={() => setStep(gscConnected ? 3 : 2)} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-950 transition-colors">Indietro</Button>
-                                    <div className="flex gap-3">
-                                        <Button variant="outline" onClick={() => buildDefaultPrompt(serpData, gscData)} className="h-12 px-6 rounded-xl border-slate-200 text-slate-600 font-black text-[9px] uppercase tracking-widest flex gap-2">
-                                            <RefreshCcw className="w-3 h-3" /> Re-build
-                                        </Button>
-                                        <Button onClick={() => setStep(5)} className="h-12 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md">Configura Asset <ChevronRight className="w-4 h-4 ml-2" /></Button>
-                                    </div>
-                                </div>
-                            </Card>
-                        )}
-
-                        {step === 5 && (
                              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <Card className="border-slate-200 rounded-2xl bg-white shadow-sm overflow-hidden flex flex-col">
                                     <div className="p-8 border-b border-slate-100 bg-slate-50/30">
@@ -1699,7 +1652,7 @@ Direttive: Ottimizzazione standard SEO premium.`;
                                     </div>
 
                                     <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                                        <Button variant="ghost" onClick={() => setStep(3)} className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-900 tracking-widest pl-0">
+                                        <Button variant="ghost" onClick={() => setStep(3)} className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-950 tracking-widest pl-0">
                                             <ArrowLeft className="w-3.5 h-3.5 mr-2" /> Indietro
                                         </Button>
                                         <Button 
@@ -1799,16 +1752,18 @@ Direttive: Ottimizzazione standard SEO premium.`;
                                                         {isSelected && <Check className="w-3 h-3 text-white" />}
                                                     </button>
 
-                                                    <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 overflow-hidden flex-shrink-0 relative group/img cursor-pointer" onClick={() => handleUseTopicInGenerator(item)}>
-                                                        {(item.featured_image || item.stock_image_url) ? (
-                                                            <img src={item.featured_image || item.stock_image_url} className="w-full h-full object-cover transition-transform group-hover/img:scale-110" />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center bg-slate-100/50">
-                                                                <ImageIcon className="w-5 h-5 text-slate-200" />
-                                                            </div>
-                                                        )}
+                                                    <div 
+                                                        className="relative w-16 h-16 rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shrink-0 group/img cursor-pointer"
+                                                        onClick={() => {
+                                                            setEditingTopic(item);
+                                                            setImgSearchQuery(item.keyword || item.titolo);
+                                                            handleImageSearch(12);
+                                                            setShowImgChangeModal(true);
+                                                        }}
+                                                    >
+                                                        <img src={item.featured_image || item.stock_image_url || 'https://via.placeholder.com/150'} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" />
                                                         <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-                                                            <Edit2 className="w-3 h-3 text-white" />
+                                                            <Sparkles className="w-3 h-3 text-white" />
                                                         </div>
                                                     </div>
 
@@ -1832,7 +1787,7 @@ Direttive: Ottimizzazione standard SEO premium.`;
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-2">
                                                     <div className="hidden sm:flex flex-col items-end px-4 border-r border-slate-100">
                                                         <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-0.5">ESTIMATED</p>
                                                         <p className="font-bold text-slate-600 text-[10px] tabular-nums">~1,500 words</p>
@@ -1840,13 +1795,23 @@ Direttive: Ottimizzazione standard SEO premium.`;
                                                     <Button 
                                                         onClick={(e) => {
                                                             e.stopPropagation();
+                                                            handleUseTopicInGenerator(item);
+                                                        }}
+                                                        variant="outline"
+                                                        className="h-10 w-10 p-0 border-slate-100 text-slate-400 hover:text-slate-900 rounded-xl transition-all"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                    <Button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
                                                             setSelectedPlanTopics([item]);
                                                             setTimeout(handleBatchPlanGenerate, 100);
                                                         }}
                                                         disabled={generating}
-                                                        className="h-10 w-10 p-0 bg-slate-50 hover:bg-slate-900 text-slate-400 hover:text-white rounded-xl transition-all shadow-none group/play"
+                                                        className="h-10 w-10 p-0 bg-slate-950 hover:bg-slate-900 text-white rounded-xl transition-all shadow-lg group/play"
                                                     >
-                                                        <Play className="w-4 h-4 fill-current group-hover/play:scale-110" />
+                                                        <Play className="w-3.5 h-3.5 fill-current" />
                                                     </Button>
                                                 </div>
                                             </div>
@@ -1888,6 +1853,50 @@ Direttive: Ottimizzazione standard SEO premium.`;
                      </Card>
                 </div>
             )}
+            {/* --- IMAGE CHANGE MODAL --- */}
+            <Dialog open={showImgChangeModal} onOpenChange={setShowImgChangeModal}>
+                <DialogContent className="max-w-xl p-0 overflow-hidden border-none shadow-2xl rounded-[2rem]">
+                    <div className="p-6 bg-slate-950 text-white">
+                        <h3 className="text-sm font-black uppercase tracking-tight flex items-center gap-2">
+                             <ImageIcon className="w-4 h-4 text-indigo-400" />
+                             Cambia Immagine
+                        </h3>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Seleziona una nuova cover per: {editingTopic?.titolo}</p>
+                    </div>
+                    <div className="p-6 bg-slate-50 min-h-[300px]">
+                        {searchingImages ? (
+                            <div className="flex flex-col items-center justify-center py-20 animate-pulse">
+                                <Loader2 className="w-8 h-8 animate-spin text-slate-200" />
+                                <p className="text-[9px] font-black uppercase text-slate-400 mt-4 tracking-widest">Ricerca immagini...</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-3 gap-4">
+                                {imgSearchResults.map((img, i) => (
+                                    <div 
+                                        key={i} 
+                                        onClick={async () => {
+                                            const updatedTopic = { ...editingTopic, featured_image: img.image };
+                                            // Persist to backend plan
+                                            const updatedPlanTopics = allPlanTopics.map(t => t.titolo === editingTopic.titolo ? updatedTopic : t);
+                                            await axios.post(`${API}/save-plan/${effectiveClientId}`, { topics: updatedPlanTopics }, { headers: getAuthHeaders() });
+                                            fetchPlan();
+                                            setShowImgChangeModal(false);
+                                            toast.success("Immagine aggiornata");
+                                        }}
+                                        className="group relative aspect-square rounded-2xl overflow-hidden bg-white border border-slate-100 cursor-pointer hover:ring-2 hover:ring-slate-900 transition-all shadow-sm"
+                                    >
+                                        <img src={img.thumbnail || img.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                        <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <Check className="w-6 h-6 text-white" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
         </div>
     );
 }

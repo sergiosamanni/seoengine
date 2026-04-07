@@ -51,6 +51,9 @@ Rispondi ESCLUSIVAMENTE con un JSON valido nel seguente formato:
       "funnel": "TOFU/MOFU/BOFU",
       "motivo": "Perché hai scelto questo tema basandoti sui dati o sulle keyword target?",
       "image_search_query": "Query in inglese per cercare immagine di stock (es. 'car rental business man city')",
+      "serp_summary": "Sintesi dell'analisi SERP e dei competitor (es. 'Competitor principali: X, Y. Focus: come risparmiare...')",
+      "master_prompt": "Il Master Prompt specifico per questo articolo (in inglese, istruzioni dettagliate per l'AI)",
+      "final_objective": "Obiettivo finale dell'asset (concept strategico)",
       "outline": [
         {{"type": "h1", "text": "Titolo H1 SEO ottimizzato"}},
         {{"type": "h2", "text": "Prima sezione principale"}},
