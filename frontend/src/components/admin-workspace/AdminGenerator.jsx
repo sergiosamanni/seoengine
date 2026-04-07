@@ -444,8 +444,10 @@ export function AdminGenerator({
             setPlan(res.data);
             toast.success("Piano editoriale generato con successo!");
         } catch (error) {
-            toast.error("Errore durante la generazione del piano");
             console.error(error);
+            const detail = error.response?.data?.detail;
+            const message = typeof detail === 'string' ? detail : JSON.stringify(detail) || "Errore sconosciuto";
+            toast.error(`Errore generazione: ${message}`);
         } finally {
             setPlanGenerating(false);
         }
@@ -1077,7 +1079,10 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
             toast.info(`Job avviato: ${total} ${label} in elaborazione...`);
             // The useEffect takes over polling
         } catch (error) {
-            toast.error(error.response?.data?.detail || 'Errore generazione');
+            console.error(error);
+            const detail = error.response?.data?.detail;
+            const message = typeof detail === 'string' ? detail : JSON.stringify(detail) || "Errore sconosciuto";
+            toast.error(`Errore generazione: ${message}`);
             setGenerating(false);
             setActiveJobId(null);
         }
