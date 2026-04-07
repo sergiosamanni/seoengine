@@ -775,39 +775,52 @@ Direttive: Ottimizzazione standard SEO premium.`;
         lines.push(`Target Audience: ${kb.pubblico_target_primario || 'Audience interessata al settore'}`);
         lines.push('');
 
+        lines.push('🏢 KNOWLEDGE BASE AZIENDALE (BRAND CORE)');
+        lines.push('------------------------------------');
+        lines.push('IMPORTANTE: Questo contenuto deve rappresentare ESCLUSIVAMENTE l\'azienda descritta. Non inventare servizi o caratteristiche non presenti qui.');
+        lines.push(`- Attività: ${kb.descrizione_attivita || 'Non specificata'}`);
+        if (kb.citta_principale) lines.push(`- Focus Territoriale: ${kb.citta_principale} (${kb.regione || ''})`);
+        
+        if (kb.punti_di_forza?.length > 0) {
+            lines.push('\n### Punti di Forza Unici (USPs):');
+            kb.punti_di_forza.slice(0, 5).forEach(p => lines.push(`- ${p}`));
+        }
+        lines.push('');
+
         if ((serp?.extracted?.titles?.length > 0) || (serp?.competitors?.length > 0)) {
-            lines.push('🔍 ANALISI COMPETITOR E HEADLINES');
+            lines.push('🔍 ANALISI SERP E CONCORRENZA');
             lines.push('------------------------------------');
+            lines.push('Usa questi dati SOLO come base semantica e per capire cosa manca sul mercato. NON copiare il posizionamento dei competitor se va contro i valori del brand.');
             const titles = serp?.extracted?.titles || serp?.competitors?.map(c => c.title) || [];
             titles.slice(0, 5).forEach((t, i) => lines.push(`Competitor ${i+1}: ${t}`));
             
             if (serp?.extracted?.headings?.length > 0) {
-                lines.push('\n### Struttura Semantica Rilevata (Heading Map):');
+                lines.push('\n### Topic Semantici Rilevati:');
                 serp.extracted.headings.slice(0, 8).forEach(h => lines.push(`- ${h}`));
             }
             lines.push('');
         }
 
         if (gsc?.keywords?.length > 0) {
-            lines.push('📈 DATI GOOGLE SEARCH CONSOLE (INSIGHTS)');
+            lines.push('📈 DATI REAL-TIME SEARCH CONSOLE');
             lines.push('------------------------------------');
-            lines.push('Integra naturalmente queste keyword per rafforzare il posizionamento esistente:');
+            lines.push('Ottimizza per conversioni sulle seguenti keyword già attive:');
             gsc.keywords.slice(0, 6).forEach(k => {
-                lines.push(`- "${k.keyword}" (Ranking attuale: pos. ${k.position.toFixed(1)})`);
+                lines.push(`- "${k.keyword}" (Ranking: pos. ${k.position.toFixed(1)})`);
             });
             lines.push('');
         }
 
-        lines.push('🛠 DIRETTIVE DI GENERAZIONE PREMIUM');
+        lines.push('🛡️ DIRETTIVE DI GENERAZIONE E BRAND SAFETY');
         lines.push('------------------------------------');
-        lines.push('1. STRUTTURA: Supera i competitor integrando gli heading rilevati con un angolo di attacco unico.');
-        lines.push(`2. TONE OF VOICE: ${kb.tono_voce || 'Professionale, autorevole e orientato alla conversione'}.`);
-        lines.push(`3. SEARCH INTENT: Soddisfa pienamente l'intento ${strategy.search_intent || 'informazionale'} fornendo risposte chiare e immediate.`);
-        lines.push('4. CONVERSIONE: Inserisci sezioni di approfondimento e FAQ per massimizzare il tempo di permanenza e il valore per l\'utente.');
-        lines.push('5. FORMATTAZIONE: Usa paragrafi brevi, elenchi puntati e grassetti strategici per la leggibilità.');
+        lines.push('1. PRIORITÀ AZIENDALE: Integra le informazioni della Knowledge Base in ogni paragrafo. L\'azienda è l\'autorità assoluta nel testo.');
+        lines.push('2. FILTRO SERP: Usa gli heading dei competitor solo se sono coerenti con i servizi offerti dall\'azienda.');
+        lines.push(`3. TONE OF VOICE: ${kb.tono_voce || 'Professionale e orientato al brand'}.`);
+        lines.push('4. CONVERSIONE: Orienta il lettore verso la CTA aziendale, non limitarti all\'informazione pura.');
+        lines.push('5. AUTENTICITÀ: Evita genericismi. Usa i punti di forza aziendali per differenziarti radicalmente dai competitor.');
         
         setAdvancedPrompt(lines.join('\n'));
-        toast.info("Prompt strategico generato!");
+        toast.info("Prompt strategico generato con dati Brand KB!");
     };
 
     const saveConfig = async () => {
