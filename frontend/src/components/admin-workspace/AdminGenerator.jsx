@@ -1295,56 +1295,57 @@ Direttive: Ottimizzazione standard SEO premium.`;
 
 
     return (
-        <div className="space-y-8 animate-fade-in min-h-screen pb-20">
-            {/* 1. Header & Mode Selector */}
-            <div className="flex flex-col gap-6">
-                <div className="flex flex-wrap items-center justify-between gap-4 bg-white/60 backdrop-blur-3xl p-3 rounded-[3rem] border border-slate-200 shadow-2xl shadow-slate-200/20">
-                    <div className="flex flex-wrap items-center gap-2">
+        <div className="space-y-6 animate-fade-in min-h-screen pb-10 bg-slate-50/30">
+            {/* --- PREMIUM STUDIO HEADER --- */}
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="flex flex-wrap items-center gap-1.5">
                         {[
-                            { id: 'single', label: 'Articolo', icon: PenTool, color: 'orange' },
-                            { id: 'pillar', label: 'Pillar', icon: Layers, color: 'emerald' },
-                            { id: 'plan', label: 'Editorial Hub', icon: Calendar, color: 'indigo' },
-                            { id: 'programmatic', label: 'Programmatica', icon: Library, color: 'purple' }
+                            { id: 'single', label: 'Studio Articoli', icon: PenTool },
+                            { id: 'pillar', label: 'Pillar Hub', icon: Layers },
+                            { id: 'plan', label: 'Editorial Plan', icon: Calendar },
+                            { id: 'programmatic', label: 'Bulk SEO', icon: Library }
                         ].map((mode) => (
                             <button 
                                 key={mode.id}
                                 onClick={() => { setGenMode(mode.id); setStep(1); }} 
-                                className={`group flex items-center gap-3 px-6 py-4 rounded-[2rem] text-[10px] uppercase tracking-[0.15em] font-black transition-all duration-500 ${
-                                    genMode === mode.id ? 'bg-slate-900 text-white shadow-xl scale-105' : 'text-slate-500 hover:bg-white hover:border-slate-100 border border-transparent'
+                                className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[10px] uppercase tracking-wider font-bold transition-all ${
+                                    genMode === mode.id ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                                 }`}
                             >
-                                <Library className={`w-4 h-4 ${genMode === mode.id ? 'text-white' : 'text-slate-400'}`} /> 
+                                <mode.icon className="w-3.5 h-3.5" /> 
                                 {mode.label}
                             </button>
                         ))}
                     </div>
-                    <div className="pr-8 flex items-center gap-3 text-right">
-                        <div className="hidden sm:block">
-                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{client?.nome || 'CLIENTE'}</p>
+                    <div className="px-4 flex items-center gap-3">
+                        <div className="hidden sm:block text-right">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">PROJET :</p>
+                            <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{client?.nome || 'STUDIO'}</p>
                         </div>
-                        <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center">
-                            <Sparkles className="w-5 h-5 text-indigo-500" />
+                        <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+                            <BrainCircuit className="w-4 h-4 text-slate-900" />
                         </div>
                     </div>
                 </div>
 
-                {/* GSC Insights - Visual High impact */}
+                {/* --- COMPACT STRATEGY INSIGHT --- */}
                 {genMode === 'plan' && gscInsights.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         {gscInsights.map((insight, idx) => (
-                            <div key={idx} className={`rounded-[2.5rem] p-6 shadow-sm border-none ${insight.bg} flex flex-col justify-between`}>
+                            <div key={idx} className={`rounded-2xl p-5 border border-slate-100 shadow-sm ${insight.bg} flex flex-col justify-between`}>
                                 <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center flex-shrink-0">
-                                        <Target className={`w-6 h-6 ${insight.color}`} />
+                                    <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center flex-shrink-0">
+                                        <insight.icon className={`w-5 h-5 ${insight.color}`} />
                                     </div>
                                     <div>
-                                        <h4 className={`text-[11px] font-black uppercase tracking-widest mb-1 ${insight.color}`}>{insight.title}</h4>
-                                        <p className="text-[10px] text-slate-600 leading-relaxed font-semibold">{insight.desc}</p>
+                                        <h4 className={`text-[10px] font-black uppercase tracking-widest mb-1 ${insight.color}`}>{insight.title}</h4>
+                                        <p className="text-[10px] text-slate-600 leading-snug font-bold">{insight.desc}</p>
                                     </div>
                                 </div>
-                                <div className="mt-5 flex gap-2 pt-2">
-                                    <Button onClick={() => handleApproveInsight(insight)} className="h-9 px-5 bg-white/80 hover:bg-white text-slate-900 rounded-full text-[9px] font-black uppercase shadow-sm">Sì, Procedi</Button>
-                                    <Button onClick={() => handleDismissInsight(insight.id)} variant="ghost" className="h-9 px-5 text-slate-400 hover:text-red-500 rounded-full text-[9px] font-black uppercase">Ignora</Button>
+                                <div className="mt-4 flex gap-2">
+                                    <Button onClick={() => handleApproveInsight(insight)} className="h-8 px-4 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase">Applica</Button>
+                                    <Button onClick={() => handleDismissInsight(insight.id)} variant="ghost" className="h-8 px-4 text-slate-400 hover:text-slate-900 rounded-lg text-[9px] font-black uppercase">Archivia</Button>
                                 </div>
                             </div>
                         ))}
@@ -1352,360 +1353,331 @@ Direttive: Ottimizzazione standard SEO premium.`;
                 )}
             </div>
 
-            {/* 2. Main Body Content Area */}
-            <div className="flex-1">
+            {/* --- WORKSPACE CORE --- */}
+            <div className="max-w-6xl mx-auto w-full">
                 {(genMode === 'single' || genMode === 'pillar') && (
-                    <div className="space-y-8">
-                        <div className="sticky top-4 z-40 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 p-2 flex items-center gap-2 shadow-xl overflow-x-auto">
+                    <div className="space-y-6">
+                        {/* SOBRE STEPPER */}
+                        <div className="bg-white rounded-2xl border border-slate-200 p-1.5 flex items-center gap-1 shadow-sm overflow-x-auto overflow-y-hidden custom-scrollbar">
                             {steps.map((s, i) => {
                                 const active = step === s.num;
                                 const done = s.done && !active;
                                 return (
                                     <Fragment key={s.num}>
-                                        <button onClick={() => setStep(s.num)} className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-bold uppercase transition-all ${active ? 'bg-slate-900 text-white shadow-lg' : done ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400 hover:bg-slate-50'}`}>
-                                            <div className="w-5 h-5 flex items-center justify-center rounded-lg border font-black text-[9px]">
-                                                {done ? <CheckCircle2 className="w-3 h-3" /> : s.num}
+                                        <button 
+                                            onClick={() => setStep(s.num)} 
+                                            className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all flex-shrink-0 ${
+                                                active ? 'bg-slate-900 text-white shadow-md' : done ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <div className={`w-5 h-5 flex items-center justify-center rounded-lg font-black text-[9px] ${active ? 'bg-white/10 border-white/20' : 'border-slate-100 bg-slate-50'}`}>
+                                                {done ? <CheckCircle2 className="w-3.5 h-3.5" /> : s.num}
                                             </div>
                                             {s.label}
                                         </button>
-                                        {i < steps.length - 1 && <div className="w-4 h-px bg-slate-100 flex-shrink-0" />}
+                                        {i < steps.length - 1 && <div className="w-3 h-px bg-slate-100 flex-shrink-0" />}
                                     </Fragment>
                                 );
                             })}
                         </div>
 
                         {step === 1 && (
-                            <Card className="border-slate-200 rounded-[3.5rem] p-12 overflow-hidden shadow-2xl">
-                                <Suspense fallback={<div>Loading...</div>}>
-                                    <ContentStrategyTab strategy={contentStrategy} setStrategy={setContentStrategy} />
-                                </Suspense>
-                                <div className="mt-12 flex justify-end">
-                                    <Button onClick={() => setStep(2)} className="h-16 px-12 bg-slate-950 text-white rounded-3xl font-black text-xs uppercase tracking-widest">
-                                        Analisi SERP <ChevronRight className="w-5 h-5 ml-4" />
-                                    </Button>
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <Card className="md:col-span-8 border-slate-200 rounded-2xl p-8 bg-white shadow-sm">
+                                    <div className="mb-8">
+                                        <h3 className="text-lg font-black text-slate-900 tracking-tight">Content Strategy Selection</h3>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Define the strategic baseline for this asset</p>
+                                    </div>
+                                    <Suspense fallback={<div className="h-64 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-200" /></div>}>
+                                        <ContentStrategyTab strategy={contentStrategy} setStrategy={setContentStrategy} />
+                                    </Suspense>
+                                    <div className="mt-8 pt-8 border-t border-slate-100 flex justify-end">
+                                        <Button onClick={() => setStep(2)} className="h-12 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md">
+                                            Analisi SERP <ChevronRight className="w-4 h-4 ml-2" />
+                                        </Button>
+                                    </div>
+                                </Card>
+                                <div className="md:col-span-4 space-y-4">
+                                    <div className="p-6 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
+                                        <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center mb-4"><Sparkles className="w-5 h-5 text-indigo-500" /></div>
+                                        <h4 className="text-[10px] font-black uppercase text-indigo-900 mb-2">Perché questo step?</h4>
+                                        <p className="text-[11px] text-indigo-700 leading-relaxed font-medium">La strategia definisce il tono, il funnel e il posizionamento. Senza questo, l'IA scriverà contenuti generici.</p>
+                                    </div>
+                                    <div className="p-6 bg-slate-900 rounded-2xl text-white">
+                                        <p className="text-[10px] font-black uppercase text-slate-500 mb-4 tracking-widest">Expert Tip</p>
+                                        <p className="text-xs font-bold leading-relaxed">Usa il modello PAS per landing page aggressive o AIDA per blog post informativi.</p>
+                                    </div>
                                 </div>
-                            </Card>
+                            </div>
                         )}
 
                         {step === 2 && (
-                            <Card className="border-slate-200 rounded-[3rem] p-10 shadow-xl">
-                                <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Search className="w-6 h-6 text-indigo-500" /> SERP Intelligence</h3>
-                                <div className="flex gap-4 mb-8">
-                                    <Input value={serpKeyword} onChange={(e) => setSerpKeyword(e.target.value)} placeholder="Tua keyword focus..." className="h-14 rounded-2xl text-lg px-6 bg-slate-50" />
-                                    <Button onClick={runSerpAnalysis} disabled={serpLoading} className="h-14 px-8 bg-indigo-600 text-white rounded-2xl font-bold">
-                                        {serpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Analizza SERP'}
-                                    </Button>
+                            <Card className="border-slate-200 rounded-2xl p-8 shadow-sm bg-white animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div>
+                                        <h3 className="text-lg font-black text-slate-900 tracking-tight">SERP Intelligence Analysis</h3>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Scraping competitors & semantic gap</p>
+                                    </div>
+                                    <div className="flex bg-slate-100 p-3 rounded-2xl w-full max-w-xl">
+                                        <Input 
+                                            value={serpKeyword} 
+                                            onChange={(e) => setSerpKeyword(e.target.value)} 
+                                            placeholder="Focus keyword..." 
+                                            className="h-10 px-4 rounded-xl text-sm border-none bg-transparent focus:ring-0" 
+                                            onKeyDown={(e) => e.key === 'Enter' && runSerpAnalysis()}
+                                        />
+                                        <Button onClick={runSerpAnalysis} disabled={serpLoading} className="h-10 px-6 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase">
+                                            {serpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Analizza'}
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 {serpData && (
-                                    <div className="space-y-8 animate-in fade-in duration-500">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                             {serpData.competitors?.map((comp, idx) => (
-                                                <div key={idx} className="p-6 rounded-[2rem] bg-slate-50 border border-slate-100 flex flex-col justify-between hover:bg-slate-100 transition-colors">
+                                                <div key={idx} className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between hover:bg-slate-100 transition-colors">
                                                     <div>
-                                                        <div className="flex items-center justify-between mb-3">
-                                                            <Badge className="bg-slate-900 text-white font-black text-[9px] uppercase">Rank #{idx + 1}</Badge>
-                                                            <a href={comp.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="w-3 h-3 text-slate-400 hover:text-indigo-600" /></a>
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <Badge className="bg-slate-900 text-white text-[8px] font-black px-2 h-4">TOP {idx + 1}</Badge>
+                                                            <a href={comp.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="w-2.5 h-2.5 text-slate-400 hover:text-slate-900" /></a>
                                                         </div>
-                                                        <h4 className="font-black text-slate-900 mb-2 line-clamp-2 leading-tight uppercase text-xs">{comp.title}</h4>
-                                                        <p className="text-[10px] text-slate-500 font-bold break-all opacity-60 line-clamp-1">{comp.url}</p>
+                                                        <h4 className="font-bold text-slate-900 mb-1 line-clamp-2 leading-tight text-[11px]">{comp.title}</h4>
+                                                        <p className="text-[9px] text-slate-400 truncate opacity-60">{comp.url}</p>
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
 
-                                        <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl">
-                                            <div className="absolute top-0 right-0 p-8 opacity-10"><BrainCircuit className="w-24 h-24" /></div>
-                                            <div className="flex items-center gap-3 mb-6">
-                                                <Sparkles className="w-5 h-5" />
-                                                <h4 className="text-[10px] font-black uppercase tracking-widest">Semantic Extraction AI</h4>
+                                        <div className="bg-slate-900 rounded-xl p-6 text-white relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 p-4 opacity-5"><BrainCircuit className="w-16 h-16" /></div>
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <Sparkles className="w-4 h-4 text-indigo-400" />
+                                                <h4 className="text-[9px] font-black uppercase tracking-widest">Semantic Core AI</h4>
                                             </div>
-                                            <div className="space-y-4">
-                                                <div className="flex flex-wrap gap-2">
-                                                    {serpData.extracted?.topics?.slice(0, 10).map((t, i) => (
-                                                        <Badge key={i} variant="outline" className="border-white/20 text-white bg-white/5 text-[9px] font-black uppercase tracking-widest px-4 py-2 hover:bg-white hover:text-indigo-600 transition-colors">{t}</Badge>
-                                                    ))}
-                                                </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {serpData.extracted?.topics?.slice(0, 15).map((t, i) => (
+                                                    <Badge key={i} variant="outline" className="border-white/10 text-white bg-white/5 text-[9px] font-bold px-3 py-1">{t}</Badge>
+                                                ))}
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
-                                <div className="mt-10 flex justify-between">
-                                    <Button variant="ghost" onClick={() => setStep(1)}>Indietro</Button>
-                                    <Button onClick={() => setStep(gscConnected ? 3 : 4)} className="h-12 px-8 bg-slate-900 text-white rounded-xl font-bold">Avanti</Button>
+                                <div className="mt-8 pt-8 border-t border-slate-100 flex justify-between">
+                                    <Button variant="ghost" onClick={() => setStep(1)} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-950 transition-colors">Indietro</Button>
+                                    <Button onClick={() => setStep(gscConnected ? 3 : 4)} className="h-12 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md">
+                                        Prosegui <ChevronRight className="w-4 h-4 ml-2" />
+                                    </Button>
                                 </div>
                             </Card>
                         )}
 
                         {step === 3 && (
-                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                                <Card className="border-slate-200 rounded-[3.5rem] p-12 overflow-hidden shadow-2xl bg-white/90 backdrop-blur-3xl border-none">
-                                    <div className="flex items-center gap-6 mb-12">
-                                        <div className="w-20 h-20 rounded-[2.5rem] bg-indigo-600 flex items-center justify-center shadow-2xl shadow-indigo-200">
-                                            <BarChart3 className="w-10 h-10 text-white" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Google Search Console</h3>
-                                            <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Contextual Data Intelligence</p>
-                                        </div>
+                            <Card className="border-slate-200 rounded-2xl p-8 shadow-sm bg-white animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-100">
+                                        <BarChart3 className="w-6 h-6 text-white" />
                                     </div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-slate-900 tracking-tight">Search Branding Intelligence</h3>
+                                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Step 03: GSC Contextual data</p>
+                                    </div>
+                                </div>
 
-                                    {gscLoading ? (
-                                        <div className="py-20 flex flex-col items-center justify-center space-y-4">
-                                            <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
-                                            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Aggregazione dati in corso...</p>
-                                        </div>
-                                    ) : gscData ? (
-                                        <div className="space-y-10">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                                <div className="p-8 rounded-[2.5rem] bg-slate-50 border border-slate-100 shadow-inner">
-                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-2">Keyword Totali</p>
-                                                    <p className="text-4xl font-black text-slate-950">{gscData.keywords?.length || 0}</p>
-                                                </div>
-                                                <div className="p-8 rounded-[2.5rem] bg-slate-50 border border-slate-100 shadow-inner">
-                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-2">Impression Totali</p>
-                                                    <p className="text-4xl font-black text-slate-950">{Math.round(gscData.totals?.impressions || 0).toLocaleString()}</p>
-                                                </div>
-                                                <div className="p-8 rounded-[2.5rem] bg-slate-50 border border-slate-100 shadow-inner">
-                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-2">CTR Medio</p>
-                                                    <p className="text-4xl font-black text-slate-950">{((gscData.totals?.ctr || 0) * 100).toFixed(2)}%</p>
-                                                </div>
+                                {gscLoading ? (
+                                    <div className="py-12 flex flex-col items-center justify-center space-y-3">
+                                        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                                        <p className="text-slate-400 font-black uppercase text-[9px] tracking-widest">Aggregazione GSC in corso...</p>
+                                    </div>
+                                ) : gscData ? (
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="p-5 rounded-xl bg-slate-50 border border-slate-100">
+                                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Keywords</p>
+                                                <p className="text-2xl font-black text-slate-900">{gscData.keywords?.length || 0}</p>
                                             </div>
+                                            <div className="p-5 rounded-xl bg-slate-50 border border-slate-100">
+                                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">Impressions</p>
+                                                <p className="text-2xl font-black text-slate-900">{Math.round(gscData.totals?.impressions || 0).toLocaleString()}</p>
+                                            </div>
+                                            <div className="p-5 rounded-xl bg-slate-50 border border-slate-100">
+                                                <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">CTR</p>
+                                                <p className="text-2xl font-black text-slate-900">{((gscData.totals?.ctr || 0) * 100).toFixed(1)}%</p>
+                                            </div>
+                                        </div>
 
-                                            <div className="bg-slate-950 rounded-[2.5rem] p-10 text-white overflow-hidden relative shadow-2xl">
-                                                <div className="absolute top-0 right-0 p-8 opacity-10"><BrainCircuit className="w-32 h-32" /></div>
-                                                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 mb-8 border-b border-white/10 pb-4">Top Keywords Intelligence</h4>
-                                                <div className="space-y-4 relative z-10">
-                                                    {gscData.keywords?.slice(0, 5).map((k, i) => (
-                                                        <div key={i} className="flex items-center justify-between group">
-                                                            <div className="flex items-center gap-4">
-                                                                <span className="text-indigo-500/50 font-black text-lg">0{i+1}</span>
-                                                                <p className="font-bold text-slate-300 group-hover:text-white transition-colors">{k.keyword}</p>
-                                                            </div>
-                                                            <div className="flex items-center gap-6">
-                                                                <div className="text-right"><p className="text-[10px] font-black text-slate-500 uppercase">Pos</p><p className="font-bold text-indigo-400">{k.position.toFixed(1)}</p></div>
-                                                                <div className="text-right"><p className="text-[10px] font-black text-slate-500 uppercase">CTR</p><p className="font-bold text-emerald-400">{(k.ctr * 100).toFixed(1)}%</p></div>
-                                                            </div>
+                                        <div className="bg-slate-950 rounded-xl p-6 text-white relative overflow-hidden">
+                                            <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-6 border-b border-white/5 pb-2">Top Contextual Keywords</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3">
+                                                {gscData.keywords?.slice(0, 8).map((k, i) => (
+                                                    <div key={i} className="flex items-center justify-between py-1 border-b border-white/5 last:border-0">
+                                                        <p className="font-bold text-slate-400 text-[11px]">{k.keyword}</p>
+                                                        <div className="flex gap-4">
+                                                            <span className="text-[10px] font-black text-indigo-400">P{k.position.toFixed(0)}</span>
+                                                            <span className="text-[10px] font-black text-emerald-400">{(k.ctr * 100).toFixed(0)}%</span>
                                                         </div>
-                                                    ))}
-                                                </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
-                                    ) : (
-                                        <div className="p-12 text-center bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
-                                            <p className="text-slate-400 font-bold">Nessun dato GSC disponibile per questo cliente.</p>
-                                            <Button variant="ghost" className="mt-4 text-indigo-600 font-black uppercase text-[10px] tracking-widest">Riconnetti GSC</Button>
-                                        </div>
-                                    )}
-
-                                    <div className="mt-12 flex justify-between">
-                                        <Button variant="ghost" onClick={() => setStep(2)} className="font-black uppercase text-[10px] tracking-widest text-slate-400 hover:text-slate-900 transition-colors">Indietro</Button>
-                                        <Button onClick={() => setStep(4)} className="h-16 px-12 bg-slate-950 text-white rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl">Revisione Prompt <ChevronRight className="w-5 h-5 ml-4" /></Button>
                                     </div>
-                                </Card>
-                            </div>
+                                ) : (
+                                    <div className="p-10 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                        <p className="text-slate-400 font-bold text-xs">Nessun dato GSC disponibile.</p>
+                                    </div>
+                                )}
+
+                                <div className="mt-8 pt-8 border-t border-slate-100 flex justify-between">
+                                    <Button variant="ghost" onClick={() => setStep(2)} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-950 transition-colors">Indietro</Button>
+                                    <Button onClick={() => setStep(4)} className="h-12 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md">Configura Prompt <ChevronRight className="w-4 h-4 ml-2" /></Button>
+                                </div>
+                            </Card>
                         )}
 
                         {step === 4 && (
-                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                                <Card className="border-slate-200 rounded-[3.5rem] p-12 overflow-hidden shadow-2xl bg-white/90 backdrop-blur-3xl border-none">
-                                    <div className="flex items-center gap-6 mb-12">
-                                        <div className="w-20 h-20 rounded-[2.5rem] bg-slate-950 flex items-center justify-center shadow-2xl shadow-slate-200">
-                                            <Lock className="w-10 h-10 text-white" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">AI Master Prompt</h3>
-                                            <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Strategic Configuration Control</p>
-                                        </div>
+                            <Card className="border-slate-200 rounded-2xl p-8 shadow-sm bg-white animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="w-12 h-12 rounded-xl bg-slate-950 flex items-center justify-center shadow-md">
+                                        <Lock className="w-6 h-6 text-white" />
                                     </div>
+                                    <div>
+                                        <h3 className="text-lg font-black text-slate-900 tracking-tight">AI Strategy Master Prompt</h3>
+                                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Step 04: Final logic control</p>
+                                    </div>
+                                </div>
 
-                                    <div className="relative group">
-                                        <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                                        <Textarea
-                                            className="min-h-[450px] relative bg-white border-slate-100 p-10 text-base font-medium leading-relaxed rounded-[2.5rem] shadow-inner focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                                            value={advancedPrompt}
-                                            onChange={(e) => setAdvancedPrompt(e.target.value)}
-                                            placeholder="Il prompt strategico verrà generato automaticamente dalle analisi precedenti..."
-                                        />
-                                    </div>
+                                <div className="relative group">
+                                    <div className="absolute -inset-0.5 bg-slate-900 rounded-2xl blur opacity-5 group-hover:opacity-10 transition duration-500"></div>
+                                    <Textarea
+                                        className="min-h-[400px] relative bg-slate-50 border-slate-100 p-8 text-sm font-medium leading-relaxed rounded-2xl shadow-inner focus:ring-1 focus:ring-slate-900 transition-all font-mono"
+                                        value={advancedPrompt}
+                                        onChange={(e) => setAdvancedPrompt(e.target.value)}
+                                        placeholder="Generating strategy..."
+                                    />
+                                </div>
 
-                                    <div className="mt-12 flex justify-between items-center">
-                                        <Button variant="ghost" onClick={() => setStep(gscConnected ? 3 : 2)} className="font-black uppercase text-[10px] tracking-widest text-slate-400 hover:text-slate-900 transition-colors">Indietro</Button>
-                                        <div className="flex gap-4">
-                                            <Button variant="outline" onClick={() => buildDefaultPrompt(serpData, gscData)} className="h-16 px-8 rounded-[2rem] border-slate-200 text-indigo-600 font-black text-[10px] uppercase tracking-widest flex gap-2">
-                                                <RefreshCcw className="w-3 h-3" /> Rigenera da Analisi
-                                            </Button>
-                                            <Button onClick={() => setStep(5)} className="h-16 px-12 bg-slate-950 text-white rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl">Configura Asset <ChevronRight className="w-5 h-5 ml-4" /></Button>
-                                        </div>
+                                <div className="mt-8 pt-8 border-t border-slate-100 flex justify-between items-center">
+                                    <Button variant="ghost" onClick={() => setStep(gscConnected ? 3 : 2)} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-950 transition-colors">Indietro</Button>
+                                    <div className="flex gap-3">
+                                        <Button variant="outline" onClick={() => buildDefaultPrompt(serpData, gscData)} className="h-12 px-6 rounded-xl border-slate-200 text-slate-600 font-black text-[9px] uppercase tracking-widest flex gap-2">
+                                            <RefreshCcw className="w-3 h-3" /> Re-build
+                                        </Button>
+                                        <Button onClick={() => setStep(5)} className="h-12 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md">Configura Asset <ChevronRight className="w-4 h-4 ml-2" /></Button>
                                     </div>
-                                </Card>
-                            </div>
+                                </div>
+                            </Card>
                         )}
 
                         {step === 5 && (
-                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                                <div className="lg:col-span-8">
-                                    <Card className="border-slate-200 rounded-[3.5rem] shadow-2xl p-12 space-y-8">
-                                        <div className="space-y-3">
-                                            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Titolo dell'Asset</Label>
-                                            <Input className="h-16 text-xl font-black bg-slate-50 border-slate-100 rounded-3xl" value={singleTitle} onChange={(e) => setSingleTitle(e.target.value)} />
-                                        </div>
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between px-1">
-                                                <div className="flex items-center gap-3">
-                                                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Concept Strategico</Label>
-                                                    {singleObjective === advancedPrompt && advancedPrompt ? (
-                                                        <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] font-black uppercase tracking-tighter flex gap-1 h-5 items-center">
-                                                            <Check className="w-2 h-2" /> Sincronizzato con Step 4
-                                                        </Badge>
-                                                    ) : (
-                                                        <div className="flex gap-2 items-center">
-                                                            <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-100 text-[8px] font-black uppercase tracking-tighter flex gap-1 h-5 items-center">
-                                                                Personalizzato
-                                                            </Badge>
-                                                            <Button onClick={() => setSingleObjective(advancedPrompt)} variant="ghost" className="h-5 p-0 px-2 text-[8px] font-black uppercase text-indigo-600 hover:text-indigo-800 tracking-widest flex gap-1 items-center">
-                                                                <RotateCcw className="w-2 h-2" /> Ripristina da Step 4
-                                                            </Button>
-                                                        </div>
-                                                    )}
+                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="lg:col-span-12">
+                                    <Card className="border-slate-200 rounded-2xl p-8 bg-white shadow-sm space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {/* Column 1: Core Config */}
+                                            <div className="space-y-6">
+                                                <div className="space-y-2">
+                                                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Titolo dell'Asset</Label>
+                                                    <Input className="h-12 text-lg font-black bg-slate-50 border-slate-100 rounded-xl" value={singleTitle} onChange={(e) => setSingleTitle(e.target.value)} />
                                                 </div>
-                                                <Button onClick={handleImproveObjective} disabled={refiningObjective} variant="ghost" className="h-8 gap-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 font-black text-[9px] uppercase tracking-widest rounded-full">
-                                                    {refiningObjective ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                                                    Migliora con AI
-                                                </Button>
-                                            </div>
-                                            <div className="relative group/concept">
-                                                <Textarea 
-                                                    className="min-h-[220px] text-base p-8 bg-slate-50 border-slate-100 rounded-[2.5rem] focus:ring-2 focus:ring-slate-900 transition-all font-medium leading-relaxed" 
-                                                    value={singleObjective} 
-                                                    onChange={(e) => setSingleObjective(e.target.value)} 
-                                                    placeholder="Definisci qui l'obiettivo strategico..."
-                                                />
-                                                <div className="absolute top-4 right-4 opacity-0 group-hover/concept:opacity-100 transition-opacity">
-                                                    <BrainCircuit className="w-5 h-5 text-indigo-500/20" />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Image Section */}
-                                        <div className="space-y-6 pt-6 border-t border-slate-100">
-                                            <div className="flex items-center justify-between">
-                                                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Selezione Immagine</h4>
-                                                <div className="flex bg-slate-100 p-1 rounded-full">
-                                                    <Button variant="ghost" size="sm" onClick={() => setImageSource('ai')} className={`h-8 px-4 rounded-full text-[9px] font-black uppercase transition-all ${imageSource === 'ai' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'}`}>Generatore AI</Button>
-                                                    <Button variant="ghost" size="sm" onClick={() => setImageSource('search')} className={`h-8 px-4 rounded-full text-[9px] font-black uppercase transition-all ${imageSource === 'search' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'}`}>Cerca Libera</Button>
-                                                </div>
-                                            </div>
-
-                                            {imageSource === 'ai' ? (
-                                                <div className="p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100 border-dashed text-center space-y-4">
-                                                    <div className="w-16 h-16 rounded-2xl bg-white shadow-sm flex items-center justify-center mx-auto"><Sparkles className="w-8 h-8 text-indigo-500" /></div>
-                                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest italic">L'AI genererà un'immagine contestuale al titolo e al brand</p>
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-4">
-                                                    <div className="flex gap-3">
-                                                        <div className="relative flex-1">
-                                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                                            <Input 
-                                                                value={imgSearchQuery} 
-                                                                onChange={(e) => setImgSearchQuery(e.target.value)} 
-                                                                placeholder="Cerca un'immagine professionale..." 
-                                                                className="h-14 pl-12 pr-32 rounded-2xl bg-slate-50 border-slate-100 focus:bg-white transition-all text-sm font-medium" 
-                                                                onKeyDown={(e) => e.key === 'Enter' && handleImageSearch(12)}
-                                                            />
-                                                            <Button 
-                                                                onClick={async () => {
-                                                                    const prompt = `Genera una query di ricerca immagini (3-5 parole in italiano) estremamente professionale e d'impatto per questo contenuto: "${singleTitle}". Focus: realismo, fotografia, stock. Solo la query, niente altro.`;
-                                                                    try {
-                                                                        const res = await axios.post(`${API}/chat/strategic-advice`, { 
-                                                                            client_id: effectiveClientId, 
-                                                                            prompt 
-                                                                        }, { headers: getAuthHeaders() });
-                                                                        const suggested = res.data.advice?.replace(/"/g, '').trim();
-                                                                        if (suggested) {
-                                                                            setImgSearchQuery(suggested);
-                                                                            handleImageSearch(12, suggested);
-                                                                        }
-                                                                    } catch (e) { toast.error("Errore suggerimento AI"); }
-                                                                }}
-                                                                variant="ghost" 
-                                                                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-3 text-[9px] font-black uppercase text-indigo-600 hover:bg-indigo-50 rounded-xl flex gap-1 items-center"
-                                                            >
-                                                                <Sparkles className="w-3 h-3" /> Suggerisci AI
-                                                            </Button>
-                                                        </div>
-                                                        <Button 
-                                                            onClick={() => handleImageSearch(12)} 
-                                                            disabled={searchingImages} 
-                                                            className="h-14 w-14 bg-slate-950 text-white rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all"
-                                                        >
-                                                            {searchingImages ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Concept Strategico</Label>
+                                                        <Button onClick={handleImproveObjective} disabled={refiningObjective} variant="ghost" className="h-6 gap-1.5 text-indigo-600 hover:bg-slate-50 font-black text-[8px] uppercase tracking-widest rounded-lg">
+                                                            {refiningObjective ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                                            AI Refine
                                                         </Button>
                                                     </div>
-                                                    
-                                                    {imgSearchResults.length > 0 && (
-                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-[360px] overflow-y-auto p-4 bg-slate-50/50 rounded-[2rem] border border-slate-100 custom-scrollbar">
+                                                    <Textarea 
+                                                        className="min-h-[280px] text-xs p-5 bg-slate-50 border-slate-100 rounded-xl focus:ring-1 focus:ring-slate-900 transition-all font-medium leading-relaxed custom-scrollbar" 
+                                                        value={singleObjective} 
+                                                        onChange={(e) => setSingleObjective(e.target.value)} 
+                                                        placeholder="Strategic concept..."
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Column 2: Visual Intelligence */}
+                                            <div className="space-y-6">
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Visual Intelligence</Label>
+                                                    <div className="flex bg-slate-100 p-1 rounded-xl">
+                                                        <Button variant="ghost" size="sm" onClick={() => setImageSource('ai')} className={`h-8 px-4 rounded-lg text-[9px] font-black uppercase transition-all ${imageSource === 'ai' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>Gen IA</Button>
+                                                        <Button variant="ghost" size="sm" onClick={() => setImageSource('search')} className={`h-8 px-4 rounded-lg text-[9px] font-black uppercase transition-all ${imageSource === 'search' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>Search</Button>
+                                                    </div>
+                                                </div>
+
+                                                {imageSource === 'ai' ? (
+                                                    <div className="aspect-square flex flex-col items-center justify-center bg-slate-50 border border-dashed border-slate-100 rounded-2xl p-10 text-center">
+                                                        <Sparkles className="w-10 h-10 text-indigo-200 mb-4" />
+                                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Generazione automatica <br/> contestuale</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-3">
+                                                        <div className="flex gap-2">
+                                                            <div className="relative flex-1">
+                                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
+                                                                <Input 
+                                                                    value={imgSearchQuery} 
+                                                                    onChange={(e) => setImgSearchQuery(e.target.value)} 
+                                                                    placeholder="Search photos..." 
+                                                                    className="h-10 pl-9 rounded-xl bg-slate-50 border-none text-xs font-bold" 
+                                                                    onKeyDown={(e) => e.key === 'Enter' && handleImageSearch(12)}
+                                                                />
+                                                            </div>
+                                                            <Button onClick={() => handleImageSearch(12)} disabled={searchingImages} className="h-10 w-10 bg-slate-950 text-white rounded-xl">
+                                                                {searchingImages ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                                                            </Button>
+                                                        </div>
+                                                        <div className="grid grid-cols-3 gap-2 h-[200px] overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-100 custom-scrollbar">
                                                             {imgSearchResults.map((img, i) => (
-                                                                <div 
-                                                                    key={i} 
-                                                                    onClick={() => importExternalImage(img.image)} 
-                                                                    className="group relative aspect-[4/3] rounded-[1.5rem] overflow-hidden cursor-pointer border-2 border-transparent hover:border-indigo-600 transition-all shadow-md bg-white"
-                                                                >
-                                                                    <img 
-                                                                        src={img.thumbnail || img.image} 
-                                                                        alt={img.title} 
-                                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                                                                        onError={(e) => e.target.src = 'https://placehold.co/600x400?text=Immagine+Non+Disponibile'}
-                                                                    />
-                                                                    <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/20 transition-colors" />
-                                                                    <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                        <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg">
-                                                                            <Plus className="w-3 h-3" />
-                                                                        </div>
+                                                                <div key={i} onClick={() => importExternalImage(img.image)} className="group relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-slate-900 transition-all bg-white shadow-sm">
+                                                                    <img src={img.thumbnail || img.image} className="w-full h-full object-cover" />
+                                                                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                        <Plus className="w-5 h-5 text-white" />
                                                                     </div>
                                                                 </div>
                                                             ))}
                                                         </div>
-                                                    )}
-                                                </div>
-                                            )}
+                                                    </div>
+                                                )}
 
-                                            {singleSelectedImage && (
-                                                <div className="relative aspect-video rounded-[2.5rem] overflow-hidden border-4 border-emerald-500/20 shadow-2xl">
-                                                    <img src={singleSelectedImage.url} className="w-full h-full object-cover" />
-                                                    <div className="absolute top-4 right-4"><Button variant="destructive" size="sm" onClick={() => setSingleSelectedImage(null)} className="rounded-full h-10 w-10 p-0 shadow-xl"><X className="w-5 h-5" /></Button></div>
-                                                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent"><p className="text-[10px] text-white font-black uppercase tracking-widest">Immagine Selezionata</p></div>
-                                                </div>
-                                            )}
+                                                {singleSelectedImage && (
+                                                    <div className="relative group rounded-xl overflow-hidden border-2 border-emerald-500 shadow-xl">
+                                                        <img src={singleSelectedImage.url} className="w-full h-32 object-cover" />
+                                                        <Button size="sm" onClick={() => setSingleSelectedImage(null)} variant="destructive" className="absolute top-2 right-2 h-7 w-7 p-0 rounded-lg"><X className="w-4 h-4" /></Button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-
-                                        <Button onClick={() => handleSingleGenerate()} disabled={singleGenerating} className="w-full h-24 bg-gradient-to-r from-slate-950 to-indigo-950 text-white rounded-[2.5rem] font-black text-sm uppercase tracking-[0.3em] shadow-2xl shadow-indigo-200 transition-all hover:scale-[1.02] active:scale-[0.98] mt-8 group">
-                                            {singleGenerating ? <Loader2 className="w-8 h-8 animate-spin" /> : (
-                                                <span className="flex items-center gap-4">Lancia Strategia AI <Zap className="w-6 h-6 group-hover:animate-pulse" /></span>
-                                            )}
-                                        </Button>
+                                        <div className="pt-8 border-t border-slate-100 flex justify-between items-center bg-white sticky bottom-0">
+                                            <Button variant="ghost" onClick={() => setStep(4)} className="text-[10px] font-black uppercase text-slate-400">Back</Button>
+                                            <Button onClick={handleSingleGenerate} disabled={singleGenerating} className="flex-1 ml-4 h-14 bg-slate-950 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all">
+                                                {singleGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                                                    <span className="flex items-center gap-3">EXECUTE STRATEGY <Zap className="w-4 h-4" /></span>
+                                                )}
+                                            </Button>
+                                        </div>
                                     </Card>
                                 </div>
-                             </div>
+                            </div>
                         )}
                     </div>
                 )}
 
                 {genMode === 'plan' && (
-                    <div className="space-y-8">
-                        <div className="flex justify-between items-center bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] border border-slate-200 shadow-2xl">
-                            <div className="flex items-center gap-5">
-                                <div className="w-16 h-16 rounded-3xl bg-indigo-600 flex items-center justify-center shadow-xl shadow-indigo-200"><Calendar className="w-8 h-8 text-white" /></div>
-                                <div><h2 className="text-2xl font-black text-slate-900 tracking-tight">Editorial Hub</h2><p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Strategy Control v4.0</p></div>
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-600">
+                        <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-slate-950 flex items-center justify-center shadow-md"><Calendar className="w-5 h-5 text-white" /></div>
+                                <div><h2 className="text-lg font-black text-slate-900 tracking-tight">Editorial Hub</h2><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Client Strategy Control</p></div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <div className="flex bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50">
-                                    <Button variant="ghost" size="sm" onClick={() => setPlanView('list')} className={`h-10 px-4 rounded-xl text-[10px] uppercase font-black ${planView === 'list' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-400'}`}>List</Button>
-                                    <Button variant="ghost" size="sm" onClick={() => setPlanView('calendar')} className={`h-10 px-4 rounded-xl text-[10px] uppercase font-black ${planView === 'calendar' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-400'}`}>Calendar</Button>
+                            <div className="flex items-center gap-2">
+                                <div className="flex bg-slate-100 p-1 rounded-xl">
+                                    <Button variant="ghost" size="sm" onClick={() => setPlanView('list')} className={`h-8 px-4 rounded-lg text-[9px] uppercase font-black ${planView === 'list' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>List</Button>
+                                    <Button variant="ghost" size="sm" onClick={() => setPlanView('calendar')} className={`h-8 px-4 rounded-lg text-[9px] uppercase font-black ${planView === 'calendar' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>Calendar</Button>
                                 </div>
-                                <Button onClick={generateNewPlan} disabled={planGenerating} className="h-12 bg-slate-950 text-white rounded-2xl font-black text-[10px] px-8">REFRESH STRATEGY</Button>
+                                <Button onClick={generateNewPlan} disabled={planGenerating} className="h-10 bg-slate-950 text-white rounded-xl font-black text-[9px] px-6">REFRESH HUB</Button>
                             </div>
                         </div>
                         {allPlanTopics.length > 0 && planView === 'calendar' && (
@@ -1715,30 +1687,28 @@ Direttive: Ottimizzazione standard SEO premium.`;
                         )}
 
                         {allPlanTopics.length > 0 && planView === 'list' && (
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 {allPlanTopics.map((item, idx) => (
-                                    <div key={idx} className="bg-white/80 p-6 rounded-[2rem] border border-white shadow-lg hover:shadow-2xl transition-all cursor-pointer group" onClick={() => handleUseTopicInGenerator(item)}>
+                                    <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group" onClick={() => handleUseTopicInGenerator(item)}>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
-                                                    <Play className="w-5 h-5 transition-transform group-hover:scale-110" />
+                                                <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all">
+                                                    <Play className="w-4 h-4" />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-black text-slate-900 group-hover:text-indigo-600 transition-colors uppercase text-sm tracking-tight">{item.titolo}</h4>
+                                                    <h4 className="font-black text-slate-900 group-hover:text-slate-950 uppercase text-[11px] tracking-tight">{item.titolo}</h4>
                                                     <div className="flex items-center gap-2 mt-1">
-                                                        <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest border-slate-200">{item.topic || 'Custom'}</Badge>
-                                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.funnel || 'Awareness'}</span>
+                                                        <Badge variant="outline" className="text-[7px] font-black uppercase px-2 h-4 border-slate-100 text-slate-400">{item.topic || 'Custom'}</Badge>
+                                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{item.funnel || 'Awareness'}</span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-6">
                                                 <div className="text-right hidden sm:block">
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">KW Base</p>
-                                                    <p className="font-bold text-slate-900 text-xs">{item.keyword || '-'}</p>
+                                                    <p className="text-[8px] font-black text-slate-300 uppercase">KW Focus</p>
+                                                    <p className="font-bold text-slate-600 text-[10px]">{item.keyword || '-'}</p>
                                                 </div>
-                                                <div className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center group-hover:bg-slate-950 group-hover:text-white transition-all">
-                                                    <ChevronRight className="w-5 h-5" />
-                                                </div>
+                                                <ChevronRight className="w-4 h-4 text-slate-200 group-hover:text-slate-900 transition-colors" />
                                             </div>
                                         </div>
                                     </div>
@@ -1749,11 +1719,14 @@ Direttive: Ottimizzazione standard SEO premium.`;
                 )}
 
                 {genMode === 'programmatic' && (
-                     <div className="animate-in fade-in slide-in-from-right-12 duration-800">
-                         <div className="bg-white p-20 rounded-[4rem] border border-slate-200 shadow-2xl text-center space-y-10">
-                              <div className="w-24 h-24 rounded-[2.5rem] bg-purple-600 flex items-center justify-center mx-auto shadow-2xl rotate-6 hover:rotate-0 transition-transform"><Zap className="w-12 h-12 text-white" /></div>
-                              <div><h2 className="text-4xl font-black text-slate-950 tracking-tighter">Programmatica v3.0</h2><p className="text-slate-500 max-w-lg mx-auto font-medium italic">Generazione massiva SEO-friendly.</p></div>
-                              <Button onClick={() => setWizardStep(1)} className="h-16 px-12 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl">INIZIA WIZARD BULK</Button>
+                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-600">
+                         <div className="bg-white p-12 rounded-2xl border border-slate-200 shadow-sm text-center space-y-6">
+                              <div className="w-16 h-16 rounded-xl bg-slate-950 flex items-center justify-center mx-auto shadow-lg"><Library className="w-8 h-8 text-white" /></div>
+                              <div>
+                                  <h2 className="text-xl font-black text-slate-950 tracking-tight">Bulk SEO Studio</h2>
+                                  <p className="text-slate-400 text-xs font-medium max-w-xs mx-auto">Generazione massiva di contenuti ottimizzati per silo semantici.</p>
+                              </div>
+                              <Button onClick={() => setWizardStep(1)} className="h-12 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest">Lancia Wizard Programmatico</Button>
                          </div>
                      </div>
                 )}
