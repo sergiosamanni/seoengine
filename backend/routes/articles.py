@@ -612,19 +612,18 @@ async def serp_images(request: dict, current_user: dict = Depends(get_current_us
         raise HTTPException(status_code=400, detail="Keyword obbligatoria")
     max_results = min(request.get("max_results", 12), 50)  # cap at 50
     
-    # Refine queries for maximum context and relevance
+    # Refine queries (reduced to 2 to avoid rate-limiting)
     context = request.get("context", "").strip()
-    # Build 3 variants of the query
     queries = [
-        keyword, # Original
-        f"\"{keyword}\" fotografia reale", # Scene focus
-        f"fotografia professionale {keyword}" # High quality focus
+        f"\"{keyword}\" fotografia professionale", 
+        f"scena reale {keyword}"
     ]
     
     try:
         from duckduckgo_search import DDGS
         import httpx as _httpx
         import random as _random
+        import asyncio as _asyncio
         
         ua_list = [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -634,55 +633,63 @@ async def serp_images(request: dict, current_user: dict = Depends(get_current_us
         all_raw = []
         try:
             with DDGS(headers={"User-Agent": _random.choice(ua_list)}) as ddgs:
-                for q in queries:
+                for idx, q in enumerate(queries):
+                    if idx > 0: await _asyncio.sleep(0.8) # Anti-ratelimit delay
                     q_res = list(ddgs.images(
                         keywords=q,
                         region="it-it",
                         safesearch="moderate",
                         size="Large",
-                        type_image="photo", # Force photos!
-                        max_results=max_results + 10
+                        type_image="photo",
+                        max_results=max_results + 5
                     ))
                     all_raw.extend(q_res)
         except Exception as ddg_err:
-            logger.warning(f"Multi-query DDG failed: {ddg_err}")
+            logger.warning(f"DDG search failed (possibly ratelimited): {ddg_err}")
 
-        # Remove duplicates by URL
+        # Fallback to Wikimedia if DDG produced nothing
+        if not all_raw:
+            logger.info("DDG failed/ratelimited. Falling back to Wikimedia...")
+            from helpers import web_search_images_wikimedia
+            wiki_results = await web_search_images_wikimedia(keyword, max_results)
+            # Adapt wiki results to DDG format for the grader
+            for wr in wiki_results:
+                all_raw.append({
+                    "image": wr["image"],
+                    "thumbnail": wr["thumbnail"],
+                    "title": wr["title"],
+                    "source": "Wikimedia"
+                })
+
+        # Remove duplicates
         seen_urls = set()
         unique_results = []
         for r in all_raw:
             u = r.get("image")
-            if u not in seen_urls:
+            if u and u not in seen_urls:
                 seen_urls.add(u)
                 unique_results.append(r)
 
-        # Smart Semantic Scorer & Filter
+        # Grader & Filters
         results = []
         kw_main = set([w.lower() for w in keyword.split() if len(w) > 3])
-        ctx_main = set([w.lower() for w in context.split() if len(w) > 4]) if context else set()
         
         for r in unique_results:
             title_low = r.get("title", "").lower()
             img_url = r.get("image", "").lower()
             
-            # 1. Hard filters for non-photos
             if any(x in title_low for x in ["logo", "icon", "vettore", "svg", "lettera", "grafica", "clipart", "disegno", "vettoriale", "illustrazione"]):
                 continue
-            if any(x in img_url for x in ["logo", "icon", "placeholder", "svg", ".png"]): # Prioritize jpg/webp for photos
-                if ".png" in img_url and "transparent" in title_low: continue
             
-            # 2. Score based on context
             score = 0
             if any(w in title_low for w in kw_main): score += 10
-            if any(w in title_low for w in ctx_main): score += 5
-            if ".it" in img_url: score += 5 # Favor Italian sources!
-            if "fotografia" in title_low or "scena" in title_low: score += 3
+            if ".it" in img_url: score += 5
+            if r.get("source") == "Wikimedia": score -= 2 # Favor DDG if available
             
             r["_score"] = score
-            if score >= 10 or (not results and score > 0): # Min threshold
+            if score >= 5 or not results:
                 results.append(r)
         
-        # Final sort by score
         results.sort(key=lambda x: x.get("_score", 0), reverse=True)
         results = results[:max_results]
         
