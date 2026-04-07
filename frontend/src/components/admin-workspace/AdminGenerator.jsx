@@ -540,16 +540,26 @@ export function AdminGenerator({
 
     // Auto-fill Strategic Objective based on Step 1, 4 and KB
     useEffect(() => {
-        if (step === 5 && genMode === 'single' && !singleObjective) {
+        if (step === 5 && genMode === 'single') {
             const kb = client?.configuration?.knowledge_base || {};
             const strategy = contentStrategy || {};
             
-            const autoObjective = `Obiettivo: Generare un contenuto ${strategy.funnel_stage || 'TOFU'} seguendo il modello ${strategy.modello_copywriting || 'PAS'}. 
+            let autoObjective = "";
+            
+            if (advancedPrompt && advancedPrompt.length > 50) {
+                // Use the advanced prompt as the master objective if it's substantial
+                autoObjective = advancedPrompt;
+            } else {
+                autoObjective = `Obiettivo: Generare un contenuto ${strategy.funnel_stage || 'TOFU'} seguendo il modello ${strategy.modello_copywriting || 'PAS'}. 
 Target: ${kb.pubblico_target_primario || 'Audience generale'}.
 Focus: ${singleTitle || singleKeywords || 'Keyword principale'}.
-Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nello Step 4.' : 'Ottimizzazione standard.'}`;
+Direttive: Ottimizzazione standard SEO premium.`;
+            }
             
-            setSingleObjective(autoObjective);
+            // Only auto-fill if it's empty or contains default text
+            if (!singleObjective || singleObjective.includes("Obiettivo: Generare un contenuto")) {
+                setSingleObjective(autoObjective);
+            }
         }
     }, [step, genMode, contentStrategy, advancedPrompt, client]);
 
@@ -610,7 +620,10 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
             }, { headers: getAuthHeaders() });
             setSerpData(res.data);
             toast.success(`Analizzati ${res.data.count} competitor per "${serpKeyword}"`);
-            if (!String(advancedPrompt || "").trim()) buildDefaultPrompt(res.data, gscData);
+            // Always rebuild prompt if we have new data, unless user has a very custom one
+            if (!advancedPrompt || advancedPrompt.length < 100 || window.confirm("Le analisi sono cambiate. Vuoi rigenerare il prompt strategico?")) {
+                buildDefaultPrompt(res.data, gscData);
+            }
         } catch (error) {
             toast.error(error.response?.data?.detail || 'Errore analisi SERP');
         } finally { setSerpLoading(false); }
@@ -622,7 +635,7 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
             const res = await axios.get(`${API}/clients/${effectiveClientId}/gsc-data?days=28`, { headers: getAuthHeaders() });
             setGscData(res.data);
             toast.success(`Dati GSC caricati: ${res.data.keywords?.length || 0} keyword`);
-            if (serpData && !String(advancedPrompt || "").trim()) buildDefaultPrompt(serpData, res.data);
+            if (serpData) buildDefaultPrompt(serpData, res.data);
         } catch (error) {
             if (error.response?.status === 401) toast.error('Token GSC scaduto. Riconnetti dalla Configurazione.');
             else toast.error(error.response?.data?.detail || 'Errore caricamento GSC');
@@ -750,35 +763,50 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
 
     const buildDefaultPrompt = (serp, gsc) => {
         const lines = [];
-        lines.push('=== ISTRUZIONI PER LA GENERAZIONE ===');
+        const strategy = contentStrategy || {};
+        const kb = client?.configuration?.knowledge_base || {};
+
+        lines.push('🎯 OBIETTIVO STRATEGICO E CONTESTO');
+        lines.push('====================================');
+        lines.push(`Asset: ${singleTitle || serpKeyword || 'Articolo Ottimizzato'}`);
+        lines.push(`Funnel Stage: ${strategy.funnel_stage || 'TOFU'}`);
+        lines.push(`Copywriting Model: ${strategy.modello_copywriting || 'PAS'}`);
+        lines.push(`Target Audience: ${kb.pubblico_target_primario || 'Audience interessata al settore'}`);
         lines.push('');
-        if (serp?.extracted?.titles?.length > 0) {
-            lines.push('## Analisi SERP - Titoli Competitor:');
-            serp.extracted.titles.forEach((t, i) => lines.push(`${i + 1}. ${t}`));
+
+        if ((serp?.extracted?.titles?.length > 0) || (serp?.competitors?.length > 0)) {
+            lines.push('🔍 ANALISI COMPETITOR E HEADLINES');
+            lines.push('------------------------------------');
+            const titles = serp?.extracted?.titles || serp?.competitors?.map(c => c.title) || [];
+            titles.slice(0, 5).forEach((t, i) => lines.push(`Competitor ${i+1}: ${t}`));
+            
+            if (serp?.extracted?.headings?.length > 0) {
+                lines.push('\n### Struttura Semantica Rilevata (Heading Map):');
+                serp.extracted.headings.slice(0, 8).forEach(h => lines.push(`- ${h}`));
+            }
             lines.push('');
         }
-        if (serp?.extracted?.headings?.length > 0) {
-            lines.push('## Struttura Headings dai Competitor:');
-            serp.extracted.headings.slice(0, 12).forEach(h => lines.push(`- ${h}`));
-            lines.push('');
-        }
-        lines.push('## Direttive:');
-        lines.push('- Analizza i titoli e le strutture dei competitor sopra riportati.');
-        lines.push('- Crea un articolo che copra tutti gli argomenti trattati dai competitor MA con un angolo unico e valore aggiunto.');
-        lines.push('- Usa heading (H2, H3) che rispondano alle domande implicite dell\'utente.');
-        lines.push('- Includi sezioni FAQ alla fine con schema markup suggerito.');
+
         if (gsc?.keywords?.length > 0) {
-            lines.push('');
-            lines.push('## Dati Google Search Console:');
-            lines.push('Queste keyword portano gia traffico al sito. Integrale naturalmente nel contenuto:');
-            gsc.keywords.slice(0, 8).forEach(k => {
-                lines.push(`- "${k.keyword}" (pos. ${k.position}, ${k.clicks} click, ${k.impressions} impression)`);
+            lines.push('📈 DATI GOOGLE SEARCH CONSOLE (INSIGHTS)');
+            lines.push('------------------------------------');
+            lines.push('Integra naturalmente queste keyword per rafforzare il posizionamento esistente:');
+            gsc.keywords.slice(0, 6).forEach(k => {
+                lines.push(`- "${k.keyword}" (Ranking attuale: pos. ${k.position.toFixed(1)})`);
             });
             lines.push('');
-            lines.push('- Rafforza le keyword con posizione 4-15 (potenziale di crescita).');
-            lines.push('- Evita cannibalizzazione con pagine gia posizionate per le keyword top.');
         }
+
+        lines.push('🛠 DIRETTIVE DI GENERAZIONE PREMIUM');
+        lines.push('------------------------------------');
+        lines.push('1. STRUTTURA: Supera i competitor integrando gli heading rilevati con un angolo di attacco unico.');
+        lines.push(`2. TONE OF VOICE: ${kb.tono_voce || 'Professionale, autorevole e orientato alla conversione'}.`);
+        lines.push(`3. SEARCH INTENT: Soddisfa pienamente l'intento ${strategy.search_intent || 'informazionale'} fornendo risposte chiare e immediate.`);
+        lines.push('4. CONVERSIONE: Inserisci sezioni di approfondimento e FAQ per massimizzare il tempo di permanenza e il valore per l\'utente.');
+        lines.push('5. FORMATTAZIONE: Usa paragrafi brevi, elenchi puntati e grassetti strategici per la leggibilità.');
+        
         setAdvancedPrompt(lines.join('\n'));
+        toast.info("Prompt strategico generato!");
     };
 
     const saveConfig = async () => {
@@ -1490,7 +1518,9 @@ Direttive Prompt: ${advancedPrompt ? 'Seguire le analisi SERP e GSC definite nel
                                     <div className="mt-12 flex justify-between items-center">
                                         <Button variant="ghost" onClick={() => setStep(gscConnected ? 3 : 2)} className="font-black uppercase text-[10px] tracking-widest text-slate-400 hover:text-slate-900 transition-colors">Indietro</Button>
                                         <div className="flex gap-4">
-                                            <Button variant="outline" onClick={() => buildDefaultPrompt(serpData, gscData)} className="h-16 px-8 rounded-[2rem] border-slate-200 text-slate-600 font-black text-[10px] uppercase tracking-widest">Reset Prompt</Button>
+                                            <Button variant="outline" onClick={() => buildDefaultPrompt(serpData, gscData)} className="h-16 px-8 rounded-[2rem] border-slate-200 text-indigo-600 font-black text-[10px] uppercase tracking-widest flex gap-2">
+                                                <RefreshCcw className="w-3 h-3" /> Rigenera da Analisi
+                                            </Button>
                                             <Button onClick={() => setStep(5)} className="h-16 px-12 bg-slate-950 text-white rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl">Configura Asset <ChevronRight className="w-5 h-5 ml-4" /></Button>
                                         </div>
                                     </div>
