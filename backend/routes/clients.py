@@ -136,7 +136,7 @@ async def get_combinations(client_id: str, current_user: dict = Depends(get_curr
             "servizio": combo[0], 
             "citta": combo[1], 
             "tipo": combo[2],
-            "titolo": titolo.strip().title()
+            "titolo": titolo.strip().capitalize()
         })
     return {"combinations": combinations, "total": len(combinations)}
 

@@ -1425,7 +1425,7 @@ REGOLE CRITICHE:
 - NON usare mai tag ```html, ```, <html>, <head>, <body>, <article>, <title>, <meta>, <!DOCTYPE>
 - NON avvolgere il contenuto in markdown code blocks
 - Inizia DIRETTAMENTE con il primo tag HTML del contenuto (es. <h1>)
-- Usa UN SOLO tag <h1> in tutto il documento per il titolo principale
+- REGOLE DI MAIUSCOLE: NON usare MAI il "Title Case" per i titoli o sottotitoli (es. non scrivere "Noleggio Auto A Roma"). Usa le maiuscole SOLAMENTE all'inizio di una frase, dopo un punto o per i nomi propri. I titoli devono seguire lo stile naturale di una frase.
 - Ogni paragrafo deve essere un <p> separato (non raggruppare piu paragrafi)
 
 """
@@ -1816,7 +1816,7 @@ async def scrape_website_info(urls: list, max_pages: int = 6) -> dict:
                 if not info["citta_principale"]:
                     for city in italian_cities:
                         if city in body_lower:
-                            info["citta_principale"] = city.title()
+                            info["citta_principale"] = city.capitalize()
                             break
             except Exception as e:
                 logger.warning(f"Error scraping {page_url}: {e}")

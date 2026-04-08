@@ -48,6 +48,7 @@ class ArticleService:
         sys_prompt = f"""Sei un Senior Editor SEO per {client_name}. 
 Raffina questo articolo (Step 2) rendendolo più umano e naturale.
 - Assicurati che i tag H3 siano distribuiti fluidamente.
+- NON usare in alcun caso la formattazione "Title Case" nei titoli e nei sottotitoli. Usa le maiuscole solo all'inizio della frase o dopo un punto.
 - Verifica che gli anchor text dei link siano di ALMENO 3 PAROLE e SEO-oriented.
 - Rinforza i riferimenti alla Knowledge Base (Città: {kb.get('citta_principale')}).
 - MANTENI e OTTIMIZZA la posizione dei placeholder [IMAGE_1], [IMAGE_2] se presenti, assicurandoti che siano vicini a testo descrittivo pertinente.
@@ -129,8 +130,8 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                     user_prompt_extra += "\n\nSEGUI QUESTO OUTLINE:\n" + "\n".join([f"- {o.get('type','h2').upper()}: {o.get('text','')}" for o in outline])
                 user_prompt = f"{titolo}{user_prompt_extra}"
             else:
-                titolo = f"{item['servizio']} {item['tipo']} a {item['citta']}".title()
-                keyword = item['servizio']
+                titolo = f"{item['servizio']} {item['tipo']} a {item['citta']}".capitalize()
+                titolo = titolo.replace("  ", " ").strip()
                 combo = item
                 user_prompt = titolo
 
