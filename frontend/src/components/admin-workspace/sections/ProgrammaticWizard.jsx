@@ -23,7 +23,7 @@ export function ProgrammaticWizard({
         wizardStep, setWizardStep,
         keywords, setKeywords,
         isArchitecting, programmaticTemplate, setProgrammaticTemplate,
-        combinations, selectedCombinations, toggleCombo, selectAll,
+        combinations, selectedCombinations,
         previewContent, generating, progressPercent, results,
         templateStyle, setTemplateStyle, internalLinkingEnabled, setInternalLinkingEnabled,
         useSpintax, setUseSpintax
@@ -31,7 +31,7 @@ export function ProgrammaticWizard({
 
     const {
         handleArchitectStep, handleGeneratePreview, handleProgrammaticGenerate,
-        handleResetProgrammatic, refreshCombinations
+        handleResetProgrammatic, refreshCombinations, toggleCombo, selectAll
     } = generation;
 
     // Step 1: Configuration of lists
