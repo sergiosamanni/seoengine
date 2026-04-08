@@ -18,21 +18,25 @@ class SEOScanner:
         if not client:
             return
             
-        # Prepare context of recent history (max 5)
-        cursor = db.autopilot_tasks.find({"client_id": client_id, "status": "completed"}).sort("executed_at", -1).limit(5)
+        # Prepare context of recent history (max 10, both completed and rejected)
+        cursor = db.autopilot_tasks.find({
+            "client_id": client_id, 
+            "status": {"$in": ["completed", "rejected"]}
+        }).sort("created_at", -1).limit(10)
         recent_history_msgs = []
         async for task in cursor:
-            recent_history_msgs.append(f"[{task.get('type')}] {task.get('title')}: {task.get('suggestion')}")
+            status_label = "FATTO" if task.get("status") == "completed" else "RIFIUTATO DALL'UTENTE (NON PROPORLO MAI PIÙ)"
+            recent_history_msgs.append(f"[{status_label}] {task.get('type')} - {task.get('title')}: {task.get('suggestion')}")
             
         history_context = ""
         if recent_history_msgs:
-            history_context = "\n\nCONTESTO STORICO RECENTE:\nQueste operazioni sono appena state approvate/implementate sul sito. NON PROPORLE DI NUOVO. Sii complementare:\n" + "\n".join(recent_history_msgs) + "\n"
+            history_context = "\n\nCONTESTO STORICO RECENTE (BLACKLIST / DONE):\nQueste operazioni sono già state gestite. NON PROPORLE DI NUOVO. Sii complementare o concentrati su altre aree:\n" + "\n".join(recent_history_msgs) + "\n"
         
         # 1. Evaluate Freshness (Old Content)
         await cls.evaluate_freshness(client, history_context)
         
         # 2. Evaluate Editorial Plan (New Content)
-        await cls.evaluate_editorial_plan(client)
+        await cls.evaluate_editorial_plan(client, history_context)
         
         # 3. Evaluate Internal Linking (Spider)
         await cls.evaluate_internal_linking(client, history_context)
@@ -100,12 +104,23 @@ class SEOScanner:
                     
                 for prop in proposals:
                     if not isinstance(prop, dict): continue
-                    
                     url = prop.get("url")
                     if not url: continue
                     
-                    # Check if task already exists (any status) to avoid duplicates/re-proposing rejected
-                    exists = await db.autopilot_tasks.find_one({"url": url, "status": {"$in": ["pending", "completed", "rejected"]}})
+                    # Normalize URL for comparison
+                    norm_url = url.strip().rstrip("/")
+                    if norm_url.startswith("http://"): norm_url = "https" + norm_url[4:]
+                    
+                    # Check if task already exists with this URL (any status)
+                    exists = await db.autopilot_tasks.find_one({
+                        "client_id": client_id,
+                        "$or": [
+                            {"url": url},
+                            {"url": url + "/"},
+                            {"url": url[:-1] if url.endswith("/") else url}
+                        ],
+                        "status": {"$in": ["pending", "completed", "rejected"]}
+                    })
                     if not exists:
                         await db.autopilot_tasks.insert_one({
                             "id": str(uuid.uuid4()),
@@ -177,8 +192,12 @@ class SEOScanner:
                 if "source_url" in prop and "target_url" in prop:
                     # Check if task already exists (any status)
                     exists = await db.autopilot_tasks.find_one({
-                        "source_url": prop["source_url"], 
-                        "target_url": prop["target_url"], 
+                        "client_id": client_id,
+                        "$or": [
+                            {"source_url": prop["source_url"], "target_url": prop["target_url"]},
+                            {"source_url": prop["source_url"] + "/", "target_url": prop["target_url"]},
+                            {"source_url": prop["source_url"], "target_url": prop["target_url"] + "/"}
+                        ],
                         "status": {"$in": ["pending", "completed", "rejected"]}
                     })
                     if not exists:
@@ -258,8 +277,12 @@ class SEOScanner:
                     
                     # Check if task already exists (any status)
                     exists = await db.autopilot_tasks.find_one({
-                        "winner_url": winner_url, 
-                        "loser_url": loser_url, 
+                        "client_id": client_id,
+                        "$or": [
+                            {"winner_url": winner_url, "loser_url": loser_url},
+                            {"winner_url": winner_url + "/", "loser_url": loser_url},
+                            {"winner_url": winner_url, "loser_url": loser_url + "/"}
+                        ],
                         "status": {"$in": ["pending", "completed", "rejected"]}
                     })
                     if not exists:
@@ -330,7 +353,12 @@ class SEOScanner:
                     
                     # Check if task already exists (any status)
                     exists = await db.autopilot_tasks.find_one({
-                        "url": kw_info.get("url"), 
+                        "client_id": client_id,
+                        "$or": [
+                            {"url": kw_info.get("url")},
+                            {"url": (kw_info.get("url") or "") + "/"},
+                            {"url": (kw_info.get("url") or "").rstrip("/")}
+                        ],
                         "title": {"$regex": "Semantic Gap"}, 
                         "status": {"$in": ["pending", "completed", "rejected"]}
                     })
@@ -350,8 +378,11 @@ class SEOScanner:
                 logger.error(f"Semantic Gap evaluation failed for {client_id} (kw: {kw}): {e}")
 
     @classmethod
-    async def evaluate_editorial_plan(cls, client):
+    async def evaluate_editorial_plan(cls, client, history_context: str = ""):
         client_id = client["id"]
+        config = client.get("configuration", {})
+        llm_config = config.get("llm", {}) or config.get("openai", {})
+        
         plan = await db.editorial_plans.find_one({"client_id": client_id})
         if not plan or not plan.get("topics"):
             return
@@ -359,9 +390,14 @@ class SEOScanner:
         # Find the first topic not already in tasks (any status)
         selected_topic = None
         for topic in plan["topics"]:
+            topic_titolo = topic["titolo"]
+            # Search with regex that covers the prefix the scanner usually adds
             exists = await db.autopilot_tasks.find_one({
                 "client_id": client_id,
-                "title": {"$regex": re.escape(topic["titolo"])},
+                "$or": [
+                    {"title": {"$regex": re.escape(topic_titolo), "$options": "i"}},
+                    {"payload.titolo": topic_titolo}
+                ],
                 "status": {"$in": ["pending", "completed", "rejected"]}
             })
             if not exists:
