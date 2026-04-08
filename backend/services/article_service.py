@@ -629,6 +629,8 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                     if success:
                         await db.articles.update_one({"id": old["id"]}, {"$set": {"contenuto_html": updated, "contenuto": updated}})
                         logger.info(f"Back-linked '{old['titolo']}' to '{new_title}'")
+                        # Trigger automatic indexing for the modified old article
+                        asyncio.create_task(cls._request_gsc_indexing(client_id, old.get("wordpress_link", "")))
         except Exception as e:
             logger.warning(f"Back-linking failed: {e}")
     @classmethod
@@ -725,5 +727,7 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                             content=content,
                             wp_type=wp_type
                         )
+                        # Trigger automatic indexing for the updated article
+                        asyncio.create_task(cls._request_gsc_indexing(client_id, article.get("wordpress_link", "")))
                     except Exception as e:
                         logger.error(f"Failed to sync inter-links to WordPress for {article_id}: {e}")

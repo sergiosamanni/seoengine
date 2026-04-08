@@ -181,6 +181,8 @@ class AutopilotService:
                 if res:
                     execution_detail = f"Link inserito con successo alla fine del contenuto (URL sorgente modificata).\nSnippet aggiunto:\n{new_pg}"
                     success = True
+                    # Trigger automatic indexing for the source post that was modified
+                    asyncio.create_task(ArticleService._request_gsc_indexing(client_id, source_url))
                 else:
                     raise ValueError("Salvataggio su WP fallito")
                     
@@ -205,6 +207,8 @@ class AutopilotService:
                 if res:
                     execution_detail = f"L'articolo è stato espanso sul CMS con successo. Aggiunto il seguente blocco alla fine:\n\n{addition}"
                     success = True
+                    # Trigger automatic indexing
+                    asyncio.create_task(ArticleService._request_gsc_indexing(client_id, target_url))
                 else:
                     raise ValueError("Salvataggio su WP fallito")
                     

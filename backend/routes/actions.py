@@ -119,6 +119,9 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
             )
             
             if success:
+                # Trigger automatic indexing if we have a URL
+                if url_target:
+                    asyncio.create_task(ArticleService._request_gsc_indexing(client_id, url_target))
                 return {"status": "success", "message": f"Contenuto aggiornato su WordPress ({wp_type})", "post_id": post_id}
             else:
                 logger.error(f"Failed to update WP {wp_type} {post_id}")

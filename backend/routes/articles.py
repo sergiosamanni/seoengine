@@ -132,6 +132,9 @@ async def publish_articles(request: ArticlePublish, current_user: dict = Depends
                 "wordpress_link": result.get("link"), "wordpress_slug": result.get("slug"),
                 "published_at": datetime.now(timezone.utc).isoformat()}})
             published.append({"id": article_id, "wordpress_post_id": result["post_id"], "link": result.get("link")})
+            
+            # Trigger automatic indexing
+            asyncio.create_task(ArticleService._request_gsc_indexing(article["client_id"], result.get("link", "")))
         except Exception as e:
             failed.append({"id": article_id, "error": str(e)})
             await db.articles.update_one({"id": article_id}, {"$set": {"stato": "publish_failed", "publish_error": str(e)}})
