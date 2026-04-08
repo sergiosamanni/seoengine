@@ -205,8 +205,10 @@ export function ProgrammaticWizard({
                                                     }`}
                                                  >
                                                      <div className="flex flex-col gap-0.5">
-                                                         <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider leading-none">{combo.servizio}</span>
-                                                         <span className="text-xs font-bold text-slate-900 ">{combo.citta}</span>
+                                                         <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider leading-none">
+                                                             {combo.servizio} {combo.tipo && <span className="text-fuchsia-500 ml-1 opacity-80">[{combo.tipo}]</span>}
+                                                         </span>
+                                                         <span className="text-xs font-bold text-slate-900">{combo.citta || 'Ovunque'}</span>
                                                      </div>
                                                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
                                                          {isSelected ? <Check className="w-3 h-3" /> : null}
