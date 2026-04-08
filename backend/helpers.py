@@ -2261,7 +2261,7 @@ async def scrape_url(url: str) -> dict:
     """Scrape a single URL and extract text, title, and headings for competitor analysis."""
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
     try:
-        async with httpx.AsyncClient(timeout=20, follow_redirects=True, headers=headers) as client_http:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True, headers=headers, verify=False) as client_http:
             resp = await client_http.get(url)
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "lxml")
