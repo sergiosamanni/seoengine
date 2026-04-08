@@ -43,6 +43,7 @@ import { EditorialCalendar } from './EditorialCalendar';
 import { CompetitorsBenchmarkTab } from '../../pages/configuration/CompetitorsBenchmarkTab';
 import { EditorialHubView } from './sections/EditorialHubView';
 import { FullPreviewModal, ImageChangeModal } from './sections/Modals';
+import { ProgrammaticWizard } from './sections/ProgrammaticWizard';
 
 // ============================================================================
 // ADMIN GENERATOR - Main Orchestrator
@@ -519,16 +520,25 @@ export function AdminGenerator({
 
                 {/* ===== BULK SEO MODE ===== */}
                 {state.genMode === 'programmatic' && (
-                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-600">
-                         <div className="bg-white p-12 rounded-2xl border border-slate-200 shadow-sm text-center space-y-6">
-                              <div className="w-16 h-16 rounded-xl bg-slate-950 flex items-center justify-center mx-auto shadow-lg"><Library className="w-8 h-8 text-white" /></div>
-                              <div>
-                                  <h2 className="text-xl font-black text-slate-950 tracking-tight">Bulk SEO Studio</h2>
-                                  <p className="text-slate-400 text-xs font-medium max-w-xs mx-auto">Generazione massiva di contenuti ottimizzati per silo semantici.</p>
-                              </div>
-                              <Button onClick={() => state.setWizardStep(1)} className="h-12 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest">Lancia Wizard Programmatico</Button>
-                         </div>
-                     </div>
+                    state.wizardStep > 0 ? (
+                        <ProgrammaticWizard 
+                            state={state} 
+                            generation={generation} 
+                            effectiveClientId={effectiveClientId} 
+                            getAuthHeaders={getAuthHeaders} 
+                        />
+                    ) : (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-600">
+                            <div className="bg-white p-12 rounded-2xl border border-slate-200 shadow-sm text-center space-y-6">
+                                <div className="w-16 h-16 rounded-xl bg-slate-950 flex items-center justify-center mx-auto shadow-lg"><Library className="w-8 h-8 text-white" /></div>
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-950 tracking-tight">Bulk SEO Studio</h2>
+                                    <p className="text-slate-400 text-xs font-medium max-w-xs mx-auto">Generazione massiva di contenuti ottimizzati per silo semantici.</p>
+                                </div>
+                                <Button onClick={() => state.setWizardStep(1)} className="h-12 px-10 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest">Lancia Wizard Programmatico</Button>
+                            </div>
+                        </div>
+                    )
                 )}
             </div>
 
