@@ -215,8 +215,20 @@ export function useGeneratorState({ client, effectiveClientId, externalMode, ini
     // Load client config
     useEffect(() => {
         if (clientConfig.content_strategy) setContentStrategy(prev => ({ ...prev, ...clientConfig.content_strategy }));
-        if (clientConfig.advanced_prompt) setAdvancedPrompt(clientConfig.advanced_prompt);
-        if (clientConfig.keywords) setKeywords(clientConfig.keywords);
+        
+        if (clientConfig.advanced_prompt) {
+            if (typeof clientConfig.advanced_prompt === 'object') {
+                setAdvancedPrompt(clientConfig.advanced_prompt.secondo_livello_prompt || '');
+            } else {
+                setAdvancedPrompt(clientConfig.advanced_prompt);
+            }
+        }
+
+        if (clientConfig.keyword_combinations) {
+            setKeywords(clientConfig.keyword_combinations);
+        } else if (clientConfig.keywords) {
+            setKeywords(clientConfig.keywords);
+        }
         if (clientConfig.automation) setAutomation(clientConfig.automation);
         if (clientConfig.gsc?.site_url) setGscSite(clientConfig.gsc.site_url);
         if (clientConfig.programmatic) {

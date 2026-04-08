@@ -34,8 +34,10 @@ export function useArticleGeneration(state, { effectiveClientId, getAuthHeaders,
             const payload = {
                 ...currentConfig,
                 content_strategy: state.contentStrategy,
-                advanced_prompt: state.advancedPrompt,
-                keywords: state.keywords,
+                advanced_prompt: {
+                    secondo_livello_prompt: state.advancedPrompt
+                },
+                keyword_combinations: state.keywords,
                 automation: state.automation,
                 programmatic: {
                     ...currentConfig.programmatic,
