@@ -1229,7 +1229,9 @@ async def get_wp_id_by_url(url: str, username: str, password: str, target_url: s
                             "id": results[0]["id"], 
                             "type": "page" if wp_type == "pages" else "post"
                         }
-            except Exception:
+            except Exception as e:
+                import logging
+                logging.getLogger("server").error(f"Errore WP discovery ({wp_type}): {e}")
                 continue
         
         return None

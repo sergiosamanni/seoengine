@@ -159,7 +159,7 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
                     wp_type = discovery["type"]
 
             if not post_id:
-                raise HTTPException(status_code=400, detail="post_id o url richiesto")
+                raise HTTPException(status_code=400, detail="Impossibile trovare l'ID WordPress per questo URL. Verifica che l'articolo esista e sia indicizzato.")
             
             post = await get_wordpress_post(
                 url=wp_config.get("url_api"),
