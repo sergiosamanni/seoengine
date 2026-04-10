@@ -13,6 +13,13 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    // If it's a ChunkLoadError (caused by Vercel deployments invalidating old cached chunks),
+    // we silently auto-reload the page to fetch the new code chunks instead of showing the red error screen.
+    if (error?.name === 'ChunkLoadError' || window.location.hash.includes('ChunkLoadError') || error?.message?.includes('Loading chunk')) {
+        console.warn("ChunkLoadError detected. Forcing a hard reload to get the latest app version.");
+        window.location.reload(true);
+        return;
+    }
     console.error("Generator Critical Error:", error, errorInfo);
   }
 
