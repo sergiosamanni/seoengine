@@ -177,27 +177,46 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
             url_target = payload.get("url")
             wp_type = payload.get("wp_type", "post")
             
-            if not post_id and url_target:
-                # 1. Local DB search
-                from urllib.parse import urlparse
-                parsed = urlparse(url_target)
-                slug = parsed.path.strip("/").split("/")[-1]
-                if slug:
-                    local_art = await db.articles.find_one({"client_id": client_id, "wordpress_link": {"$regex": slug}}, {"wordpress_post_id": 1})
-                    if local_art and local_art.get("wordpress_post_id"):
-                        post_id = local_art["wordpress_post_id"]
+            # ALWAYS check local database first to bypass SiteGround limitations
+            if url_target or post_id:
+                query = {"client_id": client_id}
+                if url_target:
+                    from urllib.parse import urlparse
+                    parsed = urlparse(url_target)
+                    slug = parsed.path.strip("/").split("/")[-1]
+                    if slug:
+                        query["wordpress_link"] = {"$regex": slug}
+                if post_id and "wordpress_link" not in query:
+                    query["wordpress_post_id"] = str(post_id)
                 
-                # 2. Try discovery if local search fails
-                if not post_id:
-                    discovery = await get_wp_id_by_url(
-                        url=wp_config.get("url_api"),
-                        username=wp_config.get("utente"),
-                        password=wp_config.get("password_applicazione"),
-                        target_url=url_target
-                    )
-                    if discovery:
-                        post_id = discovery["id"]
-                        wp_type = discovery["type"]
+                if "wordpress_link" in query or "wordpress_post_id" in query:
+                    local_art = await db.articles.find_one(query)
+                    if local_art:
+                        if not post_id and local_art.get("wordpress_post_id"):
+                            post_id = local_art["wordpress_post_id"]
+                        
+                        # Return local database copy immediately, bypassing SiteGround completely
+                        if local_art.get("contenuto_html") or local_art.get("contenuto"):
+                            logger.info(f"GET_WP_POST: Bypassing SG API. Returned local DB article for target {url_target or post_id}")
+                            post_data = {
+                                "id": str(post_id) if post_id else "0",
+                                "title": local_art.get("titolo", "Titolo Sconosciuto"),
+                                "content": local_art.get("contenuto_html") or local_art.get("contenuto", ""),
+                                "link": local_art.get("wordpress_link", url_target)
+                            }
+                            return {"status": "success", "post": post_data, "wp_type": wp_type, "method": "local_db"}
+            
+            if not post_id and url_target:
+                # Try discovery if local search fails
+                discovery = await get_wp_id_by_url(
+                    url=wp_config.get("url_api"),
+                    username=wp_config.get("utente"),
+                    password=wp_config.get("password_applicazione"),
+                    target_url=url_target
+                )
+                if discovery:
+                    post_id = discovery["id"]
+                    wp_type = discovery["type"]
 
             if not post_id:
                 # If we can't discover the ID but have the URL, try HTML scrape directly
