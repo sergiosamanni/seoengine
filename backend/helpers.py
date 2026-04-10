@@ -1165,7 +1165,7 @@ async def get_wordpress_post(url: str, username: str, password: str, post_id: st
         endpoint = f"{base_url}/pages/{post_id}" if wp_type == "page" else f"{url}/{post_id}"
         try:
             response = await http_client.get(endpoint, auth=(username, password), timeout=15.0)
-            if response.status_code == 200:
+            if response.status_code in [200, 201, 202]:
                 p = response.json()
                 return {
                     "id": p["id"],
@@ -1221,9 +1221,9 @@ async def get_wp_id_by_url(url: str, username: str, password: str, target_url: s
             try:
                 endpoint = f"{base_url}/{wp_type}"
                 resp = await http_client.get(endpoint, auth=(username, password), params={"slug": slug}, timeout=15.0)
-                if resp.status_code == 200:
+                if resp.status_code in [200, 201, 202]:
                     results = resp.json()
-                    if results:
+                    if isinstance(results, list) and results:
                         # Return both ID and mapping to our internal 'post'/'page' strings
                         return {
                             "id": results[0]["id"], 
