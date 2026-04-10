@@ -1160,34 +1160,124 @@ async def search_wordpress_post(url: str, username: str, password: str, query: s
         return []
 
 
-async def get_wordpress_post(url: str, username: str, password: str, post_id: str, wp_type: str = "post") -> dict:
-    """Get full content and metadata of a specific post/page."""
-    async with httpx.AsyncClient() as http_client:
+async def get_wordpress_post(url: str, username: str, password: str, post_id: str, wp_type: str = "post", target_url: str = None) -> dict:
+    """Get full content and metadata of a specific post/page.
+    
+    Handles SiteGround anti-bot protection (202 captcha) with:
+    1. Retry with exponential backoff on the REST API
+    2. HTML scraping fallback from the public page URL
+    """
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+    }
+    
+    async with httpx.AsyncClient(verify=False, follow_redirects=True) as http_client:
         base_url = url.replace("/posts", "")
         endpoint = f"{base_url}/pages/{post_id}" if wp_type == "page" else f"{url}/{post_id}"
-        try:
-            response = await http_client.get(
-                endpoint, 
-                auth=(username, password),
-                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
-                timeout=15.0
-            )
-            if response.status_code in [200, 201, 202]:
-                # Might be 202 HTML challenge, so fail safely if not JSON
-                try:
-                    p = response.json()
-                except Exception:
-                    logger.warning(f"Error parsing JSON from {endpoint}. Got status {response.status_code}.")
-                    return None
+        
+        # --- STRATEGY 1: REST API with retry ---
+        for attempt in range(3):
+            try:
+                response = await http_client.get(
+                    endpoint, 
+                    auth=(username, password),
+                    headers=headers,
+                    timeout=20.0
+                )
+                
+                if response.status_code in [200, 201]:
+                    try:
+                        p = response.json()
+                        return {
+                            "id": p["id"],
+                            "title": p["title"]["rendered"],
+                            "content": p["content"]["rendered"],
+                            "link": p["link"]
+                        }
+                    except Exception:
+                        logger.warning(f"JSON parse error from {endpoint} (status {response.status_code})")
+                
+                elif response.status_code == 202:
+                    logger.warning(f"SiteGround 202 captcha on attempt {attempt+1}/3 for WP {wp_type} {post_id}. Retrying...")
+                    await asyncio.sleep(2 ** attempt)  # 1s, 2s, 4s backoff
+                    continue
+                else:
+                    logger.warning(f"WP API returned {response.status_code} for {endpoint}")
+                    break
                     
-                return {
-                    "id": p["id"],
-                    "title": p["title"]["rendered"],
-                    "content": p["content"]["rendered"],
-                    "link": p["link"]
-                }
-        except Exception as e:
-            logger.warning(f"Error fetching WP post {post_id}: {e}")
+            except Exception as e:
+                logger.warning(f"WP API error (attempt {attempt+1}): {e}")
+                if attempt < 2:
+                    await asyncio.sleep(1)
+        
+        # --- STRATEGY 2: Scrape public page HTML as fallback ---
+        if target_url:
+            logger.info(f"Falling back to HTML scrape for {target_url}")
+            try:
+                html_resp = await http_client.get(
+                    target_url,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                        "Accept": "text/html,application/xhtml+xml",
+                    },
+                    timeout=20.0
+                )
+                if html_resp.status_code == 200 and "<html" in html_resp.text.lower():
+                    from bs4 import BeautifulSoup
+                    soup = BeautifulSoup(html_resp.text, "html.parser")
+                    
+                    # Extract title
+                    title_tag = soup.find("h1")
+                    title_text = title_tag.get_text(strip=True) if title_tag else ""
+                    if not title_text:
+                        og_title = soup.find("meta", property="og:title")
+                        title_text = og_title["content"] if og_title else "Articolo"
+                    
+                    # Extract main content - try common WordPress content selectors
+                    content_html = ""
+                    for selector in [
+                        "article .entry-content",
+                        ".entry-content", 
+                        "article .post-content",
+                        ".post-content",
+                        "article .content",
+                        ".elementor-widget-theme-post-content",
+                        "main article",
+                        "article",
+                        ".page-content",
+                    ]:
+                        content_el = soup.select_one(selector)
+                        if content_el and len(content_el.get_text(strip=True)) > 100:
+                            content_html = str(content_el)
+                            break
+                    
+                    if content_html:
+                        # Extract post ID from body class if possible
+                        body = soup.find("body")
+                        extracted_id = post_id
+                        if body and body.get("class"):
+                            import re as _re
+                            cls_str = " ".join(body.get("class", []))
+                            id_match = _re.search(r'(?:post|page)(?:-id)?-(\d+)', cls_str)
+                            if id_match:
+                                extracted_id = id_match.group(1)
+                                
+                        logger.info(f"HTML fallback successful for {target_url} (title: {title_text[:50]})")
+                        return {
+                            "id": int(extracted_id) if str(extracted_id).isdigit() else post_id,
+                            "title": {"rendered": title_text},
+                            "content": {"rendered": content_html},
+                            "link": target_url,
+                            "_fallback": "html_scrape"
+                        }
+                    else:
+                        logger.warning(f"HTML fallback: no content found in {target_url}")
+            except Exception as html_err:
+                logger.error(f"HTML fallback failed for {target_url}: {html_err}")
+        
         return None
 
 
@@ -1217,7 +1307,7 @@ async def fetch_sitemap(sitemap_url: str) -> List[str]:
 
 async def get_wp_id_by_url(url: str, username: str, password: str, target_url: str) -> Optional[Dict[str, Any]]:
     """Try to find the WordPress ID and type (post/page) given its public URL."""
-    async with httpx.AsyncClient(verify=False) as http_client:
+    async with httpx.AsyncClient(verify=False, follow_redirects=True) as http_client:
         base_url = url.replace("/posts", "")
         # Extract slug from URL
         parsed = urlparse(target_url)
@@ -1229,61 +1319,74 @@ async def get_wp_id_by_url(url: str, username: str, password: str, target_url: s
             # Maybe it's the homepage?
             return None
 
-        # Try to find by slug first
+        # Try to find by slug first — with retry for SiteGround 202
+        api_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "application/json",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache"
+        }
+        
         for wp_type in ["posts", "pages"]:
-            try:
-                endpoint = f"{base_url}/{wp_type}"
-                resp = await http_client.get(
-                    endpoint, 
-                    auth=(username, password), 
-                    params={"slug": slug}, 
-                    headers={
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                        "Cache-Control": "no-cache",
-                        "Pragma": "no-cache"
-                    },
-                    timeout=15.0
-                )
-                
-                # Check 200 or 201 (202 is often empty caching challenges)
-                if resp.status_code in [200, 201]:
-                    try:
-                        results = resp.json()
-                        if isinstance(results, list) and results:
-                            return {
-                                "id": results[0]["id"], 
-                                "type": "page" if wp_type == "pages" else "post"
-                            }
-                    except Exception as json_err:
-                        import logging
-                        logging.getLogger("server").error(f"Errore WP JSON decode ({wp_type}): {json_err}. Body: {resp.text[:200]}")
+            endpoint = f"{base_url}/{wp_type}"
+            
+            for attempt in range(3):
+                try:
+                    resp = await http_client.get(
+                        endpoint, 
+                        auth=(username, password), 
+                        params={"slug": slug}, 
+                        headers=api_headers,
+                        timeout=20.0
+                    )
+                    
+                    if resp.status_code in [200, 201]:
+                        try:
+                            results = resp.json()
+                            if isinstance(results, list) and results:
+                                return {
+                                    "id": results[0]["id"], 
+                                    "type": "page" if wp_type == "pages" else "post"
+                                }
+                        except Exception as json_err:
+                            logger.error(f"Errore WP JSON decode ({wp_type}): {json_err}. Body: {resp.text[:200]}")
+                        break  # JSON was valid but no results — move to next wp_type
+                        
+                    elif resp.status_code == 202:
+                        logger.warning(f"SiteGround 202 ({wp_type}) attempt {attempt+1}/3 for slug '{slug}'. Retrying...")
+                        if attempt < 2:
+                            await asyncio.sleep(2 ** attempt)
                         continue
-                elif resp.status_code == 202:
-                    import logging
-                    logging.getLogger("server").warning(f"Ricevuto 202 Accepted da WP ({wp_type}), possibile caching in corso. Body: {resp.text[:200]}")
-            except Exception as e:
-                import logging
-                logging.getLogger("server").error(f"Errore WP discovery ({wp_type}): {e}")
-                continue
+                    else:
+                        break  # Other status codes, move to next wp_type
+                        
+                except Exception as e:
+                    logger.error(f"Errore WP discovery ({wp_type}, attempt {attempt+1}): {e}")
+                    if attempt < 2:
+                        await asyncio.sleep(1)
+                    continue
                 
         # --- HTML FALLBACK ---
         # SiteGround Anti-Bot often blocks /wp-json/?slug= queries, but we can extract the ID from the frontend HTML classes!
+        logger.info(f"WP API blocked, trying HTML fallback for {target_url}")
         try:
             html_resp = await http_client.get(
                 target_url, 
-                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
-                timeout=15.0
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"},
+                timeout=20.0
             )
             if html_resp.status_code == 200:
                 import re
                 # Match class="... post-1234 ..." or page-id-1234
                 match = re.search(r'class=\"[^\"]*(?:post|page(?:-id)?)-(\d+)', html_resp.text)
                 if match:
-                    # We assume 'post' or 'page' depending on the matched string (usually post-XXXX works for both, but backend handles it transparently when we pass 'post')
-                    return {"id": int(match.group(1)), "type": "page" if "page" in match.group(0) else "post"}
+                    detected_type = "page" if "page" in match.group(0) else "post"
+                    logger.info(f"HTML fallback found {detected_type} ID {match.group(1)} for {target_url}")
+                    return {"id": int(match.group(1)), "type": detected_type}
+                else:
+                    logger.warning(f"HTML fallback: no post/page ID found in body class for {target_url}")
         except Exception as html_err:
-            import logging
-            logging.getLogger("server").error(f"Fallback HTML discovery failed: {html_err}")
+            logger.error(f"Fallback HTML discovery failed: {html_err}")
             
         return None
 

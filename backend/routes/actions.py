@@ -159,6 +159,18 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
                     wp_type = discovery["type"]
 
             if not post_id:
+                # If we can't discover the ID but have the URL, try HTML scrape directly
+                if url_target:
+                    post = await get_wordpress_post(
+                        url=wp_config.get("url_api"),
+                        username=wp_config.get("utente"),
+                        password=wp_config.get("password_applicazione"),
+                        post_id="0",  # dummy ID, will use HTML fallback
+                        wp_type=wp_type,
+                        target_url=url_target
+                    )
+                    if post:
+                        return {"status": "success", "post": post, "wp_type": wp_type, "method": "html_fallback"}
                 raise HTTPException(status_code=400, detail="Impossibile trovare l'ID WordPress per questo URL. Verifica che l'articolo esista e sia indicizzato.")
             
             post = await get_wordpress_post(
@@ -166,10 +178,18 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
                 username=wp_config.get("utente"),
                 password=wp_config.get("password_applicazione"),
                 post_id=post_id,
-                wp_type=wp_type
+                wp_type=wp_type,
+                target_url=url_target
             )
             if post:
-                return {"status": "success", "post": post, "wp_type": wp_type}
+                # Normalize response: HTML fallback returns nested dicts, API returns strings
+                normalized_post = {
+                    "id": post.get("id"),
+                    "title": post["title"]["rendered"] if isinstance(post.get("title"), dict) else post.get("title", ""),
+                    "content": post["content"]["rendered"] if isinstance(post.get("content"), dict) else post.get("content", ""),
+                    "link": post.get("link", url_target or "")
+                }
+                return {"status": "success", "post": normalized_post, "wp_type": wp_type}
             else:
                 raise HTTPException(status_code=404, detail=f"{wp_type} non trovato")
 

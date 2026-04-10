@@ -225,7 +225,7 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
             
             return (
                 <div className="space-y-4">
-                    <div className="whitespace-pre-wrap break-words">
+                    <div className="whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                         {parts.map((p, i) => {
                             if (p.startsWith('**') && p.endsWith('**')) {
                                 return <strong key={i} className="font-extrabold text-slate-900">{p.slice(2, -2)}</strong>;
@@ -299,7 +299,7 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                 )}
 
                                 {actionData.type === 'GET_SITEMAP' && (
-                                    <div className="text-[10px] text-slate-600 truncate">
+                                    <div className="text-[10px] text-slate-600 break-all">
                                         Analizza: <strong>{actionData.payload.url || "Sitemap predefinita"}</strong>
                                     </div>
                                 )}
@@ -311,13 +311,13 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                 )}
 
                                 {actionData.type === 'GET_WP_POST' && (
-                                    <div className="text-[10px] text-slate-600 truncate">
+                                    <div className="text-[10px] text-slate-600 break-all">
                                         Analizza: <strong>{actionData.payload.url || actionData.payload.post_id}</strong>
                                     </div>
                                 )}
 
                                 {actionData.type === 'TRIGGER_FRESHNESS' && (
-                                    <div className="text-[10px] text-slate-600 truncate">
+                                    <div className="text-[10px] text-slate-600 break-all">
                                         Target: <strong>{actionData.payload.url}</strong>
                                     </div>
                                 )}
@@ -482,7 +482,7 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                     <div className={`h-6 w-6 rounded-md shrink-0 flex items-center justify-center ${m.role === 'user' ? 'bg-slate-100 text-slate-400' : 'bg-slate-900 text-white'}`}>
                                         {m.role === 'user' ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
                                     </div>
-                                    <div className={`p-3 rounded-2xl text-[11px] leading-relaxed transition-all break-words overflow-hidden min-w-0 ${m.role === 'user' ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-700 font-medium'}`}>
+                                    <div className={`p-3 rounded-2xl text-[11px] leading-relaxed transition-all min-w-0 ${m.role === 'user' ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-700 font-medium'}`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                                         {renderMessageContent(m.content, idx)}
                                     </div>
                                 </div>
