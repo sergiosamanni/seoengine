@@ -73,6 +73,16 @@ async def app_root():
 async def app_health_check():
     return {"status": "healthy"}
 
+@app.get("/api/system/ip")
+async def app_system_ip():
+    import httpx
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get("https://api.ipify.org")
+            return {"ip": resp.text}
+    except Exception as e:
+        return {"error": str(e)}
+
 app.include_router(api_router)
 
 
