@@ -1149,7 +1149,9 @@ async def search_wordpress_post(url: str, username: str, password: str, query: s
         try:
             response = await http_client.get(
                 endpoint, auth=(username, password),
-                params={"search": query, "per_page": 5}, timeout=15.0
+                params={"search": query, "per_page": 5}, 
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
+                timeout=15.0
             )
             if response.status_code == 200:
                 return [{"id": p["id"], "title": p["title"]["rendered"], "link": p["link"]} for p in response.json()]
@@ -1164,9 +1166,20 @@ async def get_wordpress_post(url: str, username: str, password: str, post_id: st
         base_url = url.replace("/posts", "")
         endpoint = f"{base_url}/pages/{post_id}" if wp_type == "page" else f"{url}/{post_id}"
         try:
-            response = await http_client.get(endpoint, auth=(username, password), timeout=15.0)
+            response = await http_client.get(
+                endpoint, 
+                auth=(username, password),
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
+                timeout=15.0
+            )
             if response.status_code in [200, 201, 202]:
-                p = response.json()
+                # Might be 202 HTML challenge, so fail safely if not JSON
+                try:
+                    p = response.json()
+                except Exception:
+                    logger.warning(f"Error parsing JSON from {endpoint}. Got status {response.status_code}.")
+                    return None
+                    
                 return {
                     "id": p["id"],
                     "title": p["title"]["rendered"],
@@ -1220,7 +1233,13 @@ async def get_wp_id_by_url(url: str, username: str, password: str, target_url: s
         for wp_type in ["posts", "pages"]:
             try:
                 endpoint = f"{base_url}/{wp_type}"
-                resp = await http_client.get(endpoint, auth=(username, password), params={"slug": slug}, timeout=15.0)
+                resp = await http_client.get(
+                    endpoint, 
+                    auth=(username, password), 
+                    params={"slug": slug}, 
+                    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
+                    timeout=15.0
+                )
                 if resp.status_code in [200, 201, 202]:
                     results = resp.json()
                     if isinstance(results, list) and results:
