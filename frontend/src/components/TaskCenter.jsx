@@ -21,7 +21,10 @@ export const TaskCenter = ({ getAuthHeaders, isAdmin }) => {
 
     const fetchActiveJobs = useCallback(async () => {
         try {
-            const res = await axios.get(`${API}/jobs/active`, { headers: getAuthHeaders() });
+            const headers = getAuthHeaders();
+            if (!headers || !headers.Authorization) return; // Skip if no auth yet
+            
+            const res = await axios.get(`${API}/jobs/active`, { headers });
             const currentJobs = res.data.jobs || [];
             
             // Check for new completions to trigger toast
@@ -39,6 +42,8 @@ export const TaskCenter = ({ getAuthHeaders, isAdmin }) => {
 
             setJobs(currentJobs);
         } catch (e) {
+            // Silently ignore 401/403 on polling (token expired or not ready)
+            if (e?.response?.status === 401 || e?.response?.status === 403) return;
             console.error("Error fetching background jobs:", e);
         }
     }, [getAuthHeaders]);
