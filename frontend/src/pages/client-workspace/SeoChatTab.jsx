@@ -521,17 +521,29 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                     </div>
 
                     <form onSubmit={handleSendMessage} className="relative">
-                        <Input
-                            placeholder="Domanda allo Strategist..."
+                        <textarea
+                            placeholder="Domanda allo Strategist... (Shift+Invio per inviare)"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendMessage(e);
+                                }
+                            }}
                             disabled={!currentSession || loading}
-                            className="h-9 text-[11px] pl-4 pr-10 bg-slate-50 border-slate-100 rounded-lg focus-visible:ring-slate-900/5 focus-visible:border-slate-300 transition-all shadow-none"
+                            rows={1}
+                            onInput={(e) => {
+                                e.target.style.height = 'auto';
+                                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                            }}
+                            className="w-full min-h-[36px] max-h-[120px] text-[11px] pl-4 pr-10 py-2 bg-slate-50 border border-slate-100 rounded-lg focus:ring-1 focus:ring-slate-900/5 focus:border-slate-300 transition-all shadow-none resize-none outline-none"
+                            style={{ lineHeight: '1.5' }}
                         />
                         <Button 
                             type="submit" 
                             disabled={!currentSession || loading || !input.trim()}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md bg-slate-900 hover:bg-slate-800 text-white p-0 shadow-none"
+                            className="absolute right-1 bottom-1.5 h-7 w-7 rounded-md bg-slate-900 hover:bg-slate-800 text-white p-0 shadow-none"
                         >
                             <Send className="w-3 h-3" />
                         </Button>
