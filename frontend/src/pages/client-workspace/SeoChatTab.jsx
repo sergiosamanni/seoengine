@@ -4,7 +4,7 @@ import { API_URL as API } from '../../config';
 import { 
     Send, Loader2, User, Bot, Sparkles, MessageCircle, 
     Plus, History, Maximize2, Hash, FileText, BarChart2,
-    PieChart, Zap, X, AlertCircle, CheckCircle2, ArrowRight
+    PieChart, Zap, X, AlertCircle, CheckCircle2, ArrowRight, ExternalLink
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
@@ -155,10 +155,46 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
             return copy;
         });
 
+        const executePromise = axios.post(`${API}/chat/action/execute`, { ...action, client_id: clientId }, { headers: getAuthHeaders() });
+
+        toast.promise(executePromise, {
+            loading: (
+                <div className="flex flex-col gap-1">
+                    <span className="font-bold">Esecuzione in background...</span>
+                    <span className="text-xs text-slate-500">Stiamo applicando le modifiche su WordPress.</span>
+                </div>
+            ),
+            success: (data) => {
+                const res = data.data;
+                const targetUrl = action.payload?.url;
+                
+                if (action.type === 'FIX_CONTENT' || action.type === 'PUBLISH_ARTICLE') {
+                    return (
+                        <div className="flex flex-col gap-2 w-full">
+                            <span className="font-bold">Modifica applicata con successo!</span>
+                            <span className="text-xs text-slate-500">{res.message || "I contenuti sono online."}</span>
+                            {targetUrl && (
+                                <a 
+                                    href={targetUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="mt-1 text-xs text-blue-500 hover:text-blue-600 underline flex items-center gap-1 bg-blue-50 p-2 rounded-lg border border-blue-100 w-fit"
+                                >
+                                    <ExternalLink className="w-3 h-3" /> Visualizza la pagina live
+                                </a>
+                            )}
+                        </div>
+                    );
+                }
+                return res.message || "Azione completata con successo";
+            },
+            error: (err) => {
+                return err.response?.data?.detail || "Errore durante l'esecuzione dell'azione";
+            }
+        });
+
         try {
-            const res = await axios.post(`${API}/chat/action/execute`, { ...action, client_id: clientId }, { headers: getAuthHeaders() });
-            
-            toast.success(res.data.message || "Azione eseguita");
+            const res = await executePromise;
             
             setMessages(prev => {
                 const copy = [...prev];
@@ -187,7 +223,6 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                 handleSendMessage(null, `[SYSTEM_RESULT] ${resultsSummary}\n\nAnalizza questi dati e procedi con la richiesta originale.`);
             }
         } catch (e) {
-            toast.error("Errore azione");
             setMessages(prev => {
                 const copy = [...prev];
                 if (copy[messageIndex]) {
