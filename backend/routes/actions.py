@@ -86,8 +86,9 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
             new_content = payload.get("new_content") or payload.get("content")
             new_title = payload.get("title")
             wp_type = payload.get("wp_type", "post")
+            suggestion = payload.get("suggestion", "")
             
-            logger.info(f"FIX_CONTENT payload keys: {list(payload.keys())}")
+            logger.info(f"FIX_CONTENT: url={url_target}, post_id={post_id}, has_content={bool(new_content)}, has_title={bool(new_title)}, suggestion={suggestion[:80]}")
 
             if not post_id and url_target:
                 # Try to discover the ID and TYPE from the URL
@@ -100,14 +101,24 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
                 if discovery:
                     post_id = discovery["id"]
                     wp_type = discovery["type"]
-                    logger.info(f"Discovered WP ID {post_id} ({wp_type}) for URL {url_target}")
+                    logger.info(f"FIX_CONTENT: Discovered WP ID {post_id} ({wp_type}) for URL {url_target}")
+                else:
+                    logger.error(f"FIX_CONTENT: Could not discover WP ID for URL {url_target}")
 
-            if not post_id or (not new_content and not new_title):
-                missing = []
-                if not post_id: missing.append("post_id/url")
-                if not new_content and not new_title: missing.append("new_content o title")
-                raise HTTPException(status_code=400, detail=f"Parametri richiesti mancanti: {', '.join(missing)}")
+            if not post_id:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Impossibile trovare l'ID WordPress per {url_target or 'URL mancante'}. SiteGround potrebbe bloccare le richieste API. Riprova tra qualche secondo."
+                )
+            
+            if not new_content and not new_title:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="L'AI non ha fornito il contenuto aggiornato (new_content) né un nuovo titolo. Chiedi all'esperto di generare l'azione FIX_CONTENT completa."
+                )
 
+            logger.info(f"FIX_CONTENT: Updating WP {wp_type} {post_id} (content_len={len(new_content) if new_content else 0})")
+            
             success = await update_wordpress_post(
                 url=wp_config.get("url_api"),
                 username=wp_config.get("utente"),
@@ -122,10 +133,18 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
                 # Trigger automatic indexing if we have a URL
                 if url_target:
                     asyncio.create_task(ArticleService._request_gsc_indexing(client_id, url_target))
-                return {"status": "success", "message": f"Contenuto aggiornato su WordPress ({wp_type})", "post_id": post_id}
+                return {
+                    "status": "success", 
+                    "message": f"Contenuto aggiornato su WordPress ({wp_type} ID: {post_id})", 
+                    "post_id": post_id,
+                    "suggestion": suggestion
+                }
             else:
-                logger.error(f"Failed to update WP {wp_type} {post_id}")
-                raise HTTPException(status_code=500, detail="Errore nell'aggiornamento WordPress")
+                logger.error(f"FIX_CONTENT FAILED: WP {wp_type} {post_id} - SiteGround may be blocking")
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Errore nell'aggiornamento WordPress ({wp_type} ID: {post_id}). SiteGround potrebbe bloccare le richieste. Riprova tra qualche secondo."
+                )
             
         elif action_type == "SEARCH_WP":
             query = payload.get("query")

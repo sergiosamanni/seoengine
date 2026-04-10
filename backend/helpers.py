@@ -1392,8 +1392,11 @@ async def get_wp_id_by_url(url: str, username: str, password: str, target_url: s
 
 
 async def update_wordpress_post(url: str, username: str, password: str, post_id: str, content: str, wp_type: str = "post", title: str = None) -> bool:
-    """Update an existing WordPress post/page."""
-    async with httpx.AsyncClient(verify=False) as http_client:
+    """Update an existing WordPress post/page.
+    
+    Handles SiteGround anti-bot (202 captcha) with retry and backoff.
+    """
+    async with httpx.AsyncClient(verify=False, follow_redirects=True) as http_client:
         # Normalize the base URL - ensure it refers to the root of the v2 API
         base_v2 = url
         for suffix in ["/posts", "/pages", "/"]:
@@ -1404,7 +1407,7 @@ async def update_wordpress_post(url: str, username: str, password: str, post_id:
         plural_type = "pages" if wp_type == "page" else "posts"
         endpoint = f"{base_v2}/{plural_type}/{post_id}"
         
-        logger.debug(f"Attempting WP update on endpoint: {endpoint}")
+        logger.info(f"WP Update: {wp_type} ID {post_id} on {endpoint}")
         
         post_data = {}
         if content:
@@ -1412,17 +1415,41 @@ async def update_wordpress_post(url: str, username: str, password: str, post_id:
             post_data["content"] = gutenberg_content
         if title:
             post_data["title"] = title
+        
+        if not post_data:
+            logger.error("WP Update: no content or title provided")
+            return False
             
-        for attempt in range(3):
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+        }
+            
+        for attempt in range(4):
             try:
-                response = await http_client.post(endpoint, auth=(username, password), json=post_data, timeout=30.0)
+                response = await http_client.post(
+                    endpoint, 
+                    auth=(username, password), 
+                    json=post_data, 
+                    headers=headers,
+                    timeout=45.0
+                )
                 if response.status_code in [200, 201]:
+                    logger.info(f"WP Update SUCCESS: {wp_type} {post_id} updated")
                     return True
+                elif response.status_code == 202:
+                    # SiteGround captcha — retry with backoff
+                    logger.warning(f"SiteGround 202 on WP update (attempt {attempt+1}/4). Retrying...")
+                    await asyncio.sleep(2 ** attempt)
+                    continue
                 else:
-                    logger.warning(f"WP Update failed (attempt {attempt}) on {endpoint}: {response.status_code} - {response.text}")
+                    logger.warning(f"WP Update failed (attempt {attempt+1}/4) on {endpoint}: {response.status_code} - {response.text[:300]}")
             except Exception as e:
-                logger.error(f"WP Update error (attempt {attempt}): {e}")
-            await asyncio.sleep(1)
+                logger.error(f"WP Update error (attempt {attempt+1}/4): {e}")
+            await asyncio.sleep(2 ** attempt)
+        
+        logger.error(f"WP Update FAILED after 4 attempts for {wp_type} {post_id}")
         return False
 
 # ============== SYSTEM PROMPT BUILDER ==============
