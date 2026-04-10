@@ -1265,7 +1265,26 @@ async def get_wp_id_by_url(url: str, username: str, password: str, target_url: s
                 import logging
                 logging.getLogger("server").error(f"Errore WP discovery ({wp_type}): {e}")
                 continue
-        
+                
+        # --- HTML FALLBACK ---
+        # SiteGround Anti-Bot often blocks /wp-json/?slug= queries, but we can extract the ID from the frontend HTML classes!
+        try:
+            html_resp = await http_client.get(
+                target_url, 
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
+                timeout=15.0
+            )
+            if html_resp.status_code == 200:
+                import re
+                # Match class="... post-1234 ..." or page-id-1234
+                match = re.search(r'class=\"[^\"]*(?:post|page(?:-id)?)-(\d+)', html_resp.text)
+                if match:
+                    # We assume 'post' or 'page' depending on the matched string (usually post-XXXX works for both, but backend handles it transparently when we pass 'post')
+                    return {"id": int(match.group(1)), "type": "page" if "page" in match.group(0) else "post"}
+        except Exception as html_err:
+            import logging
+            logging.getLogger("server").error(f"Fallback HTML discovery failed: {html_err}")
+            
         return None
 
 
