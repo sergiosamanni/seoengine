@@ -210,11 +210,35 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
             let actions = [];
 
             actionMatches.forEach((match) => {
+                let raw = match[1];
                 try {
-                    const data = JSON.parse(match[1]);
+                    // Try naive parsing first
+                    const data = JSON.parse(raw);
                     actions.push(data);
                     displayContent = displayContent.replace(match[0], '').trim();
-                } catch (e) { console.error("Failed to parse action JSON:", e); }
+                } catch (e1) {
+                    try {
+                        // Advanced fallback: fix unescaped newlines/tabs inside string literals
+                        let fixed = "";
+                        let inString = false;
+                        let escapeNext = false;
+                        for (let i = 0; i < raw.length; i++) {
+                            const c = raw[i];
+                            if (escapeNext) { fixed += c; escapeNext = false; continue; }
+                            if (c === '\\') { fixed += c; escapeNext = true; continue; }
+                            if (c === '"') { inString = !inString; fixed += c; continue; }
+                            if (inString && c === '\n') { fixed += '\\n'; continue; }
+                            if (inString && c === '\r') { fixed += '\\r'; continue; }
+                            if (inString && c === '\t') { fixed += '\\t'; continue; }
+                            fixed += c;
+                        }
+                        const data = JSON.parse(fixed);
+                        actions.push(data);
+                        displayContent = displayContent.replace(match[0], '').trim();
+                    } catch (e2) {
+                        console.error("Failed to parse action JSON even after fix:", e2);
+                    }
+                }
             });
 
             // Simple parsing for bold **text**
