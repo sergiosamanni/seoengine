@@ -1237,17 +1237,30 @@ async def get_wp_id_by_url(url: str, username: str, password: str, target_url: s
                     endpoint, 
                     auth=(username, password), 
                     params={"slug": slug}, 
-                    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        "Cache-Control": "no-cache",
+                        "Pragma": "no-cache"
+                    },
                     timeout=15.0
                 )
-                if resp.status_code in [200, 201, 202]:
-                    results = resp.json()
-                    if isinstance(results, list) and results:
-                        # Return both ID and mapping to our internal 'post'/'page' strings
-                        return {
-                            "id": results[0]["id"], 
-                            "type": "page" if wp_type == "pages" else "post"
-                        }
+                
+                # Check 200 or 201 (202 is often empty caching challenges)
+                if resp.status_code in [200, 201]:
+                    try:
+                        results = resp.json()
+                        if isinstance(results, list) and results:
+                            return {
+                                "id": results[0]["id"], 
+                                "type": "page" if wp_type == "pages" else "post"
+                            }
+                    except Exception as json_err:
+                        import logging
+                        logging.getLogger("server").error(f"Errore WP JSON decode ({wp_type}): {json_err}. Body: {resp.text[:200]}")
+                        continue
+                elif resp.status_code == 202:
+                    import logging
+                    logging.getLogger("server").warning(f"Ricevuto 202 Accepted da WP ({wp_type}), possibile caching in corso. Body: {resp.text[:200]}")
             except Exception as e:
                 import logging
                 logging.getLogger("server").error(f"Errore WP discovery ({wp_type}): {e}")
