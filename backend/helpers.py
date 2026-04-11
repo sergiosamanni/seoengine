@@ -1720,10 +1720,10 @@ NOTA: La pillar page deve essere la risorsa definitiva sul web per questa keywor
     prompt += "\n=== REGOLE SEO ===\n"
     prompt += f"1. LUNGHEZZA: Minimo {lunghezza_target} parole\n"
     prompt += "2. PARAGRAFI: Max 3-4 righe\n"
-    prompt += "3. KEYWORD PRIMARIA: nel titolo H1, nei primi 100 caratteri, in almeno un H2\n"
-    prompt += "4. TITOLI H3: Inserisci tag H3 in modo naturale ed equilibrato per approfondire i paragrafi H2, seguendo uno sviluppo umano del discorso.\n"
+    prompt += "3. KEYWORD PRIMARIA: nel titolo H1 (sempre in MINUSCOLO tranne l'iniziale, NO TITLE CASE), nei primi 100 caratteri, in almeno un H2\n"
+    prompt += "4. TITOLI H3: Inserisci tag H3 in modo naturale ed equilibrato per approfondire i paragrafi H2. Tutti i titoli (H1, H2, H3) devono seguire lo stile frase (NO Title Case).\n"
     prompt += f"5. LOCALIZZAZIONE: Menziona la citta/zona target almeno 3-4 volte\n"
-    prompt += "6. CTA: una primaria, ripetuta 2-3 volte\n"
+    prompt += "6. CTA: una primaria, ripetuta 2-3 volte. DIVIETO ASSOLUTO DI 'Title Case' nei titoli.\n"
     
     prompt += "\n=== CALL TO ACTION ===\n"
     prompt += (cta_finale if cta_finale else 'Contattaci per maggiori informazioni') + "\n"

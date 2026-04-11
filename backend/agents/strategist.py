@@ -40,6 +40,7 @@ Regole:
 - Assicurati che i titoli siano accattivanti e in linea con il brand.
 - Per ogni articolo, genera un OUTLINE SEO ottimizzato (H1, H2, H3) con logica di silos tematici.
 - Per ogni articolo, includi una query di ricerca immagine in inglese per trovare una foto di stock adatta.
+- **REGOLE DI MAIUSCOLE**: NON usare MAI il "Title Case" per i titoli degli articoli (es. NON scrivere "Noleggio Auto A Roma"). Usa le maiuscole SOLAMENTE all'inizio del titolo o per i nomi propri. I titoli devono sembrare frasi naturali (es. "Noleggio auto a Roma: guida completa").
 
 Rispondi ESCLUSIVAMENTE con un JSON valido nel seguente formato:
 {{
@@ -147,6 +148,7 @@ Rispondi ESCLUSIVAMENTE con un JSON valido:
     }
   ]
 }
+REGOLE DI MAIUSCOLE: Per tutti i titoli dei cluster, NON usare mai il Title Case. Solo l'iniziale maiuscola.
 """
         user_prompt = f"""TOPIC PILLAR: {pillar_topic}
 
