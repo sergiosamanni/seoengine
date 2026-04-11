@@ -12,7 +12,7 @@ const FloatingSeoChat = () => {
 
     // Determina il client_id: se l'utente è client usa il suo id, 
     // se è admin usa il client selezionato
-    const clientId = client?.id || (user?.role === 'client' ? user.id : 'global');
+    const clientId = client?.id || (user?.role === 'client' ? user.client_ids?.[0] : 'global');
 
     if (!user) return null;
 

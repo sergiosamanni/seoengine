@@ -60,14 +60,16 @@ export const GeneratorPage = () => {
     return (isAdmin ? 'config' : 'generate');
   });
 
-  const effectiveClientId = routeClientId || client?.id;
+  const effectiveClientId = routeClientId || client?.id || (!isAdmin && user?.client_ids?.length > 0 ? user.client_ids[0] : null);
 
   // Diagnostics
   console.log("[GeneratorPage] State:", { activeTab, isAdmin, clientId: client?.id, effectiveClientId, routeClientId });
 
   useEffect(() => {
-    if (routeClientId) fetchClient(routeClientId);
-  }, [routeClientId]);
+    if (effectiveClientId && (!client || client.id !== effectiveClientId)) {
+        fetchClient(effectiveClientId);
+    }
+  }, [effectiveClientId, client?.id]);
 
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
