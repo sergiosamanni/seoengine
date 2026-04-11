@@ -115,14 +115,14 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
             setMessages(prev => [...prev, aiMsg]);
 
             // Auto-trigger read-only actions (supports multiple actions)
-            const actionMatches = [...aiMsg.content.matchAll(/\[ACTION:\s*({[\s\S]*?})\s*\]/g)];
-            if (actionMatches.length > 0) {
+            const actionsFound = extractActions(aiMsg.content);
+            if (actionsFound.length > 0) {
                 const autoTypes = ['GET_WP_POST', 'SEARCH_WP', 'GET_SITEMAP'];
                 let delay = 600;
                 
-                for (const match of actionMatches) {
+                for (const act of actionsFound) {
                     try {
-                        const actionData = JSON.parse(match[1]);
+                        const actionData = JSON.parse(act.json);
                         if (autoTypes.includes(actionData.type)) {
                             // Sequential trigger with slight offset for readability
                             setTimeout(() => {
@@ -130,7 +130,16 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                             }, delay);
                             delay += 1500; // Increase delay for subsequent actions
                         }
-                    } catch (e) { console.error("Auto-action parse error:", e); }
+                    } catch (e) { 
+                        const fixed = fixJson(act.json);
+                        try {
+                            const data = JSON.parse(fixed);
+                            if (autoTypes.includes(data.type)) {
+                                setTimeout(() => handleExecuteAction(data, messages.length + 1), delay);
+                                delay += 1500;
+                            }
+                        } catch(e2) { console.error("Auto-action parse error after fix:", e2); }
+                    }
                 }
             }
         } catch (e) {
@@ -237,39 +246,85 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
         }
     };
 
+    const fixJson = (raw) => {
+        let fixed = "";
+        let inString = false;
+        let escapeNext = false;
+        for (let i = 0; i < raw.length; i++) {
+            const c = raw[i];
+            if (escapeNext) { fixed += c; escapeNext = false; continue; }
+            if (c === '\\') { fixed += c; escapeNext = true; continue; }
+            if (c === '"') { inString = !inString; fixed += c; continue; }
+            if (inString && c === '\n') { fixed += '\\n'; continue; }
+            if (inString && c === '\r') { fixed += '\\r'; continue; }
+            if (inString && c === '\t') { fixed += '\\t'; continue; }
+            fixed += c;
+        }
+        return fixed;
+    };
+
+    const extractActions = (str) => {
+        const chunks = [];
+        let pos = 0;
+        if (!str || typeof str !== 'string') return chunks;
+        
+        while ((pos = str.indexOf('[ACTION:', pos)) !== -1) {
+            let start = pos;
+            let bracketLevel = 0;
+            let inString = false;
+            let escape = false;
+            let end = -1;
+            
+            for (let i = start; i < str.length; i++) {
+                const char = str[i];
+                if (escape) { escape = false; continue; }
+                if (char === '\\') { escape = true; continue; }
+                if (char === '"') { inString = !inString; continue; }
+                if (!inString) {
+                    if (char === '[') bracketLevel++;
+                    if (char === ']') {
+                        bracketLevel--;
+                        if (bracketLevel === 0) {
+                            end = i;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (end !== -1) {
+                const fullAction = str.substring(start, end + 1);
+                chunks.push({
+                    full: fullAction,
+                    json: fullAction.replace('[ACTION:', '').replace(/\]$/, '').trim()
+                });
+                pos = end + 1;
+            } else {
+                pos += 8;
+            }
+        }
+        return chunks;
+    };
+
     const renderMessageContent = (content, msgIndex) => {
         if (typeof content === 'string') {
             // Support multiple ACTIONS in one message
-            const actionMatches = [...content.matchAll(/\[ACTION:\s*({[\s\S]*?})\s*\]/g)];
+            const actionChunks = extractActions(content);
             let displayContent = content;
             let actions = [];
 
-            actionMatches.forEach((match) => {
-                let raw = match[1];
+            actionChunks.forEach((chunk) => {
                 try {
                     // Try naive parsing first
-                    const data = JSON.parse(raw);
+                    const data = JSON.parse(chunk.json);
                     actions.push(data);
-                    displayContent = displayContent.replace(match[0], '').trim();
+                    displayContent = displayContent.replace(chunk.full, '').trim();
                 } catch (e1) {
                     try {
-                        // Advanced fallback: fix unescaped newlines/tabs inside string literals
-                        let fixed = "";
-                        let inString = false;
-                        let escapeNext = false;
-                        for (let i = 0; i < raw.length; i++) {
-                            const c = raw[i];
-                            if (escapeNext) { fixed += c; escapeNext = false; continue; }
-                            if (c === '\\') { fixed += c; escapeNext = true; continue; }
-                            if (c === '"') { inString = !inString; fixed += c; continue; }
-                            if (inString && c === '\n') { fixed += '\\n'; continue; }
-                            if (inString && c === '\r') { fixed += '\\r'; continue; }
-                            if (inString && c === '\t') { fixed += '\\t'; continue; }
-                            fixed += c;
-                        }
+                        const fixed = fixJson(chunk.json);
                         const data = JSON.parse(fixed);
                         actions.push(data);
-                        displayContent = displayContent.replace(match[0], '').trim();
+                        displayContent = displayContent.replace(chunk.full, '').trim();
                     } catch (e2) {
                         console.error("Failed to parse action JSON even after fix:", e2);
                     }
@@ -381,32 +436,50 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                                     </div>
                                 )}
 
-                                <Button 
-                                    size="sm"
-                                    disabled={messages[msgIndex]?.executedActions?.[actionIdx] || messages[msgIndex]?.loadingActions?.[actionIdx]}
-                                    onClick={() => handleExecuteAction(actionData, msgIndex, actionIdx)}
-                                    className={`w-full h-8 text-[10px] font-bold uppercase tracking-tight gap-2 transition-all ${
-                                        messages[msgIndex]?.executedActions?.[actionIdx] 
-                                        ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-50 border border-emerald-100' 
-                                        : 'bg-slate-900 text-white hover:bg-slate-800'
-                                    }`}
-                                >
-                                    {messages[msgIndex]?.loadingActions?.[actionIdx] ? (
-                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : messages[msgIndex]?.executedActions?.[actionIdx] ? (
-                                        <CheckCircle2 className="w-3 h-3" />
-                                    ) : (
-                                        <Zap className="w-3 h-3" />
+                                <div className="flex gap-2">
+                                    <Button 
+                                        size="sm"
+                                        disabled={messages[msgIndex]?.executedActions?.[actionIdx] || messages[msgIndex]?.loadingActions?.[actionIdx]}
+                                        onClick={() => handleExecuteAction(actionData, msgIndex, actionIdx)}
+                                        className={`flex-1 h-8 text-[10px] font-bold uppercase tracking-tight gap-2 transition-all ${
+                                            messages[msgIndex]?.executedActions?.[actionIdx] 
+                                            ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-50 border border-emerald-100' 
+                                            : 'bg-slate-900 text-white hover:bg-slate-800'
+                                        }`}
+                                    >
+                                        {messages[msgIndex]?.loadingActions?.[actionIdx] ? (
+                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                        ) : messages[msgIndex]?.executedActions?.[actionIdx] ? (
+                                            <CheckCircle2 className="w-3 h-3" />
+                                        ) : (
+                                            <Zap className="w-3 h-3" />
+                                        )}
+                                        {messages[msgIndex]?.loadingActions?.[actionIdx] ? 'Esecuzione...' : 
+                                         messages[msgIndex]?.executedActions?.[actionIdx] ? 'Azione Completata' : 
+                                         actionData.type === 'PUBLISH_ARTICLE' ? 'Pubblica ORA su WP' :
+                                         actionData.type === 'SEARCH_WP' ? 'Cerca Ora' :
+                                         actionData.type === 'GET_WP_POST' ? 'Leggi Articolo' :
+                                         actionData.type === 'GET_SITEMAP' ? 'Leggi Sitemap' :
+                                         actionData.type === 'TRIGGER_FRESHNESS' ? 'Attiva Freshness' :
+                                         actionData.type === 'CREATE_ARTICLE' ? 'Crea Bozza Ora' : 'Applica Modifica'}
+                                    </Button>
+
+                                    {actionData.type === 'FIX_CONTENT' && (actionData.payload.new_content || actionData.payload.content) && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => {
+                                                const htmlContent = actionData.payload.new_content || actionData.payload.content;
+                                                navigator.clipboard.writeText(htmlContent);
+                                                toast.success("HTML copiato! Incollalo in WP se l'aggiornamento automatico fallisce.");
+                                            }}
+                                            className="h-8 px-3 border-slate-200 text-slate-500 hover:bg-slate-50"
+                                            title="Copia HTML manuale"
+                                        >
+                                            <FileText className="w-3 h-3" />
+                                        </Button>
                                     )}
-                                    {messages[msgIndex]?.loadingActions?.[actionIdx] ? 'Esecuzione...' : 
-                                     messages[msgIndex]?.executedActions?.[actionIdx] ? 'Azione Completata' : 
-                                     actionData.type === 'PUBLISH_ARTICLE' ? 'Pubblica ORA su WP' :
-                                     actionData.type === 'SEARCH_WP' ? 'Cerca Ora' :
-                                     actionData.type === 'GET_WP_POST' ? 'Leggi Articolo' :
-                                     actionData.type === 'GET_SITEMAP' ? 'Leggi Sitemap' :
-                                     actionData.type === 'TRIGGER_FRESHNESS' ? 'Attiva Freshness' :
-                                     actionData.type === 'CREATE_ARTICLE' ? 'Crea Bozza Ora' : 'Applica Modifica'}
-                                </Button>
+                                </div>
 
                                 {messages[msgIndex]?.executedActions?.[actionIdx] && messages[msgIndex]?.resultsActions?.[actionIdx] && (
                                     <div className="mt-3 p-2 bg-emerald-50 rounded-lg border border-emerald-100 space-y-2 animate-in fade-in slide-in-from-top-1">
