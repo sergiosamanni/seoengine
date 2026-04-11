@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { API_URL as API } from '../../../config';
 import { toast } from 'sonner';
@@ -110,7 +110,7 @@ export function useSerpAnalysis(state, { effectiveClientId, getAuthHeaders, clie
     };
 
     // --- GSC Insights (Memoized) ---
-    const [localDismissed, setLocalDismissed] = React.useState([]);
+    const [localDismissed, setLocalDismissed] = useState([]);
 
     const gscInsights = useMemo(() => {
         if (!gscData?.keywords) return [];
