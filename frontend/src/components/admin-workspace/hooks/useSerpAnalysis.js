@@ -110,6 +110,8 @@ export function useSerpAnalysis(state, { effectiveClientId, getAuthHeaders, clie
     };
 
     // --- GSC Insights (Memoized) ---
+    const [localDismissed, setLocalDismissed] = React.useState([]);
+
     const gscInsights = useMemo(() => {
         if (!gscData?.keywords) return [];
         const insights = [];
@@ -120,7 +122,7 @@ export function useSerpAnalysis(state, { effectiveClientId, getAuthHeaders, clie
             .sort((a,b) => b.impressions - a.impressions).slice(0, 2);
         if (lowCtr.length > 0) {
             const id = `ctr_opt_${lowCtr.map(k=>k.keyword).join('_')}`;
-            if (!dismissed.includes(id)) {
+            if (!dismissed.includes(id) && !localDismissed.includes(id)) {
                 insights.push({
                     id, type: 'optimization', title: 'CTR Optimization Support',
                     desc: `High visibility detected for "${lowCtr.map(k=>k.keyword).join(', ')}". Update Meta Titles to capture search intent.`,
@@ -133,7 +135,7 @@ export function useSerpAnalysis(state, { effectiveClientId, getAuthHeaders, clie
             .sort((a,b) => b.impressions - a.impressions).slice(0, 2);
         if (pageTwo.length > 0) {
             const id = `growth_${pageTwo.map(k=>k.keyword).join('_')}`;
-            if (!dismissed.includes(id)) {
+            if (!dismissed.includes(id) && !localDismissed.includes(id)) {
                 insights.push({
                     id, type: 'growth', title: 'Semantic Expansion Required',
                     desc: `"${pageTwo.map(k=>k.keyword).join(', ')}" are ranking on page 2. Create supporting cluster content to push into Top 10.`,
@@ -146,7 +148,7 @@ export function useSerpAnalysis(state, { effectiveClientId, getAuthHeaders, clie
             .sort((a,b) => b.impressions - a.impressions).slice(0, 1);
         if (emerging.length > 0) {
             const id = `trend_${emerging[0].keyword}`;
-            if (!dismissed.includes(id)) {
+            if (!dismissed.includes(id) && !localDismissed.includes(id)) {
                 insights.push({
                     id, type: 'trend', title: 'Market Trend Detected',
                     desc: `Growing interest in "${emerging[0].keyword}". Build an authoritative guide now to secure early market position.`,
@@ -156,7 +158,7 @@ export function useSerpAnalysis(state, { effectiveClientId, getAuthHeaders, clie
         }
 
         return insights;
-    }, [gscData, client?.configuration?.dismissed_insights]);
+    }, [gscData, client?.configuration?.dismissed_insights, localDismissed]);
 
     // --- Auto-load GSC ---
     useEffect(() => {
@@ -166,16 +168,17 @@ export function useSerpAnalysis(state, { effectiveClientId, getAuthHeaders, clie
     }, [effectiveClientId, gscConnected]);
 
     // --- Dismiss / Approve Insights ---
-    const handleDismissInsight = async (id) => {
+    const handleDismissInsight = async (id, silent = false) => {
+        setLocalDismissed(prev => [...prev, id]);
         const config = client?.configuration || {};
         const currentDismissed = config.dismissed_insights || [];
         if (currentDismissed.includes(id)) return;
         const newConfig = { ...config, dismissed_insights: [...currentDismissed, id] };
         try {
             await axios.put(`${API}/clients/${effectiveClientId}/configuration`, newConfig, { headers: getAuthHeaders() });
-            toast.success("Suggerimento archiviato.");
+            if (!silent) toast.success("Suggerimento archiviato.");
         } catch (e) {
-            toast.error("Errore salvataggio scelta");
+            if (!silent) toast.error("Errore salvataggio scelta");
         }
     };
 
@@ -188,8 +191,10 @@ export function useSerpAnalysis(state, { effectiveClientId, getAuthHeaders, clie
             state.setSingleObjective(`Espansione semantica per keyword emergente: ${firstKw}`);
             state.setStep(5);
             toast.success(`Configurazione caricata per: ${firstKw}`);
+            handleDismissInsight(insight.id, true);
         } else if (insight.type === 'optimization') {
             toast.info("Funzione ottimizzazione Meta Title in arrivo.");
+            handleDismissInsight(insight.id, true);
         }
     };
 
