@@ -141,6 +141,17 @@ export function useArticleGeneration(state, { effectiveClientId, getAuthHeaders,
                      .catch(e => console.error("Could not cleanup queue", e));
             }
 
+            const planTitlesInBatch = selectedPlanTopics.filter(t => !t.isQueueItem).map(t => t.titolo);
+            if (planTitlesInBatch.length > 0) {
+                axios.post(`${API}/editorial-plan/${effectiveClientId}/delete-topics`, { titles: planTitlesInBatch }, { headers: getAuthHeaders() })
+                     .catch(e => console.error("Could not cleanup plan topics", e));
+                     
+                if (state.plan && state.setPlan) {
+                    const remainingTopics = state.plan.topics.filter(t => !planTitlesInBatch.includes(t.titolo));
+                    state.setPlan({ ...state.plan, topics: remainingTopics });
+                }
+            }
+
             toast.success(`Job avviato con successo: ${res.data.total} articoli in elaborazione in background.`, {
                 description: "Puoi monitorare lo stato nel Centro Task in alto a destra.",
                 duration: 6000
