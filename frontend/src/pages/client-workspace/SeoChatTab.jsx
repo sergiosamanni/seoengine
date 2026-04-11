@@ -122,7 +122,14 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                 
                 for (const act of actionsFound) {
                     try {
-                        const actionData = JSON.parse(act.json);
+                        let jsonStr = act.json;
+                        const firstBrace = jsonStr.indexOf('{');
+                        const lastBrace = jsonStr.lastIndexOf('}');
+                        if (firstBrace !== -1 && lastBrace !== -1) {
+                            jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+                        }
+
+                        const actionData = JSON.parse(jsonStr);
                         if (autoTypes.includes(actionData.type)) {
                             // Sequential trigger with slight offset for readability
                             setTimeout(() => {
@@ -314,14 +321,21 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
             let actions = [];
 
             actionChunks.forEach((chunk) => {
+                let jsonStr = chunk.json;
+                const firstBrace = jsonStr.indexOf('{');
+                const lastBrace = jsonStr.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace !== -1) {
+                    jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+                }
+
                 try {
                     // Try naive parsing first
-                    const data = JSON.parse(chunk.json);
+                    const data = JSON.parse(jsonStr);
                     actions.push(data);
                     displayContent = displayContent.replace(chunk.full, '').trim();
                 } catch (e1) {
                     try {
-                        const fixed = fixJson(chunk.json);
+                        const fixed = fixJson(jsonStr);
                         const data = JSON.parse(fixed);
                         actions.push(data);
                         displayContent = displayContent.replace(chunk.full, '').trim();
