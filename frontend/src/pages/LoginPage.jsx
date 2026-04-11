@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -254,6 +255,13 @@ export const LoginPage = () => {
                 </Tabs>
                 </CardContent>
             </Card>
+
+            {/* Public Links Footer */}
+            <div className="mt-12 flex items-center justify-center gap-6">
+                <Link to="/privacy" className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 hover:text-slate-900 transition-colors">Privacy Policy</Link>
+                <div className="w-1 h-1 rounded-full bg-slate-200"></div>
+                <Link to="/terms" className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 hover:text-slate-900 transition-colors">Termini di Servizio</Link>
+            </div>
           </div>
         </div>
       </div>

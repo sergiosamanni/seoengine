@@ -17,6 +17,8 @@ import { ReportEditPage } from './pages/reports/ReportEditPage';
 import { SeoGeoGuidelines } from './pages/SeoGeoGuidelines';
 import { EmailNotificationsPage } from './pages/EmailNotificationsPage';
 import RedditPage from './pages/RedditPage';
+import { PrivacyPolicyPage } from './pages/public/PrivacyPolicyPage';
+import { TermsOfServicePage } from './pages/public/TermsOfServicePage';
 import './App.css';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -32,6 +34,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to={isAdmin ? "/dashboard" : "/generate"} replace /> : <LoginPage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms" element={<TermsOfServicePage />} />
 
       {/* Admin: Unified Dashboard (stats + clients) */}
       <Route path="/dashboard" element={<ProtectedRoute adminOnly><DashboardPage /></ProtectedRoute>} />
