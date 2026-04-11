@@ -34,6 +34,7 @@ const WordPressTab = lazy(() => import('./configuration/WordPressTab').then(m =>
 const ContentStrategyTab = lazy(() => import('./configuration/ContentStrategyTab').then(m => ({ default: m.ContentStrategyTab })));
 const AutopilotTab = lazy(() => import('./configuration/AutopilotTab').then(m => ({ default: m.AutopilotTab })));
 const GscConnectionTab = lazy(() => import('./configuration/GscConnectionTab').then(m => ({ default: m.GscConnectionTab })));
+const GA4ConnectionTab = lazy(() => import('./configuration/GA4ConnectionTab').then(m => ({ default: m.GA4ConnectionTab })));
 const GscDataTab = lazy(() => import('./configuration/GscDataTab').then(m => ({ default: m.GscDataTab })));
 const FreshnessTab = lazy(() => import('./client-workspace/FreshnessTab'));
 
@@ -184,6 +185,9 @@ export const GeneratorPage = () => {
                   <TabsTrigger value="gsc" className="px-6 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:text-sky-600 data-[state=active]:shadow-lg text-[10px] font-black uppercase tracking-widest transition-all">
                     Search Console
                   </TabsTrigger>
+                  <TabsTrigger value="ga4" className="px-6 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-lg text-[10px] font-black uppercase tracking-widest transition-all">
+                    Analytics GA4
+                  </TabsTrigger>
                 </>
               )}
               <TabsTrigger value="generate" className="px-6 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-lg text-[10px] font-black uppercase tracking-widest transition-all">
@@ -249,6 +253,14 @@ export const GeneratorPage = () => {
             <ErrorBoundary>
                 <Suspense fallback={<div className="p-4 text-xs animate-pulse">Loading GSC Data...</div>}>
                     <GscDataTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} client={client} addToQueue={addToEditorialQueue} />
+                </Suspense>
+            </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="ga4" className="mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <ErrorBoundary>
+                <Suspense fallback={<div className="p-4 text-xs animate-pulse">Loading GA4...</div>}>
+                    <GA4ConnectionTab clientId={effectiveClientId} getAuthHeaders={getAuthHeaders} isAdmin={isAdmin} />
                 </Suspense>
             </ErrorBoundary>
         </TabsContent>

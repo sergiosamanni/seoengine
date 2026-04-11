@@ -139,3 +139,4 @@ pypdf
 praw
 aiosmtplib
 json-repair==0.23.0
+google-analytics-data

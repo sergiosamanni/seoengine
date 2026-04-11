@@ -117,6 +117,15 @@ class GSCConfig(BaseModel):
     oauth_client_secret: Optional[str] = None
 
 
+class GA4Config(BaseModel):
+    property_id: Optional[str] = None
+    enabled: Optional[bool] = False
+    connected: Optional[bool] = False
+    tokens: Optional[Dict] = None
+    oauth_client_id: Optional[str] = None
+    oauth_client_secret: Optional[str] = None
+
+
 class ClientConfiguration(BaseModel):
     knowledge_base: Optional[KnowledgeBase] = None
     tono_e_stile: Optional[ToneStyle] = None
@@ -128,6 +137,7 @@ class ClientConfiguration(BaseModel):
     advanced_prompt: Optional[AdvancedPrompt] = None
     content_strategy: Optional[ContentStrategy] = None
     gsc: Optional[GSCConfig] = None
+    ga4: Optional[GA4Config] = None
     autopilot: Optional[AutopilotConfig] = None
     gmb_url: Optional[str] = None
     dismissed_insights: Optional[List[str]] = []
