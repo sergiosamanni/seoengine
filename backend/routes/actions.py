@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from auth import get_current_user
 from services.article_service import ArticleService
-from helpers import publish_to_wordpress, update_wordpress_post, search_wordpress_post, get_wordpress_post, fetch_sitemap, get_wp_id_by_url
+from helpers import publish_to_wordpress, update_wordpress_post, search_wordpress_post, get_wordpress_post, fetch_sitemap, get_wp_id_by_url, log_activity
+from services.email_service import send_notification_email
 from database import db
 import logging
 import uuid
@@ -141,6 +142,43 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
             )
             
             if success:
+                # 1. Log activity for history
+                client_label = ""
+                client = await db.clients.find_one({"id": client_id}, {"_id": 0, "nome": 1})
+                if client:
+                    client_label = client.get("nome", "")
+                    
+                await log_activity(
+                    client_id, 
+                    "chat_fix_content", 
+                    "success", 
+                    {"url": url_target, "post_id": post_id, "suggestion": suggestion}
+                )
+                
+                # 2. Send email notification
+                email_body = f"""
+                <h2 style="color:#1a2332;font-size:18px;margin:0 0 16px;">✨ Modifica applicata via Chat SEO</h2>
+                <p style="color:#4a5568;font-size:14px;line-height:1.6;margin:0 0 20px;">
+                  È stata appena applicata una modifica su un contenuto del cliente <strong style="color:#1a2332;">{client_label or client_id}</strong> tramite la chat interattiva.
+                </p>
+                <table style="width:100%;border-collapse:collapse;margin-top:16px;">
+                  <tr>
+                    <td style="padding:8px 12px;border-bottom:1px solid #e8ecf0;color:#8a94a6;font-size:12px;text-transform:uppercase;">URL</td>
+                    <td style="padding:8px 12px;border-bottom:1px solid #e8ecf0;color:#1a2332;font-size:14px;"><a href="{url_target}" style="color:#3d9970;">Link Articolo</a></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 12px;color:#8a94a6;font-size:12px;text-transform:uppercase;">Dettagli</td>
+                    <td style="padding:8px 12px;color:#1a2332;font-size:14px;">{suggestion or 'Correzione di contenuto applicata'}</td>
+                  </tr>
+                </table>
+                """
+                
+                asyncio.create_task(send_notification_email(
+                    subject=f"✨ {client_label or 'Cliente'}: Modifica applicata via SEO Chat",
+                    body_html=email_body,
+                    event_type="client_article"
+                ))
+
                 # Trigger automatic indexing if we have a URL
                 if url_target:
                     asyncio.create_task(ArticleService._request_gsc_indexing(client_id, url_target))
