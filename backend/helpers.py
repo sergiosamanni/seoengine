@@ -716,6 +716,64 @@ async def generate_image_from_web(prompt: str, user_id: str, article_title: str 
     
     raise Exception("All stock photo download attempts failed")
 
+async def import_external_image(url: str, user_id: str, article_title: str = "") -> dict:
+    """Download an external image (e.g. from Editorial Hub selection) and store it in the database."""
+    import uuid
+    import httpx
+    from io import BytesIO
+    from PIL import Image
+    from storage import put_object, APP_NAME
+    
+    logger.info(f"Importing directly selected image: {url}")
+    
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        resp = await client.get(url, headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "Accept": "image/*"
+        }, timeout=30.0)
+        
+        if resp.status_code != 200:
+            raise Exception(f"Failed to download image from {url}: status {resp.status_code}")
+            
+        img_bytes = resp.content
+        
+        try:
+            with Image.open(BytesIO(img_bytes)) as pil_img:
+                if pil_img.mode != "RGB":
+                    pil_img = pil_img.convert("RGB")
+                    
+                # Resize if too large
+                max_size = (1200, 1200)
+                if pil_img.width > max_size[0] or pil_img.height > max_size[1]:
+                    pil_img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                buf = BytesIO()
+                pil_img.save(buf, format="JPEG", quality=85, optimize=True)
+                img_bytes = buf.getvalue()
+        except Exception as pil_err:
+            logger.warning(f"PIL conversion failed for direct import image: {pil_err}")
+            if len(img_bytes) < 1000:
+                raise Exception("Downloaded file is too small or not a valid image.")
+                
+        file_id = str(uuid.uuid4())
+        path = f"{APP_NAME}/uploads/{user_id}/{file_id}.jpg"
+        content_type = "image/jpeg"
+        result = put_object(path, img_bytes, content_type)
+        
+        file_doc = {
+            "id": file_id,
+            "storage_path": result["path"],
+            "original_filename": f"imported_{file_id[:8]}.jpg",
+            "content_type": content_type,
+            "size": len(img_bytes),
+            "user_id": user_id,
+            "is_deleted": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.files.insert_one(file_doc)
+        logger.info(f"✓ Imported image securely stored ({len(img_bytes)} bytes)")
+        
+        return {"id": file_id, "url": url, "storage_path": result["path"], "provider": "imported"}
+
 
 async def generate_image_with_fallback(prompt: str, user_id: str, openai_key: str = None, together_key: str = None, article_title: str = "") -> dict:
     """Try multiple image generation providers in sequence with smart fallback.
