@@ -41,10 +41,6 @@ def clean_llm_output(raw: str) -> str:
     # Remove META_DESCRIPTION comment
     content = re.sub(r'<!--\s*META_DESCRIPTION:.*?-->', '', content, flags=re.DOTALL).strip()
     
-    # Use original if cleaning results in something too small
-    if len(content) < 50 and len(original_backup) > 50:
-        return original_backup
-        
     # Remove standalone <title> tags
     content = re.sub(r'<title[^>]*>.*?</title>', '', content, flags=re.DOTALL | re.IGNORECASE).strip()
     return content

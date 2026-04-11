@@ -125,10 +125,11 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                         let jsonStr = act.json;
                         const firstBrace = jsonStr.indexOf('{');
                         const lastBrace = jsonStr.lastIndexOf('}');
-                        if (firstBrace !== -1 && lastBrace !== -1) {
-                            jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
-                        }
-
+                        
+                        // Ignore placeholders like [ACTION: ...] or non-JSON text
+                        if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) continue;
+                        
+                        jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
                         const actionData = JSON.parse(jsonStr);
                         if (autoTypes.includes(actionData.type)) {
                             // Sequential trigger with slight offset for readability
@@ -324,9 +325,11 @@ const SeoChatTab = ({ clientId, getAuthHeaders, client, compact = false, addToQu
                 let jsonStr = chunk.json;
                 const firstBrace = jsonStr.indexOf('{');
                 const lastBrace = jsonStr.lastIndexOf('}');
-                if (firstBrace !== -1 && lastBrace !== -1) {
-                    jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
-                }
+                
+                // Skip if doesn't look like a JSON object (handle placeholders like [ACTION: ...])
+                if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) return;
+                
+                jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
 
                 try {
                     // Try naive parsing first
