@@ -101,8 +101,9 @@ export function EditorialHubView({
                                             className="relative w-16 h-16 rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shrink-0 group/img cursor-pointer"
                                             onClick={() => {
                                                 setEditingTopic(item);
-                                                setImgSearchQuery(item.keyword || item.titolo);
-                                                handleImageSearch(12);
+                                                const query = item.keyword || item.titolo;
+                                                setImgSearchQuery(query);
+                                                handleImageSearch(12, query);
                                                 setShowImgChangeModal(true);
                                             }}
                                         >
