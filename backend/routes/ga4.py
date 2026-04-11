@@ -168,6 +168,17 @@ async def ga4_disconnect(client_id: str, current_user: dict = Depends(get_curren
     return {"message": "GA4 disconnesso"}
 
 
+@router.get("/ga4/status")
+async def ga4_integration_status(request: Request, current_user: dict = Depends(get_current_user)):
+    base = str(request.base_url).rstrip('/')
+    redirect_uri = _get_ga4_redirect_uri(base)
+    return {
+        "configured": bool(GA4_OAUTH_CLIENT_ID and GA4_OAUTH_CLIENT_SECRET),
+        "redirect_uri": redirect_uri,
+        "instructions": f"Aggiungi questo URI di reindirizzamento autorizzato nella Google Cloud Console: {redirect_uri}"
+    }
+
+
 @router.get("/clients/{client_id}/ga4-data")
 async def get_ga4_data(client_id: str, days: int = 28, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):

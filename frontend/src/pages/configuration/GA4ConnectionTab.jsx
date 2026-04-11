@@ -26,16 +26,20 @@ export const GA4ConnectionTab = ({ clientId, getAuthHeaders, isAdmin }) => {
 
     const fetchStatus = async () => {
         try {
-            // Reusing a status logic similar to GSC, but for GA4
-            const res = await axios.get(`${API}/clients/${clientId}`, { 
-                headers: getAuthHeaders() 
-            });
-            const ga4Config = res.data.configuration?.ga4 || {};
+            // Fetch both client data and global GA4 status
+            const [clientRes, statusRes] = await Promise.all([
+                axios.get(`${API}/clients/${clientId}`, { headers: getAuthHeaders() }),
+                axios.get(`${API}/ga4/status`, { headers: getAuthHeaders() })
+            ]);
+            
+            const ga4Config = clientRes.data.configuration?.ga4 || {};
+            const globalStatus = statusRes.data;
+
             setStatus({
                 connected: ga4Config.connected,
-                configured: ga4Config.oauth_client_id || ga4Config.oauth_client_secret, // Simplification
+                configured: globalStatus.configured || (ga4Config.oauth_client_id && ga4Config.oauth_client_secret),
                 property_id: ga4Config.property_id,
-                redirect_uri: `${window.location.protocol}//${window.location.host}/api/ga4/callback`
+                redirect_uri: globalStatus.redirect_uri
             });
             setPropertyId(ga4Config.property_id || '');
         } catch (e) {
@@ -211,6 +215,12 @@ export const GA4ConnectionTab = ({ clientId, getAuthHeaders, isAdmin }) => {
                                     <><BarChart3 className="w-5 h-5 mr-2" />Connetti Google Analytics 4</>
                                 )}
                             </Button>
+                            {!status?.configured && (
+                                <Alert className="bg-amber-50 border-amber-200 text-amber-800 p-3">
+                                    <AlertCircle className="w-4 h-4" />
+                                    <AlertDescription className="text-xs">Credenziali OAuth globali non trovate. Inserisci il Client ID e Secret a sinistra.</AlertDescription>
+                                </Alert>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
