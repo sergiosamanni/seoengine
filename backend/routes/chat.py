@@ -79,7 +79,6 @@ async def send_message(request: dict, current_user: dict = Depends(get_current_u
         print(f"DEBUG: Chat ValueError: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        print(f"DEBUG: Chat Error: {e}")
         import traceback
-        traceback.print_exc()
+        logger.error(f"Chat Error: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))

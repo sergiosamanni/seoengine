@@ -271,11 +271,18 @@ LLM_PROVIDERS = {
 
 async def generate_with_llm(provider: str, api_key: str, model: str, temperature: float, system_prompt: str, user_prompt: str) -> str:
     async with httpx.AsyncClient() as client:
+        # Dynamic max_tokens based on provider limits
+        provider_max_tokens = 16000
+        if provider == "deepseek":
+            provider_max_tokens = 8192
+        elif provider == "groq":
+            provider_max_tokens = 8192 # Safe limit for Groq output
+
         if provider == "anthropic":
             response = await client.post(
                 LLM_PROVIDERS["anthropic"]["base_url"],
                 headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "Content-Type": "application/json"},
-                json={"model": model, "max_tokens": 16000, "system": system_prompt,
+                json={"model": model, "max_tokens": provider_max_tokens, "system": system_prompt,
                       "messages": [{"role": "user", "content": user_prompt}], "temperature": temperature},
                 timeout=120.0
             )
@@ -291,7 +298,7 @@ async def generate_with_llm(provider: str, api_key: str, model: str, temperature
                 json={"model": model, "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
-                ], "temperature": temperature, "max_tokens": 16000},
+                ], "temperature": temperature, "max_tokens": provider_max_tokens},
                 timeout=120.0
             )
             if response.status_code != 200:

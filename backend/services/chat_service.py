@@ -80,36 +80,41 @@ class ChatService:
         # 1. Gather context
         context = await ChatService._gather_context(client_id, client, config)
         
-        # 2. Setup Agent
-        agent = SEOExpertAgent(client_id=client_id, llm_config=config.get("llm", {}) or config.get("openai", {}))
-        
-        # 3. Get AI Response
-        history = session.get("messages", [])
-        ai_response = await agent.get_response(context, history, content)
-        
-        # 4. Save messages
-        user_msg = {
-            "role": "user",
-            "content": content,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "user_id": user_id
-        }
-        ai_msg = {
-            "role": "assistant",
-            "content": ai_response,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "metadata": {"context_used": True}
-        }
-        
-        await db.chat_sessions.update_one(
-            {"id": session_id},
-            {
-                "$push": {"messages": {"$each": [user_msg, ai_msg]}},
-                "$set": {"updated_at": datetime.now(timezone.utc).isoformat(), "last_message": content[:50]}
+        try:
+            # 2. Setup Agent
+            agent = SEOExpertAgent(client_id=client_id, llm_config=config.get("llm", {}) or config.get("openai", {}))
+            
+            # 3. Get AI Response
+            history = session.get("messages", [])
+            ai_response = await agent.get_response(context, history, content)
+            
+            # 4. Save messages
+            user_msg = {
+                "role": "user",
+                "content": content,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "user_id": user_id
             }
-        )
-        
-        return ai_msg
+            ai_msg = {
+                "role": "assistant",
+                "content": ai_response,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "metadata": {"context_used": True}
+            }
+            
+            await db.chat_sessions.update_one(
+                {"id": session_id},
+                {
+                    "$push": {"messages": {"$each": [user_msg, ai_msg]}},
+                    "$set": {"updated_at": datetime.now(timezone.utc).isoformat(), "last_message": content[:50]}
+                }
+            )
+            
+            return ai_msg
+        except Exception as e:
+            import traceback
+            logger.error(f"Chat Execution Error: {str(e)}\n{traceback.format_exc()}")
+            raise e
 
     @staticmethod
     async def _gather_context(client_id: str, client: Dict, config: Dict) -> Dict[str, Any]:
