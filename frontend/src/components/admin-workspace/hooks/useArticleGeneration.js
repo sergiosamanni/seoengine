@@ -11,7 +11,7 @@ export function useArticleGeneration(state, { effectiveClientId, getAuthHeaders,
 
     const {
         singleKeywords, singleTitle, singleObjective, publishToWp, imageSource,
-        singleSelectedImage, adminUploadedImages, singleScheduledDate,
+        selectedImages, adminUploadedImages, singleScheduledDate,
         gscData, serpData, genMode, contentType, autoGenerateCover,
         advancedPrompt, contentStrategy, useSpintax, templateStyle,
         setSingleGenerating, setSingleResult, setGenerating, setResults,

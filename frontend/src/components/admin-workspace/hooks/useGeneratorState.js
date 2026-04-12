@@ -309,7 +309,7 @@ Direttive: Ottimizzazione standard SEO premium.`);
         // Images
         imageSource, setImageSource, imgSearchQuery, setImgSearchQuery,
         imgSearchResults, setImgSearchResults, searchingImages, setSearchingImages,
-        singleSelectedImage, setSingleSelectedImage, autoGenerateCover, setAutoGenerateCover,
+        selectedImages, setSelectedImages, autoGenerateCover, setAutoGenerateCover,
         activePlanImageIndex, setActivePlanImageIndex,
         adminUploadedImages, setAdminUploadedImages, adminUploading, setAdminUploading,
         globalImages, setGlobalImages, imageUploadLoading, setImageUploadLoading,
