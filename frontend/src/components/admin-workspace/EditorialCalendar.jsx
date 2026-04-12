@@ -147,9 +147,23 @@ export function EditorialCalendar({
                             <div
                                 className={`min-h-[160px] p-4 border-r border-slate-100 last:border-none transition-all duration-500 relative group overflow-hidden ${
                                     !isCurrentMonth ? 'bg-slate-50/30' : 'bg-white'
-                                } ${isToday(day) ? 'bg-indigo-50/5' : ''}`}
+                                } ${isToday(day) ? 'bg-indigo-50/5' : ''} ${
+                                    movingTopic ? 'hover:bg-indigo-50/20 hover:scale-[0.98] cursor-crosshair' : ''
+                                }`}
                                 key={dayStr}
                                 onClick={() => onDateChange && onDateChange(day)}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.classList.add('bg-indigo-50/50');
+                                }}
+                                onDragLeave={(e) => {
+                                    e.currentTarget.classList.remove('bg-indigo-50/50');
+                                }}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.classList.remove('bg-indigo-50/50');
+                                    if (onDateChange) onDateChange(day);
+                                }}
                             >
                                 <div className="flex items-center justify-between mb-4 relative z-10">
                                     <span className={`text-sm font-black transition-colors ${
@@ -168,10 +182,19 @@ export function EditorialCalendar({
                                     {dayTopics.map((topic, index) => (
                                         <div 
                                             key={index}
+                                            draggable={topic.stato !== 'published'}
+                                            onDragStart={(e) => {
+                                                if (topic.stato === 'published') return;
+                                                onMoveStart && onMoveStart(topic);
+                                                e.dataTransfer.setData("text/plain", topic.titolo);
+                                            }}
+                                            onDragEnd={() => {
+                                                // Keep state if needed, but drop handles it
+                                            }}
                                             onClick={(e) => { e.stopPropagation(); onArticleClick(topic); }}
                                             className={`p-2.5 rounded-xl bg-white border shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300 group/item cursor-pointer overflow-hidden ${
-                                                movingTopic?.titolo === topic.titolo ? 'border-indigo-600 scale-105 ring-2 ring-indigo-100 animate-pulse bg-indigo-50/30' : 'border-slate-100'
-                                            }`}
+                                                movingTopic?.titolo === topic.titolo ? 'border-indigo-600 scale-105 ring-2 ring-indigo-100 animate-pulse bg-indigo-50/30 shadow-indigo-100' : 'border-slate-100'
+                                            } ${topic.stato !== 'published' ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                         >
                                             <div className="flex items-start justify-between gap-2">
                                                 <div className="flex items-start gap-2 flex-1 min-w-0">
