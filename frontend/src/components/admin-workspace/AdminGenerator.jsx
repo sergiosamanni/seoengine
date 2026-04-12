@@ -207,7 +207,12 @@ export function AdminGenerator({
                         ].map((mode) => (
                             <button 
                                 key={mode.id}
-                                onClick={() => { state.setGenMode(mode.id); state.setStep(1); }} 
+                                onClick={() => { 
+                                    state.setGenMode(mode.id); 
+                                    state.setStep(1); 
+                                    if (mode.id === 'pillar') state.setContentType('pillar_page');
+                                    else if (mode.id === 'single') state.setContentType('articolo');
+                                }} 
                                 className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[10px] uppercase tracking-wider font-bold transition-all ${
                                     state.genMode === mode.id ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                                 }`}

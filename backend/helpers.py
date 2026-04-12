@@ -1968,26 +1968,46 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
                         if len(search_urls) >= num_results: break
         except Exception: pass
 
-    # Layer 4: Emergency Google/Bing Scrape
+    # Layer 4: Emergency Scrape (Google / Bing)
     if not search_urls:
         logger.info(f"Emergency Scrape Fallback for '{keyword}'...")
+        # Rotation of potential targets
+        targets = [
+            f"https://www.google.it/search?q={keyword.replace(' ', '+')}&num=8&hl=it",
+            f"https://www.bing.com/search?q={keyword.replace(' ', '+')}"
+        ]
+        active_target = random.choice(targets)
         try:
             ua = random.choice(user_agents)
-            # Try Bing directly
-            async with httpx.AsyncClient(timeout=10, headers={"User-Agent": ua}) as client:
-                resp = await client.get(f"https://www.bing.com/search?q={keyword.replace(' ', '+')}")
+            async with httpx.AsyncClient(timeout=12, headers={"User-Agent": ua}, follow_redirects=True) as client:
+                resp = await client.get(active_target)
                 if resp.status_code == 200:
                     bsoup = BeautifulSoup(resp.text, "lxml")
-                    for li in bsoup.find_all('li', class_='b_algo'):
-                        a = li.find('a')
-                        if a and a.get('href'):
-                            title = a.get_text(strip=True)
-                            p = li.find('p')
-                            desc = p.get_text(strip=True) if p else ""
-                            if is_sane(title, desc, keyword, strict=False): # Less strict on last layers
-                                search_urls.append({"url": a['href'], "title": title, "description": desc})
-                        if len(search_urls) >= num_results: break
-        except Exception: pass
+                    # Try Bing extraction first if it was Bing
+                    if "bing.com" in active_target:
+                        for li in bsoup.find_all('li', class_='b_algo'):
+                            a = li.find('a')
+                            if a and a.get('href'):
+                                title = a.get_text(strip=True)
+                                p = li.find('p')
+                                desc = p.get_text(strip=True) if p else ""
+                                if is_sane(title, desc, keyword, strict=False):
+                                    search_urls.append({"url": a['href'], "title": title, "description": desc})
+                    else:
+                        # Try Google extraction logic
+                        for g in bsoup.find_all('div', class_='g'):
+                            a = g.find('a')
+                            if a and a.get('href') and not a['href'].startswith('/search'):
+                                t_h3 = g.find('h3')
+                                title = t_h3.get_text(strip=True) if t_h3 else a.get_text(strip=True)
+                                # Snippet finding is harder on Google
+                                snippet_div = g.find('div', style=re.compile(r'-webkit-line-clamp')) or g.find('div', class_='VwiC3b')
+                                desc = snippet_div.get_text(strip=True) if snippet_div else ""
+                                if is_sane(title, desc, keyword, strict=False):
+                                    search_urls.append({"url": a['href'], "title": title, "description": desc})
+        except Exception as e: 
+            logger.warning(f"Emergency scrape effort failed: {e}")
+            pass
 
     if not search_urls:
         logger.error(f"❌ ALL SERP providers failed for '{keyword}'")
