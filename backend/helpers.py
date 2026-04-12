@@ -1868,7 +1868,7 @@ Scrivi il paragrafo HTML con il link interno seguendo le REGOLE PADRE.
 # ============== SERP SCRAPING ==============
 
 async def scrape_google_serp(keyword: str, country: str = "it", num_results: int = 5) -> list:
-    """Search SERP using DuckDuckGo Lite with fast fail + multi-layered fallback + Sanity Check."""
+    """Search SERP using multi-layered fallback (DDG, DDGS, Google, Brave, Bing)."""
     import asyncio
     from urllib.parse import unquote, urlparse, parse_qs
     import random
@@ -1877,33 +1877,36 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
     user_agents = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0"
     ]
 
-    def is_sane(title, desc, query):
-        """Verify if result title or desc contains at least one relevant keyword (case insensitive)"""
+    def is_sane(title, desc, query, strict=True):
+        """Verify if result is relevant. If not strict, allow more generic results."""
         q_clean = query.lower().replace("+", " ")
         q_words = [w for w in q_clean.split() if len(w) > 3]
-        # Ignore sports-related results for clearly non-sports queries
-        sports_blockers = ["espn", "nfl", "raiders", "chiefs", "score", "game", "league", "mvp", "live match"]
+        sports_blockers = ["espn", "nfl", "raiders", "chiefs", "score", "game", "league", "mvp", "raiders", "chiefs", "match"]
         content = (title + " " + desc).lower()
         
-        # If it looks like a sports score and the query isn't about sports, block it
-        is_medical_or_biz = any(w in q_clean for w in ["laser", "arredo", "medico", "estetica", "clinica", "avvocato", "ristorante"])
+        # Immediate block for sports if it looks medical/biz
+        is_medical_or_biz = any(w in q_clean for w in ["laser", "arredo", "medico", "estetica", "clinica", "avvocato", "ristorante", "horeca"])
         if is_medical_or_biz and any(s in content for s in sports_blockers):
+            logger.warning(f"Blocking irrelevant sports result: {title}")
             return False
             
-        if not q_words: return True # Query too short to filter
-        return any(w in content for w in q_words) or any(w in title.lower() for w in q_words)
+        if not q_words: return True 
+        has_kw = any(w in content for w in q_words) or any(w in title.lower() for w in q_words)
+        if not has_kw and strict:
+            return False
+        return True
 
-    # Layer 1: DuckDuckGo Lite (Fast & HTML based)
+    # Layer 1: DuckDuckGo Lite
     for attempt in range(2): 
         try:
             ua = random.choice(user_agents)
-            async with httpx.AsyncClient(timeout=12, follow_redirects=True, headers={"User-Agent": ua}) as http:
+            async with httpx.AsyncClient(timeout=8, follow_redirects=True, headers={"User-Agent": ua}) as http:
                 resp = await http.get("https://lite.duckduckgo.com/lite/",
                     params={"q": keyword, "kl": f"{country}-{country}"})
-                
                 if resp.status_code == 200:
                     soup = BeautifulSoup(resp.text, "lxml")
                     snippets = [td.get_text(strip=True) for td in soup.find_all("td", class_="result-snippet")]
@@ -1922,17 +1925,12 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
                                 search_urls.append({"url": real_url, "title": title, "description": desc})
                                 idx += 1
                     if search_urls: break
-                else:
-                    logger.warning(f"DDG Lite attempt {attempt+1} status: {resp.status_code}")
-        except Exception as e:
-            logger.warning(f"DDG Lite attempt {attempt+1} error: {str(e) or 'Connection Timeout'}")
-        
-        if not search_urls:
-            await asyncio.sleep(1)
+        except Exception: pass
+        if not search_urls: await asyncio.sleep(0.5)
 
     # Layer 2: DDGS Library Fallback
     if not search_urls:
-        logger.info(f"Attempting DDGS library fallback for '{keyword}'...")
+        logger.info(f"DDGS Fallback for '{keyword}'...")
         try:
             fallback_res = await web_search_text(keyword, max_results=num_results + 3)
             if fallback_res:
@@ -1940,34 +1938,47 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
                     if is_sane(r["title"], r["body"], keyword):
                         search_urls.append({"url": r["url"], "title": r["title"], "description": r["body"]})
                     if len(search_urls) >= num_results: break
-        except Exception as fe:
-            logger.warning(f"DDGS fallback failed: {fe}")
+        except Exception: pass
 
-    # Layer 3: Direct Google Search (Minimal Scrape)
+    # Layer 3: Brave Search (Resilient & Clean)
     if not search_urls:
-        logger.info(f"Attempting emergency Google scrape for '{keyword}'...")
+        logger.info(f"Brave Fallback for '{keyword}'...")
         try:
             ua = random.choice(user_agents)
-            async with httpx.AsyncClient(timeout=15, headers={"User-Agent": ua}, follow_redirects=True) as client:
-                google_url = f"https://www.google.it/search?q={keyword.replace(' ', '+')}&num={num_results + 5}&hl=it"
-                resp = await client.get(google_url)
+            async with httpx.AsyncClient(timeout=10, headers={"User-Agent": ua}) as client:
+                resp = await client.get(f"https://search.brave.com/search?q={keyword.replace(' ', '+')}&source=web")
                 if resp.status_code == 200:
-                    gsoup = BeautifulSoup(resp.text, "lxml")
-                    for g in gsoup.find_all('div', class_='g'):
-                        anchors = g.find_all('a')
-                        if anchors:
-                            link = anchors[0]['href']
-                            title_tag = g.find('h3')
-                            title = title_tag.get_text() if title_tag else "Risultato Google"
-                            # Google sometimes hides the snippet in a div with 'VwiC3b' class or similar
-                            desc_tag = g.find('div', style=lambda x: x and '-webkit-line-clamp' in x) or g.find('div', class_=lambda x: x and 'VwiC3b' in x)
-                            desc = desc_tag.get_text() if desc_tag else ""
-                            if link.startswith('http') and 'google.com' not in link:
-                                if is_sane(title, desc, keyword):
-                                    search_urls.append({"url": link, "title": title, "description": desc})
+                    bsoup = BeautifulSoup(resp.text, "lxml")
+                    for s in bsoup.find_all('div', class_='snippet'):
+                        a = s.find('a')
+                        if a and a.get('href'):
+                            title = s.find('div', class_='title').get_text(strip=True) if s.find('div', class_='title') else a.get_text(strip=True)
+                            desc = s.find('div', class_='description').get_text(strip=True) if s.find('div', class_='description') else ""
+                            if is_sane(title, desc, keyword):
+                                search_urls.append({"url": a['href'], "title": title, "description": desc})
                         if len(search_urls) >= num_results: break
-        except Exception as ge:
-            logger.warning(f"Emergency Google search failed: {ge}")
+        except Exception: pass
+
+    # Layer 4: Emergency Google/Bing Scrape
+    if not search_urls:
+        logger.info(f"Emergency Scrape Fallback for '{keyword}'...")
+        try:
+            ua = random.choice(user_agents)
+            # Try Bing directly
+            async with httpx.AsyncClient(timeout=10, headers={"User-Agent": ua}) as client:
+                resp = await client.get(f"https://www.bing.com/search?q={keyword.replace(' ', '+')}")
+                if resp.status_code == 200:
+                    bsoup = BeautifulSoup(resp.text, "lxml")
+                    for li in bsoup.find_all('li', class_='b_algo'):
+                        a = li.find('a')
+                        if a and a.get('href'):
+                            title = a.get_text(strip=True)
+                            p = li.find('p')
+                            desc = p.get_text(strip=True) if p else ""
+                            if is_sane(title, desc, keyword, strict=False): # Less strict on last layers
+                                search_urls.append({"url": a['href'], "title": title, "description": desc})
+                        if len(search_urls) >= num_results: break
+        except Exception: pass
 
     if not search_urls:
         logger.error(f"❌ ALL SERP providers failed for '{keyword}'")
