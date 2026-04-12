@@ -268,6 +268,7 @@ class SimpleGenerateRequest(BaseModel):
     content_type: str = "articolo"  # articolo, landing_page, pillar_page
     image_ids: Optional[List[str]] = None
     generate_cover: bool = False
+    silo_context: Optional[Dict] = None
 
 
 class ReportCreate(BaseModel):

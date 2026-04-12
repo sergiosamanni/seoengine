@@ -75,6 +75,33 @@ export function AdminGenerator({
         state.setSerpData(topic.serp_summary ? { summary: topic.serp_summary } : null);
         state.setAdvancedPrompt(topic.master_prompt || '');
         state.setPromptDone(!!topic.master_prompt);
+        
+        if (topic.content_type === 'pillar_page' || topic.is_pillar) {
+            state.setContentType('pillar_page');
+        } else {
+            state.setContentType('articolo');
+        }
+
+        // Silo Logic: Identify cluster partners from the same plan
+        if (state.plan && state.plan.topics) {
+            const clusterName = topic.topic;
+            const isPillar = topic.is_pillar || topic.content_type === 'pillar_page';
+            const partners = state.plan.topics
+                .filter(t => t.topic === clusterName && t.titolo !== topic.titolo)
+                .map(t => t.titolo);
+            
+            const pillarTopic = state.plan.topics.find(t => t.topic === clusterName && (t.is_pillar || t.content_type === 'pillar_page'));
+            
+            state.setSiloContext({
+                is_pillar: isPillar,
+                partners: partners,
+                pillar_title: pillarTopic ? pillarTopic.titolo : null
+            });
+            console.log("[SILO DEBUG] Context set for single gen:", { isPillar, partners, pillarTitle: pillarTopic?.titolo });
+        } else {
+            state.setSiloContext(null);
+        }
+
         if (topic.featured_image || topic.stock_image_url) {
             state.setSingleSelectedImage({
                 url: topic.featured_image || topic.stock_image_url,

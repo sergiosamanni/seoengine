@@ -59,6 +59,7 @@ export function useGeneratorState({ client, effectiveClientId, externalMode, ini
     const [siloClusters, setSiloClusters] = useState([]);
     const [suggestingSilo, setSuggestingSilo] = useState(false);
     const [selectedSiloClusters, setSelectedSiloClusters] = useState([]);
+    const [siloContext, setSiloContext] = useState(null);
 
     // --- Programmatic / Bulk ---
     const [keywords, setKeywords] = useState({ servizi: [], citta_e_zone: [], tipi_o_qualificatori: [] });
@@ -339,6 +340,7 @@ Direttive: Ottimizzazione standard SEO premium con elementi visuali (tabelle, bo
         coverLoading, setCoverLoading, contentType, setContentType,
         activeJobId, setActiveJobId, totalInJob, setTotalInJob,
         internalLinkingEnabled, setInternalLinkingEnabled,
+        siloContext, setSiloContext,
         // Plan
         plan, setPlan, planLoading, setPlanLoading, planGenerating, setPlanGenerating,
         selectedPlanTopics, setSelectedPlanTopics, planView, setPlanView,
