@@ -9,7 +9,7 @@ import {
     ChevronLeft, ChevronRight, Calendar as CalendarIcon, Filter, Zap,
     Target, Play, Clock, CheckCircle2, ChevronUp, ChevronDown,
     TrendingUp, Search, Info, Plus, PlusCircle, MoreHorizontal,
-    ArrowsPointingOut
+    Maximize
 } from 'lucide-react';
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
@@ -192,7 +192,7 @@ export function EditorialCalendar({
                                                             movingTopic?.titolo === topic.titolo ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:text-indigo-600 hover:bg-indigo-50'
                                                         }`}
                                                     >
-                                                        <ArrowsPointingOut className="w-2.5 h-2.5" />
+                                                        <Maximize className="w-2.5 h-2.5" />
                                                     </button>
                                                 )}
                                             </div>
