@@ -8,14 +8,18 @@ import { it } from 'date-fns/locale';
 import { 
     ChevronLeft, ChevronRight, Calendar as CalendarIcon, Filter, Zap,
     Target, Play, Clock, CheckCircle2, ChevronUp, ChevronDown,
-    TrendingUp, Search, Info, Plus, PlusCircle, MoreHorizontal
+    TrendingUp, Search, Info, Plus, PlusCircle, MoreHorizontal,
+    ArrowsPointingOut
 } from 'lucide-react';
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
-export function EditorialCalendar({ topics = [], onArticleClick, onDateChange, onAddContentClick }) {
+export function EditorialCalendar({ 
+    topics = [], onArticleClick, onDateChange, onAddContentClick,
+    movingTopic, onMoveStart
+}) {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [focusTopic, setFocusTopic] = useState('all');
     
@@ -165,15 +169,32 @@ export function EditorialCalendar({ topics = [], onArticleClick, onDateChange, o
                                         <div 
                                             key={index}
                                             onClick={(e) => { e.stopPropagation(); onArticleClick(topic); }}
-                                            className="p-2.5 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300 group/item cursor-pointer overflow-hidden"
+                                            className={`p-2.5 rounded-xl bg-white border shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300 group/item cursor-pointer overflow-hidden ${
+                                                movingTopic?.titolo === topic.titolo ? 'border-indigo-600 scale-105 ring-2 ring-indigo-100 animate-pulse bg-indigo-50/30' : 'border-slate-100'
+                                            }`}
                                         >
-                                            <div className="flex items-start gap-2">
-                                                <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
-                                                    topic.stato === 'published' ? 'bg-emerald-500' : 'bg-amber-500'
-                                                }`} />
-                                                <p className="text-[9px] font-bold text-slate-700 leading-tight line-clamp-2 group-hover/item:text-indigo-600 transition-colors uppercase">
-                                                    {topic.titolo}
-                                                </p>
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex items-start gap-2 flex-1 min-w-0">
+                                                    <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
+                                                        topic.stato === 'published' ? 'bg-emerald-500' : 'bg-amber-500'
+                                                    }`} />
+                                                    <p className="text-[9px] font-bold text-slate-700 leading-tight line-clamp-2 group-hover/item:text-indigo-600 transition-colors uppercase">
+                                                        {topic.titolo}
+                                                    </p>
+                                                </div>
+                                                {onMoveStart && topic.stato !== 'published' && (
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onMoveStart(movingTopic?.titolo === topic.titolo ? null : topic);
+                                                        }}
+                                                        className={`p-1 rounded-lg transition-all ${
+                                                            movingTopic?.titolo === topic.titolo ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:text-indigo-600 hover:bg-indigo-50'
+                                                        }`}
+                                                    >
+                                                        <ArrowsPointingOut className="w-2.5 h-2.5" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     ))}

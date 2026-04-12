@@ -3,7 +3,7 @@ import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { 
     Zap, Loader2, Search, Calendar, Check, Sparkles, 
-    Trash2, Edit2, Play, BrainCircuit, Clock
+    Trash2, Edit2, Play, BrainCircuit, Clock, Plus
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -19,7 +19,13 @@ export function EditorialHubView({
     handleUseTopicInGenerator, isTopicSelected, toggleTopicSelection,
     setEditingTopic, setImgSearchQuery, handleImageSearch, setShowImgChangeModal,
     recentArticles,
+    fetchPlan, 
+    getAuthHeaders,
 }) {
+    const [targetTopic, setTargetTopic] = React.useState('');
+    const [numToGen, setNumToGen] = React.useState(5);
+    const [movingTopic, setMovingTopic] = React.useState(null);
+    const [targetGenerating, setTargetGenerating] = React.useState(false);
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-600">
             {/* Header Bar */}
@@ -37,6 +43,49 @@ export function EditorialHubView({
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
+                    {/* Targeted Generation Form */}
+                    <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                        <div className="relative">
+                            <BrainCircuit className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+                            <input 
+                                type="text"
+                                placeholder="Topic Cluster..."
+                                value={targetTopic}
+                                onChange={(e) => setTargetTopic(e.target.value)}
+                                className="h-8 pl-8 pr-3 bg-transparent text-[10px] font-bold outline-none border-none w-32 focus:w-48 transition-all"
+                            />
+                        </div>
+                        <input 
+                            type="number"
+                            value={numToGen}
+                            onChange={(e) => setNumToGen(parseInt(e.target.value))}
+                            className="h-8 w-12 bg-white rounded-lg text-[10px] font-black text-center border-none shadow-sm"
+                            min="1" max="20"
+                        />
+                        <Button 
+                            onClick={async () => {
+                                if(!targetTopic) return toast.error("Inserisci un topic");
+                                setTargetGenerating(true);
+                                try {
+                                    const { API_URL: API } = await import('../../../config');
+                                    await axios.post(`${API}/generate-plan/${client.id}`, {
+                                        focus_topic: targetTopic,
+                                        num_topics: numToGen
+                                    }, { headers: getAuthHeaders() });
+                                    toast.success(`Espansione per '${targetTopic}' avviata!`);
+                                    setTargetTopic('');
+                                    fetchPlan && fetchPlan();
+                                } catch (e) { toast.error("Errore espansione"); }
+                                finally { setTargetGenerating(false); }
+                            }}
+                            disabled={targetGenerating || !targetTopic}
+                            className="h-8 px-3 bg-indigo-600 text-white rounded-lg text-[9px] font-black uppercase flex gap-2"
+                        >
+                            {targetGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                            ESPANDI
+                        </Button>
+                    </div>
+
                     {selectedPlanTopics.length > 0 ? (
                         <div className="flex items-center gap-2 animate-in zoom-in-95 duration-200">
                              <Button onClick={handleBatchPlanGenerate} disabled={generating} className="h-10 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase px-6 tracking-widest shadow-lg shadow-indigo-100 flex gap-2">
@@ -62,11 +111,32 @@ export function EditorialHubView({
 
             {/* Calendar View */}
             {planView === 'calendar' && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-200 p-10 shadow-2xl">
-                    {/* Calendar shows EVERYTHING: plan topics + already published articles */}
+                <div className="bg-white rounded-[3.5rem] border border-slate-200 p-10 shadow-2xl relative">
+                    {movingTopic && (
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-indigo-600 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl animate-bounce">
+                            Spostamento: {movingTopic.titolo.slice(0, 30)}... → Seleziona nuova data
+                        </div>
+                    )}
                     <EditorialCalendar 
                         topics={[...allPlanTopics, ...(recentArticles || [])]} 
-                        onArticleClick={handleUseTopicInGenerator} 
+                        onArticleClick={handleUseTopicInGenerator}
+                        movingTopic={movingTopic}
+                        onMoveStart={setMovingTopic}
+                        onDateChange={async (date) => {
+                            if (movingTopic) {
+                                try {
+                                    const { API_URL: API } = await import('../../../config');
+                                    await axios.patch(`${API}/editorial-plan/${client.id}/topic-date`, {
+                                        title: movingTopic.titolo,
+                                        article_id: movingTopic.id, // Only present if it's already an article
+                                        scheduled_date: date.toISOString()
+                                    }, { headers: getAuthHeaders() });
+                                    toast.success("Data aggiornata!");
+                                    setMovingTopic(null);
+                                    fetchPlan && fetchPlan();
+                                } catch (e) { toast.error("Errore aggiornamento data"); }
+                            }
+                        }}
                     />
                 </div>
             )}

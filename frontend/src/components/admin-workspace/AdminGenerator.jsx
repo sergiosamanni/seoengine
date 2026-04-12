@@ -515,6 +515,8 @@ export function AdminGenerator({
                         handleImageSearch={images.handleImageSearch}
                         setShowImgChangeModal={state.setShowImgChangeModal}
                         recentArticles={state.recentArticles}
+                        fetchPlan={planMgmt.fetchPlan}
+                        getAuthHeaders={getAuthHeaders}
                     />
                 )}
 

@@ -975,8 +975,49 @@ async def save_editorial_plan(client_id: str, plan: dict, current_user: dict = D
 
 from pydantic import BaseModel
 class PlanRequest(BaseModel):
-    objective: str = ""
-    num_topics: int = 10
+    objective: Optional[str] = ""
+    num_topics: Optional[int] = 10
+    focus_topic: Optional[str] = None
+
+@router.patch("/editorial-plan/{client_id}/topic-date")
+async def update_topic_date(client_id: str, request: dict, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    title = request.get("title")
+    article_id = request.get("article_id")
+    new_date = request.get("scheduled_date")
+    
+    if not new_date:
+        raise HTTPException(status_code=400, detail="Data richiesta")
+        
+    # Case 1: Already generated article
+    if article_id:
+        await db.articles.update_one(
+            {"id": article_id, "client_id": client_id},
+            {"$set": {"scheduled_date": new_date}}
+        )
+        return {"message": "Data articolo aggiornata"}
+        
+    # Case 2: Planned topic
+    if title:
+        plan = await db.editorial_plans.find_one({"client_id": client_id})
+        if plan and "topics" in plan:
+            topics = plan["topics"]
+            updated = False
+            for t in topics:
+                if t.get("titolo") == title:
+                    t["scheduled_date"] = new_date
+                    updated = True
+                    break
+            if updated:
+                await db.editorial_plans.update_one(
+                    {"client_id": client_id},
+                    {"$set": {"topics": topics}}
+                )
+                return {"message": "Data topic aggiornata"}
+
+    raise HTTPException(status_code=404, detail="Topic non trovato")
 
 @router.post("/generate-plan/{client_id}")
 async def generate_editorial_plan(client_id: str, req: PlanRequest = None, current_user: dict = Depends(get_current_user)):
@@ -1001,6 +1042,15 @@ async def generate_editorial_plan(client_id: str, req: PlanRequest = None, curre
     
     objective = req.objective if req else ""
     num_topics = req.num_topics if req else 10
+    focus_topic = req.focus_topic if req else None
+
+    if focus_topic:
+        objective = f"Genera {num_topics} idee di articoli basati sul topic '{focus_topic}'. {objective}"
+    focus_topic = req.focus_topic if req else None
+    
+    if focus_topic:
+        # If focus_topic is provided, build a specific prompt for expansion
+        objective = f"Genera {num_topics} idee di articoli specificamente incentrati sul topic/cluster: '{focus_topic}'. {objective}"
     
     existing_articles = await db.articles.find({"client_id": client_id}, {"titolo": 1, "_id": 0}).to_list(200)
     existing_topics = [a.get("titolo") for a in existing_articles if a.get("titolo")]
