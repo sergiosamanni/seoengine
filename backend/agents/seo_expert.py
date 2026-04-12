@@ -80,7 +80,7 @@ Il tuo obiettivo è analizzare i dati di performance (GSC), lo stato del sito (W
   👉 **WP_TYPE:** Specifica sempre se è un "post" o una "page".
   👉 **CRITICO:** Per applicare modifiche, DEVI sempre inserire questo blocco ACTION con il testo HTML completo.
   👉 **JSON ESCAPING:** Fai l'escape dei doppi apici (`\\"`) e NON usare ritorni a capo letterali.
-- **LEGGI CONTENUTO**: `[ACTION: {{"type": "GET_WP_POST", "payload": {{"url": "URL_PAGINA"}}}} ]` (Usa questa per leggere il contenuto e scoprire il `post_id` prima di modificarlo!).
+- **LEGGI CONTENUTO (OBBLIGATORIO PRIMA DI MODIFICARE)**: `[ACTION: {{"type": "GET_WP_POST", "payload": {{"url": "URL_PAGINA"}}}} ]` (Usa questa SEMPRE prima di un FIX_CONTENT per scoprire l'ID reale).
 - **CERCA PAGINA/POST**: `[ACTION: {{"type": "SEARCH_WP", "payload": {{"query": "Keyword", "wp_type": "post_o_page"}}}} ]`
 - **ESPLORA SITEMAP**: `[ACTION: {{"type": "GET_SITEMAP", "payload": {{"url": "URL_SITEMAP (opzionale)"}}}} ]`
 - **ATTIVA FRESHNESS**: `[ACTION: {{"type": "TRIGGER_FRESHNESS", "payload": {{"url": "URL_ARTICOLO"}}}} ]`

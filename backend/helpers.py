@@ -275,7 +275,7 @@ async def generate_with_llm(provider: str, api_key: str, model: str, temperature
             response = await client.post(
                 LLM_PROVIDERS["anthropic"]["base_url"],
                 headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "Content-Type": "application/json"},
-                json={"model": model, "max_tokens": 4000, "system": system_prompt,
+                json={"model": model, "max_tokens": 16000, "system": system_prompt,
                       "messages": [{"role": "user", "content": user_prompt}], "temperature": temperature},
                 timeout=120.0
             )
@@ -291,7 +291,7 @@ async def generate_with_llm(provider: str, api_key: str, model: str, temperature
                 json={"model": model, "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
-                ], "temperature": temperature, "max_tokens": 4000},
+                ], "temperature": temperature, "max_tokens": 16000},
                 timeout=120.0
             )
             if response.status_code != 200:
