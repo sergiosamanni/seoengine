@@ -8,8 +8,7 @@ import { it } from 'date-fns/locale';
 import { 
     ChevronLeft, ChevronRight, Calendar as CalendarIcon, Filter, Zap,
     Target, Play, Clock, CheckCircle2, ChevronUp, ChevronDown,
-    TrendingUp, Search, Info, Plus, PlusCircle, MoreHorizontal,
-    Maximize
+    TrendingUp, Search, Info, Plus, PlusCircle, MoreHorizontal
 } from 'lucide-react';
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
@@ -205,19 +204,6 @@ export function EditorialCalendar({
                                                         {topic.titolo}
                                                     </p>
                                                 </div>
-                                                {onMoveStart && topic.stato !== 'published' && (
-                                                    <button 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            onMoveStart(movingTopic?.titolo === topic.titolo ? null : topic);
-                                                        }}
-                                                        className={`p-1 rounded-lg transition-all ${
-                                                            movingTopic?.titolo === topic.titolo ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:text-indigo-600 hover:bg-indigo-50'
-                                                        }`}
-                                                    >
-                                                        <Maximize className="w-2.5 h-2.5" />
-                                                    </button>
-                                                )}
                                             </div>
                                         </div>
                                     ))}

@@ -7,7 +7,9 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { toast } from 'sonner';
 import { EditorialCalendar } from '../EditorialCalendar';
+import axios from 'axios';
 
 /**
  * Editorial Hub View - renders the plan list/calendar with all controls.
@@ -112,11 +114,6 @@ export function EditorialHubView({
             {/* Calendar View */}
             {planView === 'calendar' && (
                 <div className="bg-white rounded-[3.5rem] border border-slate-200 p-10 shadow-2xl relative">
-                    {movingTopic && (
-                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-indigo-600 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl animate-bounce">
-                            Spostamento: {movingTopic.titolo.slice(0, 30)}... → Seleziona nuova data
-                        </div>
-                    )}
                     <EditorialCalendar 
                         topics={[...allPlanTopics, ...(recentArticles || [])]} 
                         onArticleClick={handleUseTopicInGenerator}
@@ -131,10 +128,10 @@ export function EditorialHubView({
                                         article_id: movingTopic.id, // Only present if it's already an article
                                         scheduled_date: date.toISOString()
                                     }, { headers: getAuthHeaders() });
-                                    toast.success("Data aggiornata!");
+                                    toast.success("Programmazione aggiornata");
                                     setMovingTopic(null);
                                     fetchPlan && fetchPlan();
-                                } catch (e) { toast.error("Errore aggiornamento data"); }
+                                } catch (e) { toast.error("Errore aggiornamento"); }
                             }
                         }}
                     />
