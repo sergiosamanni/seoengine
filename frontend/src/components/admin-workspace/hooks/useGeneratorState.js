@@ -271,20 +271,29 @@ export function useGeneratorState({ client, effectiveClientId, externalMode, ini
         }
     }, [initialData]);
 
-    // Auto-fill strategic objective when entering step 5
+    // Auto-fill strategic objective and title when entering step 4
     useEffect(() => {
-        if (step === 5 && genMode === 'single') {
+        if (step === 4 && genMode === 'single') {
             const kb = client?.configuration?.knowledge_base || {};
             const strategy = contentStrategy || {};
-            const isDefault = !singleObjective || singleObjective.includes("Obiettivo: Generare un contenuto") || singleObjective === "";
-            if (isDefault) {
+            
+            // 1. Title Auto-Propose
+            const isDefaultTitle = !singleTitle || singleTitle === "" || singleTitle === "Inserisci il titolo...";
+            if (isDefaultTitle && serpKeyword) {
+                const proposedTitle = serpKeyword.charAt(0).toUpperCase() + serpKeyword.slice(1);
+                setSingleTitle(proposedTitle);
+            }
+
+            // 2. Objective Auto-Propose
+            const isDefaultObj = !singleObjective || singleObjective.includes("Obiettivo: Generare un contenuto") || singleObjective === "" || singleObjective.includes("Describe the strategic goal...");
+            if (isDefaultObj) {
                 if (advancedPrompt && advancedPrompt.length > 50) {
                     setSingleObjective(advancedPrompt);
                 } else {
                     setSingleObjective(`Obiettivo: Generare un contenuto ${strategy.funnel_stage || 'TOFU'} seguendo il modello ${strategy.modello_copywriting || 'PAS'}. 
 Target: ${kb.pubblico_target_primario || 'Audience generale'}.
-Focus: ${singleTitle || singleKeywords || 'Keyword principale'}.
-Direttive: Ottimizzazione standard SEO premium.`);
+Focus: ${singleTitle || serpKeyword || 'Keyword principale'}.
+Direttive: Ottimizzazione standard SEO premium con elementi visuali (tabelle, box riassuntivi e CTA).`);
                 }
             }
         }

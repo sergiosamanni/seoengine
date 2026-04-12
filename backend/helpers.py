@@ -1702,9 +1702,18 @@ NOTA: La pillar page deve essere la risorsa definitiva sul web per questa keywor
 """
 
     else:
-        if include_faq:
-            prompt += "\n8. <h2>Domande Frequenti</h2> con 3-5 FAQ\n"
-        prompt += "\n"
+        prompt += f"""Struttura ARTICOLO (Deep Dive 1000-1500 parole):
+1. <h1> - Titolo diretto e coinvolgente basato sulla keyword principale.
+2. <p> - Introduzione che scalda l'utente e contestualizza il problema.
+3. [VISUAL: BOX IN BREVE] - Inserisci il box di riepilogo come definito nella Visual Intelligence.
+4. <h2> - Analisi del problema, contesto tecnico o storico.
+5. <h2> - Soluzioni pratiche e vantaggi (usa <ul> per i punti chiave).
+6. [VISUAL: TABELLA COMPARATIVA] - Inserisci una tabella tecnica o di confronto se l'argomento lo permette.
+7. <h2> - Approfondimento verticale o "I consigli dell'esperto".
+8. <h2> - Considerazioni finali e sintesi.
+9. {'<h2>Domande Frequenti</h2> con almeno 5 FAQ strutturate' if include_faq else ''}
+10. [VISUAL: BOX CTA FINALE] - Concludi con la sezione di conversione.
+"""
 
     if global_guidelines:
         prompt += "\n=== SEO/GEO GLOBAL GUIDELINES (MANDATORY) ===\n"
