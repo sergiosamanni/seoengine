@@ -12,7 +12,7 @@ export function useImageManagement(state, { effectiveClientId, getAuthHeaders })
     const {
         imgSearchQuery, setImgSearchResults, setSearchingImages,
         singleTitle, singleObjective, imageSource,
-        setSingleSelectedImage, singleSelectedImage,
+        setSelectedImages, selectedImages,
         setAdminUploadedImages, setAdminUploading,
         setGlobalImages, setImageUploadLoading,
         plan, setPlan, activePlanImageIndex, setActivePlanImageIndex,
@@ -71,14 +71,22 @@ export function useImageManagement(state, { effectiveClientId, getAuthHeaders })
 
             if (activePlanImageIndex !== null) {
                 const newTopics = [...plan.topics];
+                const currentIds = newTopics[activePlanImageIndex].image_ids || [];
+                const alreadySelected = currentIds.includes(res.data.id);
+                
                 newTopics[activePlanImageIndex] = {
                     ...newTopics[activePlanImageIndex],
-                    image_ids: [res.data.id], image_url: imageUrlFull
+                    image_ids: alreadySelected ? currentIds : [...currentIds, res.data.id], 
+                    image_url: imageUrlFull // Keep as main preview
                 };
                 setPlan({ ...plan, topics: newTopics });
-                setActivePlanImageIndex(null);
+                // We DON'T set activePlanImageIndex to null here to allow multiple clicks
             } else {
-                setSingleSelectedImage({ id: res.data.id, url: imageUrlFull });
+                setSelectedImages(prev => {
+                    const exists = prev.some(i => i.id === res.data.id);
+                    if (exists) return prev;
+                    return [...prev, { id: res.data.id, url: imageUrlFull }];
+                });
             }
             toast.success("Immagine importata correttamente");
             setImgSearchResults([]);
@@ -102,9 +110,13 @@ export function useImageManagement(state, { effectiveClientId, getAuthHeaders })
             const res = await axios.post(`${API}/uploads?token=${token}`, fd, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            setSingleSelectedImage({
-                id: res.data.id,
-                url: `${API}/uploads/files/${res.data.id}?auth=${token}`
+            setSelectedImages(prev => {
+                const exists = prev.some(i => i.id === res.data.id);
+                if (exists) return prev;
+                return [...prev, {
+                    id: res.data.id,
+                    url: `${API}/uploads/files/${res.data.id}?auth=${token}`
+                }];
             });
             toast.success("Immagine caricata");
         } catch (error) {
@@ -193,9 +205,13 @@ export function useImageManagement(state, { effectiveClientId, getAuthHeaders })
         }
     };
 
+    const removeSelectedImage = (id) => {
+        setSelectedImages(prev => prev.filter(img => img.id !== id));
+    };
+
     return {
         handleImageSearch, importExternalImage, handleSingleFileUpload,
         handleAdminImageUpload, removeAdminImage, generateAIImageForTopic,
-        handleGlobalImageUpload,
+        handleGlobalImageUpload, removeSelectedImage
     };
 }

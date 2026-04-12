@@ -1512,7 +1512,7 @@ def build_system_prompt(kb: dict, tone: dict, seo: dict, client_name: str,
                         advanced_prompt: dict = None, strategy: dict = None,
                         content_type: str = "articolo_blog", brief_override: dict = None,
                         existing_articles: list = None, global_guidelines: list = None,
-                        silo_context: dict = None) -> str:
+                        silo_context: dict = None, available_images: list = None) -> str:
     lingua = seo.get("lingua", "italiano")
     lunghezza = seo.get("lunghezza_minima_parole", 1500)
     include_faq = seo.get("include_faq_in_fondo", False)
@@ -1804,6 +1804,14 @@ REGOLE MANDATORIE PER I LINK INTERNI:
 """
 
     prompt += "\n=== ISTRUZIONE FINALE ===\nGenera un contenuto SEO completo, dettagliato e ottimizzato. Applica il modello di copywriting indicato, integra le leve psicologiche e rispetta tutte le regole SEO on-page.\n\n=== META DESCRIPTION ===\nAlla FINE del contenuto HTML, aggiungi un blocco separato:\n<!-- META_DESCRIPTION: [scrivi qui una meta description di 150-160 caratteri, con keyword principale, intento di ricerca e call to action implicita] -->"
+    if available_images and len(available_images) > 0:
+        num_imgs = len(available_images)
+        prompt += f"\n\nVISUAL STRATEGY:\nSono disponibili {num_imgs} immagini per questo contenuto.\n"
+        prompt += "Inserisci i seguenti placeholder nel testo HTML dove ritieni che l'immagine sia più pertinente e crei maggior engagement:\n"
+        for i in range(num_imgs):
+            prompt += f"- [IMAGE_{i+1}]: per l'immagine {i+1}\n"
+        prompt += "\nDistribuisci le immagini in modo omogeneo, circa ogni 300-400 parole, evitando di raggrupparle tutte vicine."
+
     return prompt
 
 

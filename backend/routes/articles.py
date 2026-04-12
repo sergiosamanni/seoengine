@@ -387,7 +387,8 @@ async def simple_generate_article(request: SimpleGenerateRequest, current_user: 
     ct_map = {"articolo": "articolo_blog", "landing_page": "landing_page", "pillar_page": "pillar_page"}
     system_prompt = build_system_prompt(kb, config.get("tono_e_stile", {}), config.get("seo", {}),
         client_doc["nome"], config.get("advanced_prompt", {}), config.get("content_strategy", {}), 
-        ct_map.get(request.content_type, "articolo_blog"), brief_override, existing_published, global_g)
+        ct_map.get(request.content_type, "articolo_blog"), brief_override, existing_published, global_g,
+        available_images=request.image_ids)
 
     # Append GSC and SERP context
     if request.gsc_context or request.serp_context:

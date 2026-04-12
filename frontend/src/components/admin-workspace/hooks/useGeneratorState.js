@@ -47,7 +47,7 @@ export function useGeneratorState({ client, effectiveClientId, externalMode, ini
     const [imgSearchQuery, setImgSearchQuery] = useState('');
     const [imgSearchResults, setImgSearchResults] = useState([]);
     const [searchingImages, setSearchingImages] = useState(false);
-    const [singleSelectedImage, setSingleSelectedImage] = useState(null);
+    const [selectedImages, setSelectedImages] = useState([]); // Array of {id, url}
     const [autoGenerateCover, setAutoGenerateCover] = useState(true);
     const [activePlanImageIndex, setActivePlanImageIndex] = useState(null);
     const [adminUploadedImages, setAdminUploadedImages] = useState([]);

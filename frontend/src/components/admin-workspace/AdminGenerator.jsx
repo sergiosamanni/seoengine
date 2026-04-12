@@ -407,12 +407,12 @@ export function AdminGenerator({
                                                             </div>
                                                             <div>
                                                                 <p className="text-[11px] font-black text-slate-900 uppercase tracking-widest">Generazione IA</p>
-                                                                <p className="text-[10px] text-slate-400 font-bold leading-relaxed mt-1">L'immagine verrà creata in base <br/>al concept strategico.</p>
+                                                                <p className="text-[10px] text-slate-400 font-bold leading-relaxed mt-1">Le immagini verranno create e distribuite <br/>IA-driven nel contenuto.</p>
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <div className="flex-1 p-4 space-y-4">
-                                                            <div className="flex gap-2">
+                                                        <div className="flex-1 p-4 flex flex-col min-h-0">
+                                                            <div className="flex gap-2 mb-4">
                                                                 <div className="relative flex-1">
                                                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
                                                                     <Input value={state.imgSearchQuery} onChange={(e) => state.setImgSearchQuery(e.target.value)} placeholder="Search..." className="h-9 pl-9 rounded-xl border-slate-200 bg-white text-[11px] font-bold" onKeyDown={(e) => e.key === 'Enter' && images.handleImageSearch(12)} />
@@ -421,31 +421,66 @@ export function AdminGenerator({
                                                                     {state.searchingImages ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
                                                                 </Button>
                                                             </div>
-                                                            <div className="grid grid-cols-3 gap-3 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
-                                                                {state.imgSearchResults.map((img, i) => (
-                                                                    <div key={i} onClick={() => images.importExternalImage(img.image)} className="group relative aspect-square rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-slate-900 transition-all bg-white border border-slate-100">
-                                                                        <img src={img.thumbnail || img.image} className="w-full h-full object-cover" />
-                                                                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                                            <Plus className="w-4 h-4 text-white" />
-                                                                        </div>
+
+                                                            {/* Selected Images Grid */}
+                                                            {state.selectedImages.length > 0 && (
+                                                                <div className="mb-4 bg-white p-3 rounded-xl border border-indigo-100 shadow-sm">
+                                                                    <p className="text-[8px] font-black uppercase text-indigo-500 mb-2 px-1">Selezionate ({state.activePlanImageIndex !== null ? (state.plan?.topics[state.activePlanImageIndex]?.image_ids?.length || 0) : state.selectedImages.length})</p>
+                                                                    <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                                                                        {state.activePlanImageIndex !== null ? (state.plan?.topics[state.activePlanImageIndex]?.image_ids || []).map((id, i) => (
+                                                                            <div key={i} className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 border border-slate-100 shadow-sm">
+                                                                                <img src={`${BASE_URL}/api/uploads/files/${id}?auth=${localStorage.getItem('seo_token')}`} className="w-full h-full object-cover" />
+                                                                                <button 
+                                                                                    onClick={() => {
+                                                                                        const newTopics = [...state.plan.topics];
+                                                                                        newTopics[state.activePlanImageIndex].image_ids = newTopics[state.activePlanImageIndex].image_ids.filter(iid => iid !== id);
+                                                                                        state.setPlan({...state.plan, topics: newTopics});
+                                                                                    }} 
+                                                                                    className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg p-0.5 hover:bg-red-600"
+                                                                                >
+                                                                                    <X className="w-2.5 h-2.5" />
+                                                                                </button>
+                                                                            </div>
+                                                                        )) : state.selectedImages.map((img, i) => (
+                                                                            <div key={i} className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 border border-slate-100 shadow-sm animate-in zoom-in-50">
+                                                                                <img src={img.url} className="w-full h-full object-cover" />
+                                                                                <button onClick={() => images.removeSelectedImage(img.id)} className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg p-0.5 hover:bg-red-600">
+                                                                                    <X className="w-2.5 h-2.5" />
+                                                                                </button>
+                                                                            </div>
+                                                                        ))}
                                                                     </div>
-                                                                ))}
+                                                                </div>
+                                                            )}
+
+                                                            <div className="grid grid-cols-3 gap-3 overflow-y-auto pr-1 custom-scrollbar flex-1">
+                                                                {state.imgSearchResults.map((img, i) => {
+                                                                    const isSelected = state.activePlanImageIndex !== null 
+                                                                        ? (state.plan?.topics[state.activePlanImageIndex]?.image_ids || []).includes(img.id)
+                                                                        : state.selectedImages.some(s => s.id === img.id);
+                                                                    return (
+                                                                        <div key={i} onClick={() => images.importExternalImage(img.image)} className={`group relative aspect-square rounded-xl overflow-hidden cursor-pointer transition-all bg-white border ${isSelected ? 'ring-2 ring-indigo-600 border-indigo-600' : 'border-slate-100 hover:border-slate-300'}`}>
+                                                                            <img src={img.thumbnail || img.image} className="w-full h-full object-cover" />
+                                                                            <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                                <Plus className="w-4 h-4 text-white" />
+                                                                            </div>
+                                                                            {isSelected && <div className="absolute top-1 right-1 bg-indigo-600 text-white rounded-full p-0.5"><Check className="w-2.5 h-2.5" /></div>}
+                                                                        </div>
+                                                                    );
+                                                                })}
                                                                 {state.imgSearchResults.length === 0 && !state.searchingImages && (
                                                                     <div className="col-span-3 py-10 flex flex-col items-center justify-center opacity-30">
                                                                         <ImageIcon className="w-8 h-8 mb-2" />
                                                                         <p className="text-[8px] font-black uppercase">Fai una ricerca</p>
                                                                     </div>
                                                                 )}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    {state.singleSelectedImage && (
-                                                        <div className="absolute inset-0 bg-white z-10 p-2 animate-in fade-in zoom-in-95 duration-200">
-                                                            <div className="relative h-full rounded-xl overflow-hidden border-2 border-emerald-500/30 group">
-                                                                <img src={state.singleSelectedImage.url} className="w-full h-full object-cover" />
-                                                                <div className="absolute top-2 right-2 flex gap-2">
-                                                                    <Button size="icon" onClick={() => state.setSingleSelectedImage(null)} variant="destructive" className="h-8 w-8 rounded-lg shadow-lg"><X className="w-4 h-4" /></Button>
-                                                                </div>
+                                                                {state.activePlanImageIndex !== null && (
+                                                                    <div className="col-span-3 pt-4 border-t border-slate-100 flex justify-end">
+                                                                        <Button onClick={() => { state.setActivePlanImageIndex(null); state.setShowImgChangeModal(false); }} className="h-8 px-4 bg-indigo-600 text-white rounded-lg font-black text-[9px] uppercase tracking-widest">
+                                                                            Conferma Selezione
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     )}

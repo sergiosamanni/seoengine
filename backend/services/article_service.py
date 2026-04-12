@@ -2,6 +2,7 @@ import uuid
 import asyncio
 import logging
 import re
+import random
 from datetime import datetime, timezone
 from database import db
 from helpers import (
@@ -148,7 +149,7 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                     "partners": partners
                 }
             
-            system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, content_type_prompt, brief, existing_published, global_g, silo_context=silo_context)
+            system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, content_type_prompt, brief, existing_published, global_g, silo_context=silo_context, available_images=item.get("image_ids"))
 
             content = None
             gen_error = None
@@ -428,7 +429,7 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                     if image_ids and len(image_ids) > 1:
                         num_extra = len(image_ids) - 1
                         user_prompt += f"\n\nIMPORTANTE - IMMAGINI DEL CLIENTE: Sono disponibili {num_extra} immagini reali caricate dal cliente (oltre a quella in evidenza)."
-                        user_prompt += f"\nInserisci nel testo HTML i placeholder {', '.join([f'[IMAGE_{i+1}]' for i in range(min(num_extra, 2))])} in punti strategici, naturali e contestuali dove una foto starebbe bene."
+                        user_prompt += f"\nInserisci nel testo HTML i placeholder {', '.join([f'[IMAGE_{i+1}]' for i in range(num_extra)])} in punti strategici, naturali e contestuali distribuendoli in modo omogeneo per creare engagement."
                     
                     content = await generate_with_rotation(llm_config, safe_system_prompt, user_prompt)
                     
