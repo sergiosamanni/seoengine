@@ -1868,7 +1868,7 @@ Scrivi il paragrafo HTML con il link interno seguendo le REGOLE PADRE.
 # ============== SERP SCRAPING ==============
 
 async def scrape_google_serp(keyword: str, country: str = "it", num_results: int = 5) -> list:
-    """Search SERP using DuckDuckGo Lite with fast fail + multi-layered fallback."""
+    """Search SERP using DuckDuckGo Lite with fast fail + multi-layered fallback + Sanity Check."""
     import asyncio
     from urllib.parse import unquote, urlparse, parse_qs
     import random
@@ -1880,8 +1880,24 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     ]
 
+    def is_sane(title, desc, query):
+        """Verify if result title or desc contains at least one relevant keyword (case insensitive)"""
+        q_clean = query.lower().replace("+", " ")
+        q_words = [w for w in q_clean.split() if len(w) > 3]
+        # Ignore sports-related results for clearly non-sports queries
+        sports_blockers = ["espn", "nfl", "raiders", "chiefs", "score", "game", "league", "mvp", "live match"]
+        content = (title + " " + desc).lower()
+        
+        # If it looks like a sports score and the query isn't about sports, block it
+        is_medical_or_biz = any(w in q_clean for w in ["laser", "arredo", "medico", "estetica", "clinica", "avvocato", "ristorante"])
+        if is_medical_or_biz and any(s in content for s in sports_blockers):
+            return False
+            
+        if not q_words: return True # Query too short to filter
+        return any(w in content for w in q_words) or any(w in title.lower() for w in q_words)
+
     # Layer 1: DuckDuckGo Lite (Fast & HTML based)
-    for attempt in range(2): # Reduced to 2 fast attempts
+    for attempt in range(2): 
         try:
             ua = random.choice(user_agents)
             async with httpx.AsyncClient(timeout=12, follow_redirects=True, headers={"User-Agent": ua}) as http:
@@ -1902,8 +1918,9 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
                         else: real_url = raw_href
                         if real_url and title and "duckduckgo.com" not in real_url:
                             desc = snippets[idx] if idx < len(snippets) else ""
-                            search_urls.append({"url": real_url, "title": title, "description": desc})
-                            idx += 1
+                            if is_sane(title, desc, keyword):
+                                search_urls.append({"url": real_url, "title": title, "description": desc})
+                                idx += 1
                     if search_urls: break
                 else:
                     logger.warning(f"DDG Lite attempt {attempt+1} status: {resp.status_code}")
@@ -1917,20 +1934,21 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
     if not search_urls:
         logger.info(f"Attempting DDGS library fallback for '{keyword}'...")
         try:
-            fallback_res = await web_search_text(keyword, max_results=num_results)
+            fallback_res = await web_search_text(keyword, max_results=num_results + 3)
             if fallback_res:
                 for r in fallback_res:
-                    search_urls.append({"url": r["url"], "title": r["title"], "description": r["body"]})
+                    if is_sane(r["title"], r["body"], keyword):
+                        search_urls.append({"url": r["url"], "title": r["title"], "description": r["body"]})
+                    if len(search_urls) >= num_results: break
         except Exception as fe:
             logger.warning(f"DDGS fallback failed: {fe}")
 
-    # Layer 3: Direct Google Search (Minimal Scrape) - ONLY if others failed
+    # Layer 3: Direct Google Search (Minimal Scrape)
     if not search_urls:
         logger.info(f"Attempting emergency Google scrape for '{keyword}'...")
         try:
             ua = random.choice(user_agents)
-            async with httpx.AsyncClient(timeout=15, headers={"User-Agent": ua}) as client:
-                # Use google.it for Italian context
+            async with httpx.AsyncClient(timeout=15, headers={"User-Agent": ua}, follow_redirects=True) as client:
                 google_url = f"https://www.google.it/search?q={keyword.replace(' ', '+')}&num={num_results + 5}&hl=it"
                 resp = await client.get(google_url)
                 if resp.status_code == 200:
@@ -1941,8 +1959,12 @@ async def scrape_google_serp(keyword: str, country: str = "it", num_results: int
                             link = anchors[0]['href']
                             title_tag = g.find('h3')
                             title = title_tag.get_text() if title_tag else "Risultato Google"
+                            # Google sometimes hides the snippet in a div with 'VwiC3b' class or similar
+                            desc_tag = g.find('div', style=lambda x: x and '-webkit-line-clamp' in x) or g.find('div', class_=lambda x: x and 'VwiC3b' in x)
+                            desc = desc_tag.get_text() if desc_tag else ""
                             if link.startswith('http') and 'google.com' not in link:
-                                search_urls.append({"url": link, "title": title, "description": ""})
+                                if is_sane(title, desc, keyword):
+                                    search_urls.append({"url": link, "title": title, "description": desc})
                         if len(search_urls) >= num_results: break
         except Exception as ge:
             logger.warning(f"Emergency Google search failed: {ge}")
