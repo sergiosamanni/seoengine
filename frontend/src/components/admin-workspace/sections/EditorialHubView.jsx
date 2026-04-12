@@ -3,8 +3,10 @@ import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { 
     Zap, Loader2, Search, Calendar, Check, Sparkles, 
-    Trash2, Edit2, Play, BrainCircuit
+    Trash2, Edit2, Play, BrainCircuit, Clock
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
 import { EditorialCalendar } from '../EditorialCalendar';
 
 /**
@@ -59,9 +61,13 @@ export function EditorialHubView({
             </div>
 
             {/* Calendar View */}
-            {allPlanTopics.length > 0 && planView === 'calendar' && (
+            {planView === 'calendar' && (
                 <div className="bg-white rounded-[3.5rem] border border-slate-200 p-10 shadow-2xl">
-                    <EditorialCalendar topics={allPlanTopics} onArticleClick={handleUseTopicInGenerator} />
+                    {/* Calendar shows EVERYTHING: plan topics + already published articles */}
+                    <EditorialCalendar 
+                        topics={[...allPlanTopics, ...(recentArticles || [])]} 
+                        onArticleClick={handleUseTopicInGenerator} 
+                    />
                 </div>
             )}
 
@@ -84,8 +90,12 @@ export function EditorialHubView({
                          <div className="text-[9px] font-black uppercase text-slate-400 tracking-widest">STATUS / AZIONE</div>
                     </div>
 
-                    {allPlanTopics.map((item, idx) => {
+                    {allPlanTopics
+                        .filter(item => item.stato !== 'published' && item.publish_status !== 'success') // Only show items waiting to be published
+                        .map((item, idx) => {
                         const isSelected = isTopicSelected(item);
+                        const displayDate = item.scheduled_date || item.created_at;
+
                         return (
                             <div key={idx} className={`bg-white p-4 rounded-2xl border transition-all relative overflow-hidden group ${isSelected ? 'border-indigo-600 ring-1 ring-indigo-50 shadow-md' : 'border-slate-100 hover:border-slate-300 shadow-sm'}`}>
                                 <div className="flex items-center justify-between gap-4">
@@ -122,13 +132,21 @@ export function EditorialHubView({
                                             </div>
                                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                                                 <div className="flex items-center gap-1.5 opacity-60">
-                                                    <span className="w-1 h-1 rounded-full bg-slate-400" />
+                                                    <span className="w-1 h-1 rounded-full bg-emerald-500" />
                                                     <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{item.funnel || 'Awareness'}</span>
                                                 </div>
                                                 <div className="flex items-center gap-1.5">
                                                     <Search className="w-2.5 h-2.5 text-slate-300" />
                                                     <span className="text-[9px] text-slate-500 font-black tracking-tight">{item.keyword || '-'}</span>
                                                 </div>
+                                                {displayDate && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Clock className="w-2.5 h-2.5 text-indigo-400" />
+                                                        <span className="text-[9px] text-indigo-500 font-black tracking-tight uppercase">
+                                                            {format(new Date(displayDate), 'dd MMM yyyy', { locale: it })}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
