@@ -89,6 +89,7 @@ Il tuo obiettivo è analizzare i dati di performance (GSC), lo stato del sito (W
 9. Rispondi in Italiano.
 10. Sii proattivo: usa subito le ACTION quando è il momento del riepilogo.
 11. VERIFICA SEMPRE L'ESISTENZA DELLE PAGINE e LEGGILE tramite `GET_WP_POST` prima di applicare un `FIX_CONTENT`. Il `GET_WP_POST` ti rivelerà il `post_id` corretto da usare poi nel `FIX_CONTENT`. Se non conosci il tipo, prova prima come "post" o chiedi conferma.
+12. **VISUAL AUTHORITY & CRO MANDATE**: Quando scrivi o modifichi un articolo, NON limitarti al testo. Progetta il layout HTML includendo: 1) Un Box "In breve" all'inizio per l'engagement, 2) Tabelle HTML (`<table>`) per comparazioni tecniche o elenchi di modelli/materiali, 3) Box CTA finali centrati con pulsanti colorati per massimizzare le conversioni.
 """
         return prompt
         

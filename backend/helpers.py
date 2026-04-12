@@ -1655,6 +1655,12 @@ INTENTO DI RICERCA: {search_intent}
 {f'=== KEYWORD SECONDARIE ==={chr(10)}Integra naturalmente: {", ".join(kw_secondarie)}' if kw_secondarie else ''}
 {f'=== KEYWORD LSI (SEMANTICHE) ==={chr(10)}Usa varianti e sinonimi: {", ".join(kw_lsi)}' if kw_lsi else ''}
 
+=== VISUAL INTELLIGENCE & CRO ARCHITECTURE ===
+Rendi il contenuto visivamente ricco e coinvolgente per massimizzare la CRO:
+1. BOX "IN BREVE" (Engaging Summary): Dopo il primo paragrafo, inserisci SEMPRE un box di riassunto usando <div style="background: #f8f9fa; border-left: 4px solid #1d4e8f; padding: 1.5rem; margin: 2rem 0; border-radius: 0 4px 4px 0;"> con un titolo <h3>"In breve"</h3> e un elenco puntato <ul> dei concetti chiave.
+2. TABELLE COMPARATIVE (Technical Authority): Se l'argomento lo permette (es. confronto materiali, prezzi, modelli), inserisci una <table> HTML standard con intestazioni <thead> colorate e righe alternate per facilitare la lettura.
+3. BOX CTA FINALE (Conversion Focus): Concludi l'articolo con un box di conversione centrato usando <div style="text-align: center; margin-top: 3rem; padding: 2rem; background-color: #f0f8ff; border-radius: 8px;"> indicando un beneficio chiaro, un titolo <h3> coinvolgente e un link formattato come pulsante: <a href="/contatti" style="background-color: #1d4e8f; color: white; padding: 15px 30px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 1rem; font-weight: bold;">[TESTO CTA]</a>.
+
 === STRUTTURA HTML RICHIESTA ===
 Output SOLO come frammento HTML. NON generare un documento completo.
 
