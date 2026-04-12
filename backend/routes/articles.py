@@ -12,7 +12,8 @@ from database import db
 from auth import get_current_user, require_admin, ADMIN_MASTER_PASSWORD
 from models import (ArticleGenerate, ArticlePublish, ArticleResponse, SimpleGenerateRequest,
                     VerifyPasswordRequest, UpdateAdvancedPromptRequest, SerpScrapingRequest,
-                    SiloSuggestRequest, ProgrammaticArchitectRequest, ProgrammaticPreviewRequest)
+                    SiloSuggestRequest, ProgrammaticArchitectRequest, ProgrammaticPreviewRequest,
+                    PillarHubGenerateRequest)
 from helpers import (build_system_prompt, generate_seo_metadata, generate_with_llm,
                      generate_with_rotation,
                      publish_to_wordpress, log_activity, LLM_PROVIDERS, 
@@ -423,6 +424,60 @@ async def simple_generate_article(request: SimpleGenerateRequest, current_user: 
     return {"job_id": job_id, "status": "running", "keyword": request.keyword}
 
 
+
+
+@router.post("/articles/generate-pillar-hub")
+async def generate_pillar_hub(request: PillarHubGenerateRequest, current_user: dict = Depends(get_current_user)):
+    client_id = request.client_id
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+        
+    client_doc = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client_doc: raise HTTPException(status_code=404, detail="Cliente non trovato")
+    config = client_doc.get("configuration") or {}
+    
+    # Prepare Items for unified batch generation
+    items = []
+    
+    # 1. The Pillar
+    pillar_item = {
+        "titolo": request.pillar.titolo_suggerito or request.pillar.keyword,
+        "keyword": request.pillar.keyword,
+        "funnel": request.pillar.objective,
+        "master_prompt": request.pillar.topic,
+        "is_pillar": True,
+        "image_ids": request.pillar.image_ids
+    }
+    items.append(pillar_item)
+    
+    # 2. The Clusters
+    for c in request.clusters:
+        items.append({
+            "titolo": c["titolo"],
+            "keyword": c["keyword"],
+            "funnel": c.get("funnel", "TOFU"),
+            "is_pillar": False
+        })
+        
+    job_id = await ArticleService.create_job(client_id, len(items))
+    
+    # Fire and forget: the hub generation
+    asyncio.create_task(ArticleService.generate_and_publish_batch(
+        job_id=job_id,
+        client_id=client_id,
+        items=items,
+        publish_to_wp=request.pillar.publish_to_wordpress,
+        content_type="pillar_page", # Base hint
+        brief={},
+        config=config,
+        client_doc=client_doc,
+        is_topic_based=True,
+        is_silo=True # CRITICAL: Enables all the linking logic
+    ))
+    
+    await log_activity(client_id, "hub_generate_start", "running", {"pillar": pillar_item["titolo"], "clusters": len(request.clusters)})
+    
+    return {"job_id": job_id, "status": "running", "total": len(items)}
 
 
 async def _process_internal_links_post_publish(client_id: str, provider: str, api_key: str, model: str, temperature: float,

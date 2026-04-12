@@ -20,7 +20,7 @@ import {
     XCircle, Clock, Send, ExternalLink, Search, Lock, Target, BarChart3,
     PenTool, ChevronRight, Sparkles, ImagePlus, X, Camera, Image as ImageIcon,
     Calendar, BrainCircuit, RefreshCcw, Info, AlertTriangle, Plus,
-    ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, Save, History, ListPlus, MousePointerClick, FileCode,
+    ChevronUp, ChevronDown, TrendingUp, Trash2, Eye, Save, History, ListPlus, MousePointerClick, FileCode, BoxSelect,
     Library, Check, Layers, ArrowRight, ArrowLeft, RotateCcw, LayoutList, LayoutGrid, Play, Edit2
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -119,14 +119,14 @@ export function AdminGenerator({
 
     // --- Silo Helpers ---
     async function handleSuggestSilo() {
-        if (!state.singleObjective) { toast.error("Inserisci prima l'obiettivo della Pillar Page"); return; }
+        if (!state.singleTitle && !state.serpKeyword) { toast.error("Inserisci prima il titolo o la keyword della Pillar Page"); return; }
         state.setSuggestingSilo(true);
         try {
             const { data } = await axios.post(`${API}/articles/suggest-silo`, {
-                objective: state.singleObjective, clientId: effectiveClientId
+                pillar_topic: state.singleTitle || state.serpKeyword, 
+                client_id: effectiveClientId
             }, { headers: getAuthHeaders() });
             state.setSiloClusters(data.clusters || []);
-            state.setSelectedSiloClusters(data.clusters || []);
             toast.success("Strategia Silo generata con successo!");
         } catch (err) {
             toast.error("Errore generazione strategia silo");
@@ -370,12 +370,81 @@ export function AdminGenerator({
                                 <div className="relative group">
                                     <div className="absolute -inset-0.5 bg-slate-900 rounded-2xl blur opacity-5 group-hover:opacity-10 transition duration-500"></div>
                                     <Textarea
-                                        className="min-h-[400px] relative bg-slate-50 border-slate-100 p-8 text-sm font-medium leading-relaxed rounded-2xl shadow-inner focus:ring-1 focus:ring-slate-900 transition-all font-mono"
+                                        className="min-h-[250px] relative bg-slate-50 border-slate-100 p-8 text-sm font-medium leading-relaxed rounded-2xl shadow-inner focus:ring-1 focus:ring-slate-900 transition-all font-mono"
                                         value={state.advancedPrompt}
                                         onChange={(e) => state.setAdvancedPrompt(e.target.value)}
                                         placeholder="Generating strategy..."
                                     />
                                 </div>
+
+                                {/* SILO HUB ARCHITECT (Only for Pillar Pages) */}
+                                {state.contentType === 'pillar_page' && (
+                                    <div className="mt-8 pt-8 border-t border-slate-100 animate-in fade-in duration-700">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div>
+                                                <h4 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-2">
+                                                    <Layers className="w-4 h-4 text-indigo-500" /> Silo Hub Architecture
+                                                </h4>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed mt-1">
+                                                    Define contextual cluster articles to connect with this pillar page. <br/>
+                                                    <span className="text-indigo-500/70">Each cluster will include SERP Analysis & SEO/GEO optimization.</span>
+                                                </p>
+                                            </div>
+                                            <Button 
+                                                onClick={handleSuggestSilo} 
+                                                disabled={state.suggestingSilo} 
+                                                className="h-10 px-6 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 hover:scale-[1.02] transition-all"
+                                            >
+                                                {state.suggestingSilo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-2" />}
+                                                Suggest Silo Structure
+                                            </Button>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[100px] border-2 border-dashed border-slate-100 rounded-2xl p-4 transition-all">
+                                            {state.siloClusters.length > 0 ? state.siloClusters.map((cluster, idx) => (
+                                                <div key={idx} className="p-5 rounded-[1.25rem] bg-slate-50 border border-slate-100 group relative hover:border-indigo-200 hover:bg-white transition-all hover:shadow-xl hover:shadow-indigo-50/50">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex-1 space-y-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-1.5 h-4 bg-indigo-500 rounded-full"></div>
+                                                                <Input 
+                                                                    value={cluster.titolo} 
+                                                                    onChange={(e) => {
+                                                                        const newClusters = [...state.siloClusters];
+                                                                        newClusters[idx].titolo = e.target.value;
+                                                                        state.setSiloClusters(newClusters);
+                                                                    }}
+                                                                    className="h-8 text-[11px] font-black bg-transparent border-none p-0 focus:ring-0 text-slate-900 w-full" 
+                                                                />
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <Badge variant="outline" className="border-slate-200 text-slate-400 text-[8px] font-black h-5 px-2 uppercase tracking-tight bg-white">KW: {cluster.keyword}</Badge>
+                                                                <Badge variant="outline" className="border-indigo-100 text-indigo-500 text-[8px] font-black h-5 px-2 uppercase tracking-tight bg-indigo-50/50">{cluster.funnel}</Badge>
+                                                                <Badge variant="outline" className="border-emerald-100 text-emerald-600 text-[8px] font-black h-5 px-2 uppercase tracking-tight bg-emerald-50/50">READY</Badge>
+                                                            </div>
+                                                        </div>
+                                                        <Button 
+                                                            onClick={() => {
+                                                                const newClusters = state.siloClusters.filter((_, i) => i !== idx);
+                                                                state.setSiloClusters(newClusters);
+                                                            }} 
+                                                            size="icon" 
+                                                            variant="ghost" 
+                                                            className="w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )) : (
+                                                <div className="col-span-2 py-8 flex flex-col items-center justify-center opacity-20">
+                                                    <BoxSelect className="w-10 h-10 mb-2" />
+                                                    <p className="text-[10px] font-black uppercase tracking-widest italic">No cluster satellites defined yet</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="mt-8 pt-8 border-t border-slate-100 flex justify-between items-center">
                                     <Button variant="ghost" onClick={() => state.setStep(2)} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-950 transition-colors">Indietro</Button>
                                     <div className="flex gap-3">

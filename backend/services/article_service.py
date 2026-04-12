@@ -149,7 +149,13 @@ Restituisci solo l'articolo raffinato in HTML (frammento)."""
                     "partners": partners
                 }
             
-            system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, content_type_prompt, brief, existing_published, global_g, silo_context=silo_context, available_images=item.get("image_ids"))
+            # Dynamic Content Type per item in Silo/Hub
+            item_content_type = content_type_prompt
+            if is_silo:
+                is_pillar = item.get("is_pillar", False)
+                item_content_type = "pillar_page" if is_pillar else "articolo_blog"
+
+            system_prompt = build_system_prompt(kb, tone, seo, client_doc["nome"], advanced_prompt, strategy, item_content_type, brief, existing_published, global_g, silo_context=silo_context, available_images=item.get("image_ids"))
 
             content = None
             gen_error = None

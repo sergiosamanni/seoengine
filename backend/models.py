@@ -271,6 +271,12 @@ class SimpleGenerateRequest(BaseModel):
     silo_context: Optional[Dict] = None
 
 
+class PillarHubGenerateRequest(BaseModel):
+    client_id: str
+    pillar: SimpleGenerateRequest
+    clusters: List[Dict[str, Any]]
+
+
 class ReportCreate(BaseModel):
     title: str
     date: str  # ISO 8601 (YYYY-MM-DDTHH:MM:SSZ)

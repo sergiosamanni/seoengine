@@ -75,7 +75,11 @@ export function useArticleGeneration(state, { effectiveClientId, getAuthHeaders,
         setSingleGenerating(true);
         setSingleResult(null);
         try {
-            const res = await axios.post(`${API}/articles/simple-generate`, {
+            // Check if we are generating a Pillar Hub (Pillar + Clusters)
+            const isHub = state.contentType === 'pillar_page' && state.siloClusters?.length > 0;
+            const endpoint = isHub ? `${API}/articles/generate-pillar-hub` : `${API}/articles/simple-generate`;
+            
+            const payload = {
                 client_id: effectiveClientId,
                 keyword: singleKeywords || singleTitle,
                 titolo_suggerito: singleTitle || undefined,
@@ -88,11 +92,25 @@ export function useArticleGeneration(state, { effectiveClientId, getAuthHeaders,
                 scheduled_date: (singleScheduledDate && singleScheduledDate !== '') ? new Date(singleScheduledDate).toISOString() : undefined,
                 gsc_context: gscData ? { top_keywords: gscData.keywords?.slice(0, 10), totals: gscData.totals } : undefined,
                 serp_context: serpData ? { competitors: serpData.competitors, extracted: serpData.extracted } : undefined,
-                generate_cover: imageSource === 'ai' ? true : false
-            }, { headers: getAuthHeaders() });
+                generate_cover: imageSource === 'ai' ? true : false,
+            };
+
+            // If Hub, wrap the pillar payload and add clusters
+            const finalRequest = isHub ? {
+                client_id: effectiveClientId,
+                pillar: payload,
+                clusters: state.siloClusters.map(c => ({
+                    titolo: c.titolo,
+                    keyword: c.keyword,
+                    objective: c.obiettivo || 'informazionale',
+                    funnel: c.funnel || 'TOFU'
+                }))
+            } : payload;
+
+            const res = await axios.post(endpoint, finalRequest, { headers: getAuthHeaders() });
 
             setSingleResult({ ...res.data, status: 'running' });
-            toast.success('Generazione avviata!');
+            toast.success(isHub ? 'Generazione Hub avviata!' : 'Generazione avviata!');
             const jobId = res.data.job_id;
             const poll = async () => {
                 try {
@@ -102,7 +120,7 @@ export function useArticleGeneration(state, { effectiveClientId, getAuthHeaders,
                         setSingleResult({ ...res.data, ...r, status: jr.data.status });
                         setSingleGenerating(false);
                         if (jr.data.status === 'completed' && r.generation_status === 'success') {
-                            toast.success(r.publish_status === 'success' ? 'Articolo generato e pubblicato su WordPress!' : 'Articolo generato con successo!');
+                            toast.success(isHub ? 'Hub Generato con Successo!' : (r.publish_status === 'success' ? 'Articolo generato e pubblicato su WordPress!' : 'Articolo generato con successo!'));
                         } else {
                             toast.error('Generazione fallita: ' + (r.generation_error || jr.data.error || 'errore sconosciuto'));
                         }
