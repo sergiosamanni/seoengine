@@ -34,6 +34,7 @@ from routes.diag import router as diag_router
 from routes.autopilot import router as autopilot_router
 from routes.settings import router as settings_router
 from routes.reddit import router as reddit_router
+from routes.competitors import router as competitors_router
 
 app.add_middleware(
     CORSMiddleware,
@@ -65,6 +66,7 @@ api_router.include_router(diag_router)
 api_router.include_router(autopilot_router)
 api_router.include_router(settings_router, prefix="/settings")
 api_router.include_router(reddit_router)
+api_router.include_router(competitors_router)
 
 
 @app.get("/")

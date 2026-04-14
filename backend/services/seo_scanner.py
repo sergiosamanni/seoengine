@@ -47,6 +47,9 @@ class SEOScanner:
         # 5. Evaluate Semantic Gap (Analysis)
         await cls.evaluate_semantic_gap(client, history_context)
         
+        # 6. Evaluate External Keyword Data (Research Hub)
+        await cls.evaluate_external_keywords(client, history_context)
+        
         logger.info(f"SEO Scan completed for client {client_id}")
 
     @classmethod
@@ -416,3 +419,73 @@ class SEOScanner:
                 "payload": selected_topic,
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
+
+    @classmethod
+    async def evaluate_external_keywords(cls, client, history_context: str = ""):
+        client_id = client["id"]
+        config = client.get("configuration", {})
+        
+        # 1. Fetch Keyword Research Hub data
+        kw_doc = await db.client_keywords.find_one({"client_id": client_id})
+        if not kw_doc or not kw_doc.get("data"):
+            return
+            
+        # Top 15 by volume for analysis
+        candidate_keywords = sorted(kw_doc["data"], key=lambda x: x.get("search_volume", 0), reverse=True)[:15]
+        
+        # 2. Setup LLM
+        llm_config = config.get("llm", {}) or config.get("openai", {})
+        if not llm_config or not (llm_config.get("api_key") or llm_config.get("openai_api_key")):
+            llm_config = {
+                "provider": os.environ.get("LLM_PROVIDER", "openai"),
+                "api_key": os.environ.get("OPENAI_API_KEY"),
+                "modello": os.environ.get("LLM_MODEL", "gpt-4o-mini")
+            }
+            
+        prompt = (
+            "Sei un SEO Consultant. Analizza queste keyword provenienti da una ricerca esterna (Ahrefs/SEMRush).\n"
+            "Proponi UN SOLO nuovo contenuto o NUOVA ottimizzazione per la keyword più promettente (alto volume, difficoltà accessibile).\n"
+            f"{history_context}\n"
+            "KEYWORDS DISPONIBILI:\n" + json.dumps(candidate_keywords, indent=2) + "\n\n"
+            "FORNISCI IL RISULTATO SOLO IN JSON:\n"
+            "{\n"
+            "  \"type\": \"NEW_CONTENT o OPTIMIZATION\",\n"
+            "  \"keyword\": \"...\",\n"
+            "  \"title\": \"Titolo suggerito\",\n"
+            "  \"reason\": \"Perché questa keyword (max 150 car)\",\n"
+            "  \"suggestion\": \"Azione pratica (es: Crea guida su X o Aggiungi sezione Y a URL Z)\",\n"
+            "  \"url\": \"URL se OPTIMIZATION, altrimenti null\"\n"
+            "}\n"
+        )
+        
+        try:
+            response_text = await generate_with_rotation(llm_config, prompt, "Autopilot Keyword Hub Scan:")
+            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            if json_match:
+                prop = json.loads(json_match.group(0))
+                if not isinstance(prop, dict): return
+                
+                kw = prop.get("keyword")
+                if not kw: return
+                
+                # Check if task already exists (any status)
+                exists = await db.autopilot_tasks.find_one({
+                    "client_id": client_id,
+                    "title": {"$regex": re.escape(kw), "$options": "i"},
+                    "status": {"$in": ["pending", "completed", "rejected"]}
+                })
+                
+                if not exists:
+                    await db.autopilot_tasks.insert_one({
+                        "id": str(uuid.uuid4()),
+                        "client_id": client_id,
+                        "type": prop.get("type", "NEW_CONTENT"),
+                        "status": "pending",
+                        "title": f"Keyword Hub: {prop.get('title', kw)}",
+                        "reason": prop.get("reason", ""),
+                        "suggestion": prop.get("suggestion", ""),
+                        "url": prop.get("url"),
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    })
+        except Exception as e:
+            logger.error(f"Keyword Hub evaluation failed for {client_id}: {e}")

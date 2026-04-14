@@ -134,11 +134,16 @@ class ChatService:
         global_settings = await db.global_settings.find_one({"id": "global"}, {"_id": 0})
         guidelines = global_settings.get("seo_geo_guidelines", []) if global_settings else []
         
+        # Fetch Keyword Research Hub data
+        kw_doc = await db.client_keywords.find_one({"client_id": client_id}, {"_id": 0})
+        keyword_research = kw_doc.get("data", []) if kw_doc else []
+        
         context = {
             "client_name": client.get("nome"),
             "settore": client.get("settore"),
             "knowledge_base": config.get("knowledge_base", {}),
             "gsc_summary": gsc_summary,
+            "keyword_research": keyword_research[:100], # Pass top 100 for context limit
             "recent_articles": recent_articles,
             "global_guidelines": guidelines,
             "wordpress_config": {

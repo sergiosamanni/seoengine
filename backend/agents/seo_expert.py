@@ -59,6 +59,9 @@ Il tuo obiettivo è analizzare i dati di performance (GSC), lo stato del sito (W
 ### CONTENUTI RECENTI:
 {json.dumps([{"titolo": a.get('titolo', 'N/A'), "url": a.get('wordpress_link', 'N/A')} for a in articles[:5]], indent=2)}
 
+### KEYWORD RESEARCH HUB (Dati Excel/CSV Caricati):
+{json.dumps(context.get('keyword_research', []), indent=2)}
+
 - Sito Web: {context.get('wordpress_config', {}).get('url', 'N/A')}
 - Sitemap URL: {context.get('wordpress_config', {}).get('sitemap_url', 'N/A')}
 
