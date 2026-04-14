@@ -103,6 +103,18 @@ export function CompetitorsBenchmarkTab({ client, config, setConfig, getAuthHead
         }
     };
 
+    const handleDeleteKeywords = async () => {
+        if (!confirm("Sei sicuro di voler eliminare tutti i dati della ricerca keyword per questo cliente?")) return;
+        
+        try {
+            await axios.delete(`${API}/clients/${client.id}/keyword-research`, { headers: getAuthHeaders() });
+            setKeywords([]);
+            toast.success("Dati eliminati con successo.");
+        } catch (error) {
+            toast.error("Errore durante l'eliminazione dei dati.");
+        }
+    };
+
     return (
         <div className="space-y-12 animate-in fade-in duration-500 pb-20">
             {/* --- SECTION 1: COMPETITOR BENCHMARK --- */}
@@ -232,7 +244,7 @@ export function CompetitorsBenchmarkTab({ client, config, setConfig, getAuthHead
                             <BarChart3 className="w-6 h-6 text-emerald-500" />
                             Keyword Research Hub
                         </h3>
-                        <div className="relative">
+                        <div className="flex items-center gap-3">
                             <input 
                                 type="file" 
                                 id="kw-upload" 
@@ -240,6 +252,16 @@ export function CompetitorsBenchmarkTab({ client, config, setConfig, getAuthHead
                                 accept=".xlsx, .xls, .csv" 
                                 onChange={handleKeywordUpload}
                             />
+                            {keywords.length > 0 && (
+                                <Button 
+                                    variant="outline"
+                                    onClick={handleDeleteKeywords}
+                                    className="h-10 px-4 border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all"
+                                >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Svuota Dati
+                                </Button>
+                            )}
                             <Button 
                                 asChild
                                 disabled={uploadingKeywords}
@@ -275,7 +297,6 @@ export function CompetitorsBenchmarkTab({ client, config, setConfig, getAuthHead
                                             <TableCell className="py-4 pl-8">
                                                 <div className="flex flex-col">
                                                     <span className="text-[13px] font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">{kw.keyword}</span>
-                                                    {kw.position && <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Posizione attuale: #{kw.position}</span>}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="py-4">

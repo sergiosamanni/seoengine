@@ -103,6 +103,14 @@ async def upload_keyword_research(client_id: str, file: UploadFile = File(...), 
         logger.error(f"Error uploading keyword research: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.delete("/clients/{client_id}/keyword-research")
+async def delete_keyword_research(client_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+        
+    await db.client_keywords.delete_one({"client_id": client_id})
+    return {"status": "success", "message": "Ricerca keyword eliminata."}
+
 @router.get("/clients/{client_id}/keyword-research")
 async def get_keyword_research(client_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin" and client_id not in current_user.get("client_ids", []):
