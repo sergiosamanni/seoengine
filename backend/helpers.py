@@ -1499,9 +1499,25 @@ async def update_wordpress_post(url: str, username: str, password: str, post_id:
                 if response.status_code in [200, 201]:
                     logger.info(f"WP Update SUCCESS: {wp_type} {post_id} updated")
                     return True
+                elif response.status_code == 404:
+                    # Auto-fallback for type mismatch (post vs page)
+                    alt_type = "pages" if plural_type == "posts" else "posts"
+                    alt_endpoint = f"{base_v2}/{alt_type}/{post_id}"
+                    logger.warning(f"WP Update 404 on {endpoint}. Trying alternative endpoint: {alt_endpoint}")
+                    try:
+                        resp_alt = await http_client.post(alt_endpoint, auth=(username, password), json=post_data, headers=headers, timeout=45.0)
+                        if resp_alt.status_code in [200, 201]:
+                            logger.info(f"WP Update SUCCESS on alternative endpoint: {alt_type} {post_id}")
+                            return True
+                    except Exception as alt_err:
+                        logger.error(f"Alternative WP endpoint failed: {alt_err}")
+                    
+                    # If alt fails too, break early - ID is truly invalid
+                    logger.error(f"WP Update: ID {post_id} not found as post OR page.")
+                    return False
                 elif response.status_code == 202:
                     # SiteGround captcha — retry with backoff
-                    logger.warning(f"SiteGround 202 on WP update (attempt {attempt+1}/4). Retrying...")
+                    logger.warning(f"WordPress 202 (Processing/SiteGround) on update (attempt {attempt+1}/4). Retrying...")
                     await asyncio.sleep(2 ** attempt)
                     continue
                 else:

@@ -192,7 +192,7 @@ async def execute_chat_action(request: dict, current_user: dict = Depends(get_cu
                 logger.error(f"FIX_CONTENT FAILED: WP {wp_type} {post_id} - SiteGround may be blocking")
                 raise HTTPException(
                     status_code=500, 
-                    detail=f"Errore nell'aggiornamento WordPress ({wp_type} ID: {post_id}). SiteGround potrebbe bloccare le richieste. Riprova tra qualche secondo."
+                    detail=f"Errore nell'aggiornamento WordPress ({wp_type} ID: {post_id}). Verifica che l'ID sia corretto o se ci sono restrizioni di sicurezza (API/WAF) sul server."
                 )
             
         elif action_type == "SEARCH_WP":
