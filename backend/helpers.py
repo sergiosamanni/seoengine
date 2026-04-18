@@ -1010,11 +1010,19 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                                 categories: List[int] = None, tags: List[str] = None,
                                 wp_type: str = "post", image_ids: List[str] = None, schedule_date: str = None) -> dict:
     from storage import get_object
-    # Realistic User-Agent to bypass trivial bot-filters (SiteGround)
+    # Hyper-realistic headers to bypass aggressive WAFs (SiteGround AI Anti-Bot)
+    domain = url.split("//")[-1].split("/")[0]
     wp_headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*",
-        "Connection": "keep-alive"
+        "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": f"https://{domain}/wp-admin/",
+        "X-Requested-With": "XMLHttpRequest",
+        "Origin": f"https://{domain}",
+        "Connection": "keep-alive",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin"
     }
     # Disable SSL verification for WordPress calls to handle clients with misconfigured certificates
     async with httpx.AsyncClient(verify=False, headers=wp_headers, follow_redirects=True) as http_client:
