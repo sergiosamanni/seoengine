@@ -99,28 +99,48 @@ export function useImageManagement(state, { effectiveClientId, getAuthHeaders })
     };
 
     // --- Single File Upload ---
+    // --- Single File Upload (Used in Article Generator) ---
     const handleSingleFileUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         if (file.size > 5 * 1024 * 1024) return toast.error("File troppo grande (max 5MB)");
+        
         const token = localStorage.getItem('seo_token');
         const fd = new FormData();
         fd.append('file', file);
+        fd.append('client_id', effectiveClientId);
+        
         try {
-            const res = await axios.post(`${API}/uploads?token=${token}`, fd, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+            const res = await axios.post(`${API}/uploads/article-image`, fd, {
+                headers: { 
+                    ...getAuthHeaders(),
+                    'Content-Type': 'multipart/form-data' 
+                }
             });
-            setSelectedImages(prev => {
-                const exists = prev.some(i => i.id === res.data.id);
-                if (exists) return prev;
-                return [...prev, {
-                    id: res.data.id,
-                    url: `${API}/uploads/files/${res.data.id}?auth=${token}`
-                }];
-            });
-            toast.success("Immagine caricata");
+            const imgUrl = `${BASE_URL}/api/uploads/files/${res.data.id}?auth=${token}`;
+            
+            // If we are in the change modal for a specific topic
+            if (activePlanImageIndex !== null) {
+                const newTopics = [...plan.topics];
+                const currentIds = newTopics[activePlanImageIndex].image_ids || [];
+                newTopics[activePlanImageIndex] = {
+                    ...newTopics[activePlanImageIndex],
+                    image_ids: [...currentIds, res.data.id],
+                    image_url: imgUrl
+                };
+                setPlan({ ...plan, topics: newTopics });
+                toast.success("Immagine caricata e assegnata");
+            } else {
+                setSelectedImages(prev => {
+                    if (prev.some(i => i.id === res.data.id)) return prev;
+                    return [...prev, { id: res.data.id, url: imgUrl }];
+                });
+                toast.success("Immagine caricata");
+            }
         } catch (error) {
-            toast.error("Errore upload immagine");
+            toast.error("Errore upload immagine: " + (error.response?.data?.detail || "Errore sconosciuto"));
+        } finally {
+            e.target.value = ''; // Reset input
         }
     };
 

@@ -475,6 +475,7 @@ export function AdminGenerator({
                                             <div className="flex gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200/50">
                                                 <Button variant="ghost" size="sm" onClick={() => state.setImageSource('ai')} className={`h-8 px-5 rounded-lg text-[9px] font-black uppercase transition-all ${state.imageSource === 'ai' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>Gen IA</Button>
                                                 <Button variant="ghost" size="sm" onClick={() => state.setImageSource('search')} className={`h-8 px-5 rounded-lg text-[9px] font-black uppercase transition-all ${state.imageSource === 'search' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>Search</Button>
+                                                <Button variant="ghost" size="sm" onClick={() => state.setImageSource('upload')} className={`h-8 px-5 rounded-lg text-[9px] font-black uppercase transition-all ${state.imageSource === 'upload' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>Upload</Button>
                                             </div>
                                         </div>
                                     </div>
@@ -513,20 +514,40 @@ export function AdminGenerator({
                                                         </div>
                                                     ) : (
                                                         <div className="flex-1 p-4 flex flex-col min-h-0">
-                                                            <div className="flex gap-2 mb-4">
-                                                                <div className="relative flex-1">
-                                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
-                                                                    <Input value={state.imgSearchQuery} onChange={(e) => state.setImgSearchQuery(e.target.value)} placeholder="Search..." className="h-9 pl-9 rounded-xl border-slate-200 bg-white text-[11px] font-bold" onKeyDown={(e) => e.key === 'Enter' && images.handleImageSearch(12)} />
+                                                            {state.imageSource === 'upload' ? (
+                                                                <div className="flex flex-col items-center justify-center py-6 border-b border-slate-100 mb-4 bg-white/50 rounded-xl border-dashed border-2">
+                                                                    <div 
+                                                                        onClick={() => document.getElementById('image-upload-input').click()}
+                                                                        className="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center border border-slate-100 cursor-pointer hover:border-indigo-400 transition-all group mb-3"
+                                                                    >
+                                                                        <ImagePlus className="w-6 h-6 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                                                                    </div>
+                                                                    <input 
+                                                                        id="image-upload-input"
+                                                                        type="file" 
+                                                                        className="hidden" 
+                                                                        accept="image/*"
+                                                                        onChange={images.handleSingleFileUpload}
+                                                                    />
+                                                                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Carica Immagine</p>
+                                                                    <p className="text-[9px] text-slate-400 font-bold mt-0.5 text-center px-4">Supporta JPG, PNG, WEBP (max 5MB)</p>
                                                                 </div>
-                                                                <Button onClick={() => images.handleImageSearch(12)} disabled={state.searchingImages} className="h-9 w-9 bg-slate-900 text-white rounded-xl shadow-lg shadow-slate-200">
-                                                                    {state.searchingImages ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                                                                </Button>
-                                                            </div>
+                                                            ) : (
+                                                                <div className="flex gap-2 mb-4">
+                                                                    <div className="relative flex-1">
+                                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
+                                                                        <Input value={state.imgSearchQuery} onChange={(e) => state.setImgSearchQuery(e.target.value)} placeholder="Search..." className="h-9 pl-9 rounded-xl border-slate-200 bg-white text-[11px] font-bold" onKeyDown={(e) => e.key === 'Enter' && images.handleImageSearch(12)} />
+                                                                    </div>
+                                                                    <Button onClick={() => images.handleImageSearch(12)} disabled={state.searchingImages} className="h-9 w-9 bg-slate-900 text-white rounded-xl shadow-lg shadow-slate-200">
+                                                                        {state.searchingImages ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                                                                    </Button>
+                                                                </div>
+                                                            )}
 
                                                             {/* Selected Images Grid */}
                                                             {state.selectedImages.length > 0 && (
-                                                                <div className="mb-4 bg-white p-3 rounded-xl border border-indigo-100 shadow-sm">
-                                                                    <p className="text-[8px] font-black uppercase text-indigo-500 mb-2 px-1">Selezionate ({state.activePlanImageIndex !== null ? (state.plan?.topics[state.activePlanImageIndex]?.image_ids?.length || 0) : state.selectedImages.length})</p>
+                                                                <div className="mb-4 bg-white p-3 rounded-xl border border-indigo-100 shadow-sm animate-in fade-in zoom-in-95 duration-300">
+                                                                    <p className="text-[8px] font-black uppercase text-indigo-500 mb-2 px-1">Immagini Selezionate ({state.activePlanImageIndex !== null ? (state.plan?.topics[state.activePlanImageIndex]?.image_ids?.length || 0) : state.selectedImages.length})</p>
                                                                     <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                                                                         {state.activePlanImageIndex !== null ? (state.plan?.topics[state.activePlanImageIndex]?.image_ids || []).map((id, i) => (
                                                                             <div key={i} className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 border border-slate-100 shadow-sm">
@@ -554,35 +575,38 @@ export function AdminGenerator({
                                                                 </div>
                                                             )}
 
-                                                            <div className="grid grid-cols-3 gap-3 overflow-y-auto pr-1 custom-scrollbar flex-1">
-                                                                {state.imgSearchResults.map((img, i) => {
-                                                                    const isSelected = state.activePlanImageIndex !== null 
-                                                                        ? (state.plan?.topics[state.activePlanImageIndex]?.image_ids || []).includes(img.id)
-                                                                        : state.selectedImages.some(s => s.id === img.id);
-                                                                    return (
-                                                                        <div key={i} onClick={() => images.importExternalImage(img.image)} className={`group relative aspect-square rounded-xl overflow-hidden cursor-pointer transition-all bg-white border ${isSelected ? 'ring-2 ring-indigo-600 border-indigo-600' : 'border-slate-100 hover:border-slate-300'}`}>
-                                                                            <img src={img.thumbnail || img.image} className="w-full h-full object-cover" />
-                                                                            <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                                                <Plus className="w-4 h-4 text-white" />
+                                                            {state.imageSource === 'search' && (
+                                                                <div className="grid grid-cols-3 gap-3 overflow-y-auto pr-1 custom-scrollbar flex-1">
+                                                                    {state.imgSearchResults.map((img, i) => {
+                                                                        const isSelected = state.activePlanImageIndex !== null 
+                                                                            ? (state.plan?.topics[state.activePlanImageIndex]?.image_ids || []).includes(img.id)
+                                                                            : state.selectedImages.some(s => s.id === img.id);
+                                                                        return (
+                                                                            <div key={i} onClick={() => images.importExternalImage(img.image)} className={`group relative aspect-square rounded-xl overflow-hidden cursor-pointer transition-all bg-white border ${isSelected ? 'ring-2 ring-indigo-600 border-indigo-600' : 'border-slate-100 hover:border-slate-300'}`}>
+                                                                                <img src={img.thumbnail || img.image} className="w-full h-full object-cover" />
+                                                                                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                                    <Plus className="w-4 h-4 text-white" />
+                                                                                </div>
+                                                                                {isSelected && <div className="absolute top-1 right-1 bg-indigo-600 text-white rounded-full p-0.5"><Check className="w-2.5 h-2.5" /></div>}
                                                                             </div>
-                                                                            {isSelected && <div className="absolute top-1 right-1 bg-indigo-600 text-white rounded-full p-0.5"><Check className="w-2.5 h-2.5" /></div>}
+                                                                        );
+                                                                    })}
+                                                                    {state.imgSearchResults.length === 0 && !state.searchingImages && (
+                                                                        <div className="col-span-3 py-10 flex flex-col items-center justify-center opacity-30">
+                                                                            <Search className="w-8 h-8 mb-2" />
+                                                                            <p className="text-[8px] font-black uppercase">Fai una ricerca stock</p>
                                                                         </div>
-                                                                    );
-                                                                })}
-                                                                {state.imgSearchResults.length === 0 && !state.searchingImages && (
-                                                                    <div className="col-span-3 py-10 flex flex-col items-center justify-center opacity-30">
-                                                                        <ImageIcon className="w-8 h-8 mb-2" />
-                                                                        <p className="text-[8px] font-black uppercase">Fai una ricerca</p>
-                                                                    </div>
-                                                                )}
-                                                                {state.activePlanImageIndex !== null && (
-                                                                    <div className="col-span-3 pt-4 border-t border-slate-100 flex justify-end">
-                                                                        <Button onClick={() => { state.setActivePlanImageIndex(null); state.setShowImgChangeModal(false); }} className="h-8 px-4 bg-indigo-600 text-white rounded-lg font-black text-[9px] uppercase tracking-widest">
-                                                                            Conferma Selezione
-                                                                        </Button>
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {state.activePlanImageIndex !== null && state.imageSource === 'search' && (
+                                                                <div className="pt-4 border-t border-slate-100 flex justify-end">
+                                                                    <Button onClick={() => { state.setActivePlanImageIndex(null); state.setShowImgChangeModal(false); }} className="h-8 px-4 bg-indigo-600 text-white rounded-lg font-black text-[9px] uppercase tracking-widest">
+                                                                        Conferma Selezione
+                                                                    </Button>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
@@ -693,6 +717,7 @@ export function AdminGenerator({
                 effectiveClientId={effectiveClientId}
                 getAuthHeaders={getAuthHeaders}
                 fetchPlan={planMgmt.fetchPlan}
+                handleSingleFileUpload={images.handleSingleFileUpload}
             />
         </div>
     );

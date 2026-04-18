@@ -4,7 +4,7 @@ import { Button } from '../../ui/button';
 import { Globe, X } from 'lucide-react';
 import { Dialog, DialogContent } from '../../ui/dialog';
 import { ScrollArea } from '../../ui/scroll-area';
-import { Loader2, Check, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Check, Image as ImageIcon, Plus } from 'lucide-react';
 import axios from 'axios';
 import { API_URL as API } from '../../../config';
 import { toast } from 'sonner';
@@ -39,6 +39,7 @@ export function ImageChangeModal({
     open, onOpenChange, editingTopic,
     searchingImages, imgSearchResults, allPlanTopics,
     effectiveClientId, getAuthHeaders, fetchPlan,
+    handleSingleFileUpload
 }) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -49,6 +50,29 @@ export function ImageChangeModal({
                          Cambia Immagine
                     </h3>
                     <p className="text-[9px] text-slate-400 font-bold uppercase mt-1 line-clamp-1">{editingTopic?.titolo}</p>
+                </div>
+                <div className="p-3 bg-white border-b border-slate-100 flex items-center justify-between">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2">Risultati & Caricamento</p>
+                    <div className="flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => document.getElementById('modal-image-upload-input').click()}
+                            className="h-7 px-3 gap-2 border-slate-100 text-slate-600 font-black text-[8px] uppercase tracking-widest rounded-lg"
+                        >
+                            <Plus className="w-3 h-3" /> Carica Foto
+                        </Button>
+                        <input 
+                            id="modal-image-upload-input"
+                            type="file" 
+                            className="hidden" 
+                            accept="image/*"
+                            onChange={async (e) => {
+                                await handleSingleFileUpload(e);
+                                onOpenChange(false); // Close after upload + selection
+                            }}
+                        />
+                    </div>
                 </div>
                 <ScrollArea className="max-h-[60vh] bg-slate-50">
                     <div className="p-4">
