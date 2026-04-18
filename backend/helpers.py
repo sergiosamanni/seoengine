@@ -1079,18 +1079,25 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                             logger.error(f"Image {img_id} is corrupt or not an image. Skipping upload.")
                             continue
 
-                    media_resp = await http_client.post(
-                        f"{base_url}/media",
-                        auth=(username, password),
-                        headers={"Content-Type": ct, "Content-Disposition": f'attachment; filename="{fname}"'},
-                        content=img_data, timeout=90.0
-                    )
-                    
-                    if media_resp.status_code in [200, 201]:
-                        wp_media_ids.append(media_resp.json()["id"])
-                        logger.info(f"Image {img_id} uploaded to WP media (wp_id: {media_resp.json()['id']})")
-                    else:
-                        logger.error(f"WP Media Upload Failed ({media_resp.status_code}): {media_resp.text[:500]}")
+                    max_media_retries = 3
+                    for media_attempt in range(max_media_retries):
+                        media_resp = await http_client.post(
+                            f"{base_url}/media",
+                            auth=(username, password),
+                            headers={"Content-Type": ct, "Content-Disposition": f'attachment; filename="{fname}"'},
+                            content=img_data, timeout=90.0
+                        )
+                        
+                        if media_resp.status_code in [200, 201]:
+                            wp_media_ids.append(media_resp.json()["id"])
+                            logger.info(f"Image {img_id} uploaded to WP media (wp_id: {media_resp.json()['id']})")
+                            break
+                        elif media_resp.status_code == 202:
+                            logger.warning(f"Image {img_id} WP Upload 202 (SiteGround) - attempt {media_attempt+1}/{max_media_retries}. Retrying...")
+                            await asyncio.sleep(2 ** media_attempt)
+                        else:
+                            logger.error(f"WP Media Upload Failed ({media_resp.status_code}): {media_resp.text[:500]}")
+                            break
                 except Exception as e:
                     logger.warning(f"Error uploading image {img_id} to WP: {e}")
 
@@ -1131,9 +1138,11 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
         if tags and wp_type == "post":
             for tag_name in tags:
                 try:
+                    # Sanitize tag search to avoid 400s
+                    safe_tag = tag_name[:30] if len(tag_name) > 30 else tag_name
                     search_response = await http_client.get(
                         f"{base_url}/tags", auth=(username, password),
-                        params={"search": tag_name}, timeout=10.0)
+                        params={"search": safe_tag}, timeout=10.0)
                     if search_response.status_code == 200:
                         existing_tags = search_response.json()
                         tag_found = next((t for t in existing_tags if t.get("name", "").lower() == tag_name.lower()), None)
@@ -1145,6 +1154,8 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                                 json={"name": tag_name}, timeout=10.0)
                             if create_response.status_code in [200, 201]:
                                 tag_ids.append(create_response.json()["id"])
+                    elif search_response.status_code == 202:
+                        logger.warning(f"Tag search '{tag_name}' returned 202 (Captcha). Skipping tag.")
                 except Exception as e:
                     logger.warning(f"Error handling tag '{tag_name}': {e}")
         if tag_ids:
@@ -1181,6 +1192,10 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                         return {"post_id": data.get("id"), "link": data.get("link"), "slug": data.get("slug"), "status": "success", "note": "published without meta"}
                     else:
                         last_error = f"WP Retry Error: {retry_resp.status_code} - {retry_resp.text}"
+                elif response.status_code == 202:
+                    logger.warning(f"WP Post 202 (SiteGround) - attempt {attempt+1}/{max_retries}. Retrying...")
+                    await asyncio.sleep(2 ** attempt)
+                    continue
                 elif response.status_code == 401:
                     raise Exception("Autenticazione WordPress fallita. Verifica username e password applicazione.")
                 elif response.status_code == 403:
