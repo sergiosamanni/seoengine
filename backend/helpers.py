@@ -1079,7 +1079,7 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                             logger.error(f"Image {img_id} is corrupt or not an image. Skipping upload.")
                             continue
 
-                    max_media_retries = 3
+                    max_media_retries = 5
                     for media_attempt in range(max_media_retries):
                         media_resp = await http_client.post(
                             f"{base_url}/media",
@@ -1093,8 +1093,11 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                             logger.info(f"Image {img_id} uploaded to WP media (wp_id: {media_resp.json()['id']})")
                             break
                         elif media_resp.status_code == 202:
-                            logger.warning(f"Image {img_id} WP Upload 202 (SiteGround) - attempt {media_attempt+1}/{max_media_retries}. Retrying...")
-                            await asyncio.sleep(2 ** media_attempt)
+                            wait_time = 3 * (media_attempt + 1)
+                            logger.warning(f"Image {img_id} WP Upload 202 (SiteGround) - attempt {media_attempt+1}/{max_media_retries}. Waiting {wait_time}s...")
+                            await asyncio.sleep(wait_time)
+                            if media_attempt == max_media_retries - 1:
+                                logger.error(f"Image {img_id} failed after {max_media_retries} attempts due to 202 Captcha.")
                         else:
                             logger.error(f"WP Media Upload Failed ({media_resp.status_code}): {media_resp.text[:500]}")
                             break
@@ -1173,7 +1176,7 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
             if meta_fields:
                 post_data["meta"] = meta_fields
 
-        max_retries = 3
+        max_retries = 5
         last_error = None
         for attempt in range(max_retries):
             try:
@@ -1193,28 +1196,33 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                     else:
                         last_error = f"WP Retry Error: {retry_resp.status_code} - {retry_resp.text}"
                 elif response.status_code == 202:
-                    logger.warning(f"WP Post 202 (SiteGround) - attempt {attempt+1}/{max_retries}. Retrying...")
-                    await asyncio.sleep(2 ** attempt)
+                    wait_time = 3 * (attempt + 1)
+                    last_error = f"SiteGround Captcha (202 Accepted) persistente dopo {attempt+1} tentativi. L'indirizzo IP del server potrebbe essere temporaneamente limitato."
+                    logger.warning(f"WP Post 202 (SiteGround) - attempt {attempt+1}/{max_retries}. Waiting {wait_time}s...")
+                    await asyncio.sleep(wait_time)
                     continue
                 elif response.status_code == 401:
                     raise Exception("Autenticazione WordPress fallita. Verifica username e password applicazione.")
                 elif response.status_code == 403:
-                    raise Exception("Permessi insufficienti per pubblicare su WordPress.")
+                    raise Exception("Permessi insufficienti per pubblicare su WordPress (403 Forbidden).")
                 elif response.status_code == 404:
-                    raise Exception("Endpoint WordPress non trovato. Verifica l'URL API.")
+                    raise Exception("Endpoint WordPress non trovato (404). Verifica l'URL API nelle impostazioni cliente.")
                 else:
                     last_error = f"WordPress API error: {response.status_code} - {response.text}"
             except httpx.TimeoutException:
-                last_error = "Timeout nella connessione a WordPress"
+                last_error = "Timeout nella connessione a WordPress (Server troppo lento o firewall)"
             except httpx.ConnectError:
-                last_error = "Impossibile connettersi al server WordPress"
+                last_error = "Impossibile connettersi al server WordPress (DNS o Connettività)"
             except Exception as e:
                 last_error = str(e)
                 if any(err in str(e) for err in ["401", "403", "404"]):
                     raise
             if attempt < max_retries - 1:
-                await asyncio.sleep(2 ** attempt)
-        raise Exception(last_error or "Errore sconosciuto nella pubblicazione")
+                # Extra exponential delay for non-202 errors handled by loop
+                if response.status_code != 202:
+                    await asyncio.sleep(2 ** attempt)
+        
+        raise Exception(last_error or "Errore sconosciuto nella pubblicazione su WordPress")
 
 
 async def search_wordpress_post(url: str, username: str, password: str, query: str, wp_type: str = "post") -> list:

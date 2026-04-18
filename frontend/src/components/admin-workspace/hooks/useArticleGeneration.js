@@ -120,7 +120,17 @@ export function useArticleGeneration(state, { effectiveClientId, getAuthHeaders,
                         setSingleResult({ ...res.data, ...r, status: jr.data.status });
                         setSingleGenerating(false);
                         if (jr.data.status === 'completed' && r.generation_status === 'success') {
-                            toast.success(isHub ? 'Hub Generato con Successo!' : (r.publish_status === 'success' ? 'Articolo generato e pubblicato su WordPress!' : 'Articolo generato con successo!'));
+                            if (isHub) {
+                                toast.success('Hub Generato con Successo!');
+                            } else if (r.publish_status === 'success') {
+                                toast.success('Articolo generato e pubblicato su WordPress!');
+                            } else if (r.publish_status === 'failed') {
+                                toast.warning('Articolo generato, ma PUBBLICAZIONE FALLITA.', {
+                                    description: r.publish_error || "Errore durante l'invio a WordPress."
+                                });
+                            } else {
+                                toast.success('Articolo generato con successo!');
+                            }
                         } else {
                             toast.error('Generazione fallita: ' + (r.generation_error || jr.data.error || 'errore sconosciuto'));
                         }
@@ -367,8 +377,17 @@ export function useArticleGeneration(state, { effectiveClientId, getAuthHeaders,
                 if (jr.data.status === 'completed' || jr.data.status === 'failed') {
                     const s = jr.data.summary || {};
                     if (jr.data.status === 'completed') {
-                        if ((s.generated_ok || 0) === 0) toast.error(`Generazione terminata senza successo.`);
-                        else toast.success(`Completato: ${s.generated_ok || 0} generate`);
+                        if ((s.generated_ok || 0) === 0) {
+                            toast.error(`Generazione terminata senza successo.`);
+                        } else {
+                            if ((s.published_ok || 0) < (s.generated_ok || 0)) {
+                                toast.warning(`Completato: ${(s.generated_ok || 0)} generate, ma solo ${(s.published_ok || 0)} pubblicate su WordPress.`, {
+                                    description: "Verifica i log o gli errori dei singoli articoli per i dettagli."
+                                });
+                            } else {
+                                toast.success(`Completato: ${s.generated_ok || 0} articoli generati e pubblicati!`);
+                            }
+                        }
                     }
                     setGenerating(false);
                     setActiveJobId(null);
