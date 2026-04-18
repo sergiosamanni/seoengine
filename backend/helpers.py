@@ -1010,8 +1010,14 @@ async def publish_to_wordpress(url: str, username: str, password: str, title: st
                                 categories: List[int] = None, tags: List[str] = None,
                                 wp_type: str = "post", image_ids: List[str] = None, schedule_date: str = None) -> dict:
     from storage import get_object
-    # Disable SSL verification for WordPress calls to handle clients with misconfigured certificates (hostname mismatch, etc.)
-    async with httpx.AsyncClient(verify=False) as http_client:
+    # Realistic User-Agent to bypass trivial bot-filters (SiteGround)
+    wp_headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Connection": "keep-alive"
+    }
+    # Disable SSL verification for WordPress calls to handle clients with misconfigured certificates
+    async with httpx.AsyncClient(verify=False, headers=wp_headers, follow_redirects=True) as http_client:
         base_url = url.replace("/posts", "")
         endpoint = f"{base_url}/pages" if wp_type == "page" else url
 

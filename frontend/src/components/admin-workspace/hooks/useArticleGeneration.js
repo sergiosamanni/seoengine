@@ -132,7 +132,8 @@ export function useArticleGeneration(state, { effectiveClientId, getAuthHeaders,
                                 toast.success('Articolo generato con successo!');
                             }
                         } else {
-                            toast.error('Generazione fallita: ' + (r.generation_error || jr.data.error || 'errore sconosciuto'));
+                            const errorMsg = r.publish_error || r.generation_error || jr.data.error || 'errore sconosciuto';
+                            toast.error('Generazione/Pubblicazione fallita: ' + errorMsg);
                         }
                         return;
                     }
