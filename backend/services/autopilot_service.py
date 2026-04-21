@@ -193,7 +193,10 @@ class AutopilotService:
                 target_wp_info = await get_wp_id_by_url(wp_url, wp_user, wp_pass, target_url)
                 if not target_wp_info: raise ValueError(f"Impossibile trovare WP ID per {target_url}")
                 
-                post_data = await get_wordpress_post(wp_url, wp_user, wp_pass, target_wp_info["id"], wp_type=target_wp_info["type"])
+                post_data = await get_wordpress_post(wp_url, wp_user, wp_pass, target_wp_info["id"], wp_type=target_wp_info["type"], target_url=target_url)
+                if not post_data:
+                    raise ValueError(f"Impossibile recuperare il contenuto dell'articolo (ID: {target_wp_info['id']}) tramite le API di WordPress.")
+                
                 old_content = post_data.get("content", "")
                 
                 system_prompt = "Sei un SEO Specialist. Genera in formato HTML (usando <h2> per eventuali titoletti, poi tag <p>, <ul> o <table>) i paragrafi di approfondimento richiesti per completare il gap semantico di un articolo. L'output verrà posizionato alla fine dell'ultimo paragrafo. TRALASCIA intestazioni come ```html e produci solo l'HTML grezzo da innestare. Procedi con la scrittura dei contenuti informativi richiesti senza riserve, l'operazione è stata validata ed è di tipo 'Safe-Append' (aggiunta in coda)."

@@ -1407,8 +1407,17 @@ async def get_wp_id_by_url(url: str, username: str, password: str, target_url: s
     """Try to find the WordPress ID and type (post/page) given its public URL."""
     async with httpx.AsyncClient(verify=False, follow_redirects=True) as http_client:
         base_url = url.replace("/posts", "")
-        # Extract slug from URL
+        # Parse the target URL
+        from urllib.parse import urlparse, parse_qs
         parsed = urlparse(target_url)
+        query_params = parse_qs(parsed.query)
+        
+        # Handle plain links: ?p=ID or ?page_id=ID
+        if 'p' in query_params:
+            return {"id": int(query_params['p'][0]), "type": "post"}
+        if 'page_id' in query_params:
+            return {"id": int(query_params['page_id'][0]), "type": "page"}
+
         slug = parsed.path.strip("/")
         if "/" in slug:
             slug = slug.split("/")[-1]

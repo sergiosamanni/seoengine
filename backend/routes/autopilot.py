@@ -78,11 +78,16 @@ async def approve_autopilot_task(task_id: str, current_user: dict = Depends(get_
     # Execute task
     execution_detail = ""
 
-    if task_type == "NEW_CONTENT" and "payload" in task:
+    if task_type == "NEW_CONTENT":
         current_queue = client.get("configuration", {}).get("editorial_queue", [])
+        
+        # If payload is present, we could potentially extract more info, 
+        # but the current queue logic uses title and suggestion.
         new_item = f"[AUTOPILOT] {task['title']} : {task['suggestion']}"
+        
         if new_item not in current_queue:
             await db.clients.update_one({"id": client_id}, {"$push": {"configuration.editorial_queue": new_item}})
+        
         execution_detail = "Iniezione Avvenuta: L'argomento e la sua direttiva AI sono stati inseriti in Cima al Piano Editoriale del cliente e verranno generati automaticamente alla prima pubblicazione disponibile."
         
         # Mark as completed
