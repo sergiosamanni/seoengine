@@ -22,6 +22,13 @@ export const ClientProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Clear client on logout to prevent state leaks across sessions
+  useEffect(() => {
+    if (!user) {
+      setClient(null);
+    }
+  }, [user]);
+
   const fetchClient = useCallback(async (clientId) => {
     if (!clientId) return;
     setLoading(true);
