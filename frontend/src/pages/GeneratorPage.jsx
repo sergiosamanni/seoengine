@@ -269,9 +269,9 @@ export const GeneratorPage = () => {
           <ErrorBoundary>
             <Suspense fallback={<div className="flex items-center justify-center p-12 text-slate-400 font-medium italic animate-pulse"><Loader2 className="w-5 h-5 mr-3 animate-spin" />Inizializzazione Generatore...</div>}>
               {isAdmin ? (
-                <AdminGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
+                <AdminGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} fetchClient={fetchClient} />
               ) : (
-                <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} />
+                <ClientGenerator client={client} effectiveClientId={effectiveClientId} getAuthHeaders={getAuthHeaders} navigate={navigate} fetchClient={fetchClient} />
               )}
             </Suspense>
           </ErrorBoundary>

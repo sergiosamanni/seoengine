@@ -49,12 +49,12 @@ import { ProgrammaticWizard } from './sections/ProgrammaticWizard';
 // ADMIN GENERATOR - Main Orchestrator
 // ============================================================================
 export function AdminGenerator({
-    client, effectiveClientId, getAuthHeaders, navigate, externalMode, initialData, onDataUsed
+    client, effectiveClientId, getAuthHeaders, navigate, externalMode, initialData, onDataUsed, fetchClient
 }) {
     // --- 1. STATE (via custom hook) ---
     const state = useGeneratorState({ client, effectiveClientId, externalMode, initialData, onDataUsed });
 
-    const hookDeps = { effectiveClientId, getAuthHeaders, client };
+    const hookDeps = { effectiveClientId, getAuthHeaders, client, fetchClient };
 
     // --- 2. LOGIC (via custom hooks) ---
     const generation = useArticleGeneration(state, hookDeps);

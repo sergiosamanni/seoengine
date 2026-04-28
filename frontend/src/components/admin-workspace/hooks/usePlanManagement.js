@@ -7,7 +7,7 @@ import { toast } from 'sonner';
  * Custom hook for Editorial Plan management:
  * fetch, generate, delete, save, topic selection, batch operations
  */
-export function usePlanManagement(state, { effectiveClientId, getAuthHeaders, client }) {
+export function usePlanManagement(state, { effectiveClientId, getAuthHeaders, client, fetchClient }) {
 
     const {
         plan, setPlan, planLoading, setPlanLoading, planGenerating, setPlanGenerating,
@@ -24,6 +24,9 @@ export function usePlanManagement(state, { effectiveClientId, getAuthHeaders, cl
         try {
             const res = await axios.get(`${API}/editorial-plan/${effectiveClientId}`, { headers: getAuthHeaders() });
             setPlan(res.data || null);
+            if (fetchClient) {
+                await fetchClient(effectiveClientId); // Refresh client state (including editorial_queue)
+            }
         } catch (error) {
             console.error("Error fetching editorial plan:", error);
             setPlan(null);
