@@ -93,7 +93,8 @@ export const ClientProvider = ({ children }) => {
     saving,
     fetchClient,
     updateConfiguration,
-    addToEditorialQueue
+    addToEditorialQueue,
+    addToQueueFromContext: addToEditorialQueue,
   };
 
   return (

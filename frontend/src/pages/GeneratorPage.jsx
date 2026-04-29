@@ -79,6 +79,14 @@ export const GeneratorPage = () => {
     }
   }, [searchParams]);
 
+  // Force-refresh client data when entering the generator tab,
+  // so that the editorial_queue (updated by Autopilot approvals) is always fresh.
+  useEffect(() => {
+    if (activeTab === 'generate' && effectiveClientId) {
+      fetchClient(effectiveClientId);
+    }
+  }, [activeTab, effectiveClientId]);
+
   // Configuration States
   const [wordpress, setWordpress] = useState({ url_api: '', utente: '', password_applicazione: '', stato_pubblicazione: 'draft' });
   const [llm, setLlm] = useState({ provider: 'deepseek', api_key: '', modello: 'deepseek-chat', temperatura: 0.7 });
